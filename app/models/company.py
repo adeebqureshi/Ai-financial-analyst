@@ -6,20 +6,10 @@ Domain model representing a publicly traded company.
 
 from __future__ import annotations
 
-from enum import Enum
-
 from pydantic import Field, HttpUrl, field_validator
 
+from app.enums.exchange import Exchange
 from app.models.base import DomainModel
-
-
-class Exchange(str, Enum):
-    """Supported stock exchanges."""
-
-    NASDAQ = "NASDAQ"
-    NYSE = "NYSE"
-    AMEX = "AMEX"
-    OTHER = "OTHER"
 
 
 class Company(DomainModel):
@@ -46,20 +36,35 @@ class Company(DomainModel):
         description="Official company name",
     )
 
-    exchange: Exchange
+    exchange: Exchange = Field(
+        ...,
+        description="Stock exchange",
+    )
 
-    sector: str
+    sector: str = Field(
+        ...,
+        description="Business sector",
+    )
 
-    industry: str
+    industry: str = Field(
+        ...,
+        description="Business industry",
+    )
 
-    country: str
+    country: str = Field(
+        ...,
+        description="Country of incorporation",
+    )
 
     currency: str = Field(
         default="USD",
         description="Trading currency",
     )
 
-    website: HttpUrl | None = None
+    website: HttpUrl | None = Field(
+        default=None,
+        description="Official company website",
+    )
 
     market_cap: float | None = Field(
         default=None,
@@ -73,7 +78,6 @@ class Company(DomainModel):
         """
         Normalize ticker symbols.
         """
-
         value = value.strip().upper()
 
         if len(value) > 10:
@@ -87,6 +91,7 @@ class Company(DomainModel):
         """
         Validate SEC CIK.
         """
+        value = value.strip()
 
         if not value.isdigit():
             raise ValueError("CIK must contain only digits.")
