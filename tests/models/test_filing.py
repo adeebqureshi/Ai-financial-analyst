@@ -1,7 +1,7 @@
 from datetime import date
 from pathlib import Path
 
-import pytest
+from pytest import raises
 
 from app.enums.filing_type import FilingType
 from app.enums.processing_status import ProcessingStatus
@@ -22,6 +22,7 @@ def test_filing():
     )
 
     assert filing.ticker == "AAPL"
+
     assert filing.parser_status == ProcessingStatus.PENDING
     assert filing.embedding_status == ProcessingStatus.PENDING
     assert filing.indexing_status == ProcessingStatus.PENDING
@@ -29,7 +30,7 @@ def test_filing():
 
 def test_invalid_cik():
 
-    with pytest.raises(ValueError):
+    with raises(ValueError):
 
         Filing(
             ticker="AAPL",
