@@ -1,4 +1,4 @@
-from app.ingestion.models.base import DomainModel
+from app.models.base import DomainModel
 
 
 class Dummy(DomainModel):
