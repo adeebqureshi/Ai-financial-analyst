@@ -1,0 +1,14 @@
+from pathlib import Path
+
+from app.ingestion.services.sec_service import SECService
+
+
+def test_download_latest_filing():
+
+    service = SECService()
+
+    path = service.download_latest_filing("AAPL")
+
+    assert isinstance(path, Path)
+
+    assert path.exists()
