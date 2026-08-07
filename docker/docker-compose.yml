@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DATABASE_URL: sqlite+pysqlite:///:memory:
+
+  redis:
+    image: redis:7
+
+  postgres:
+    image: postgres:17
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: financial
