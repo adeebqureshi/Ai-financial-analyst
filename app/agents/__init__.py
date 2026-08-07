@@ -1,13 +1,11 @@
-from .auditor import AuditorAgent
-from .financial_analyst import FinancialAnalystAgent
-from .models import AgentTask
+"""
+Multi-agent orchestration package.
+"""
+
 from .planner import PlannerAgent
-from .retriever import RetrieverAgent
+from .task import Task
 
 __all__ = [
-    "AuditorAgent",
-    "FinancialAnalystAgent",
-    "AgentTask",
     "PlannerAgent",
-    "RetrieverAgent",
+    "Task",
 ]

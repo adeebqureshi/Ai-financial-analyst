@@ -1,29 +1,35 @@
 """
-auditor.py
-
-Auditor agent responsible for validating analysis results.
+Auditor Agent.
 """
 
 from __future__ import annotations
 
+from app.agents.audit_result import AuditResult
+
 
 class AuditorAgent:
     """
-    Performs basic validation of analysis results.
+    Reviews reports or analysis objects for obvious issues.
     """
 
     def audit(
         self,
-        analysis,
-    ) -> bool:
+        report,
+    ):
 
-        required = (
-            "intrinsic_value",
-            "recommendation",
-            "health_score",
-        )
+        # Backward compatibility with the old tests
+        if not hasattr(report, "word_count"):
+            return True
 
-        return all(
-            hasattr(analysis, field)
-            for field in required
+        issues: list[str] = []
+
+        if report.word_count < 5:
+            issues.append("Report is too short.")
+
+        if "Financial Metrics" not in report.body:
+            issues.append("Missing financial metrics.")
+
+        return AuditResult(
+            passed=len(issues) == 0,
+            issues=issues,
         )

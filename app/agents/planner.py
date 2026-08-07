@@ -1,77 +1,70 @@
 """
-planner.py
-
-Planning agent.
+Planner agent.
 """
 
 from __future__ import annotations
 
-from app.agents.models import AgentTask
+from app.agents.task import Task
 
 
 class PlannerAgent:
+    """
+    Plans the sequence of tasks needed
+    to answer a user request.
+    """
 
     def plan(
         self,
         query: str,
-    ) -> list[AgentTask]:
+    ) -> list[Task]:
 
-        tasks = []
+        tasks: list[Task] = []
 
-        q = query.lower()
+        query = query.lower()
 
         if any(
-            word in q
-            for word in [
+            keyword in query
+            for keyword in (
                 "valuation",
-                "intrinsic",
                 "dcf",
-            ]
+                "intrinsic value",
+            )
         ):
             tasks.append(
-                AgentTask(
-                    "valuation",
-                    "Perform company valuation.",
+                Task(
+                    name="Retrieve Documents",
+                    description="Retrieve relevant financial documents.",
                 )
             )
-
-        if any(
-            word in q
-            for word in [
-                "risk",
-                "bankruptcy",
-                "health",
-            ]
-        ):
-            tasks.append(
-                AgentTask(
-                    "health",
-                    "Evaluate financial health.",
-                )
-            )
-
-        if any(
-            word in q
-            for word in [
-                "revenue",
-                "profit",
-                "growth",
-            ]
-        ):
-            tasks.append(
-                AgentTask(
-                    "analysis",
-                    "Analyze financial performance.",
-                )
-            )
-
-        if not tasks:
 
             tasks.append(
-                AgentTask(
-                    "general",
-                    "General financial analysis.",
+                Task(
+                    name="Run Valuation",
+                    description="Perform DCF valuation.",
                 )
             )
+
+            tasks.append(
+                Task(
+                    name="Generate Report",
+                    description="Generate valuation report.",
+                )
+            )
+
+            return tasks
+
+        tasks.append(
+            Task(
+                name="Retrieve Documents",
+                description="Retrieve relevant financial documents.",
+            )
+        )
+
+        tasks.append(
+            Task(
+                name="Generate Report",
+                description="Generate final response.",
+            )
+        )
 
         return tasks

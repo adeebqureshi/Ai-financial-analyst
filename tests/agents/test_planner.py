@@ -1,45 +1,29 @@
 from app.agents.planner import PlannerAgent
 
 
-def test_valuation_plan():
+def test_general_plan():
 
     planner = PlannerAgent()
 
     tasks = planner.plan(
-        "Perform DCF valuation of Apple"
+        "Tell me about Apple."
     )
 
-    assert tasks[0].name == "valuation"
+    assert len(tasks) == 2
+
+    assert tasks[0].name == "Retrieve Documents"
+
+    assert tasks[1].name == "Generate Report"
 
 
-def test_health_plan():
+def test_dcf_plan():
 
     planner = PlannerAgent()
 
     tasks = planner.plan(
-        "Evaluate bankruptcy risk"
+        "Calculate DCF valuation."
     )
 
-    assert tasks[0].name == "health"
+    assert len(tasks) == 3
 
-
-def test_analysis_plan():
-
-    planner = PlannerAgent()
-
-    tasks = planner.plan(
-        "Analyze revenue growth"
-    )
-
-    assert tasks[0].name == "analysis"
-
-
-def test_default_plan():
-
-    planner = PlannerAgent()
-
-    tasks = planner.plan(
-        "Tell me about Apple"
-    )
-
-    assert tasks[0].name == "general"
+    assert tasks[1].name == "Run Valuation"
