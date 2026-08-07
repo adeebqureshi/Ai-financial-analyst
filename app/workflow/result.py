@@ -1,5 +1,5 @@
 """
-Workflow checkpoint.
+Workflow result.
 """
 
 from __future__ import annotations
@@ -10,14 +10,15 @@ from app.workflow.state import WorkflowState
 
 
 @dataclass(slots=True)
-class WorkflowCheckpoint:
+class WorkflowResult:
     """
-    Stores workflow progress.
+    Final workflow result.
     """
 
     state: WorkflowState
 
+    success: bool
+
     @property
     def completed_steps(self) -> int:
-
         return len(self.state.completed)
