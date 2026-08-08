@@ -1,5 +1,7 @@
 import {
   AgentProgress,
+  ChatInput,
+  CompanyHeader,
   PromptSuggestions,
   StreamingResponse,
   ThinkingTimeline,
@@ -15,32 +17,36 @@ export default function AnalysisPage() {
       sidebar={<Sidebar />}
       insights={<AIInsight />}
     >
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl space-y-8">
 
-        <div className="mb-10">
-          <p className="text-sm uppercase tracking-[0.3em] text-blue-400">
-            AI Workspace
-          </p>
+        {/* Company Header */}
 
-          <h1 className="mt-3 text-5xl font-bold tracking-tight">
-            Apple Inc. Analysis
-          </h1>
+        <CompanyHeader />
 
-          <p className="mt-4 text-lg text-zinc-400">
-            Multi-agent institutional analysis in progress.
-          </p>
-        </div>
+        {/* Workspace */}
 
         <div className="grid gap-6 xl:grid-cols-3">
 
+          {/* Main Content */}
+
           <div className="space-y-6 xl:col-span-2">
+
+            <ChatInput />
+
             <StreamingResponse />
+
             <PromptSuggestions />
+
           </div>
 
+          {/* Right Sidebar */}
+
           <div className="space-y-6">
+
             <AgentProgress />
+
             <ThinkingTimeline />
+
           </div>
 
         </div>
