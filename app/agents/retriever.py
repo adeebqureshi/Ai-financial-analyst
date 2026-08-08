@@ -25,8 +25,10 @@ class RetrieverAgent:
     def retrieve(
         self,
         query: str,
-        documents: list[Embedding],
+        documents: list[Embedding] | None = None,
     ) -> RetrievalResult:
+        if documents is None:
+            documents = []
 
         query_embedding = Embedding(
             text=query,

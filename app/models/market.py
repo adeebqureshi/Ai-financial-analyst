@@ -30,8 +30,8 @@ class MarketData(DomainModel):
 
     current_price: float = Field(
         ...,
-        gt=0,
-        description="Current market price",
+        ge=0,
+        description="Current market price (0.0 means price unavailable)",
     )
 
     currency: str = Field(

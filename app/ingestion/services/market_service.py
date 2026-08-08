@@ -38,11 +38,12 @@ class MarketService:
         elif "NASDAQ" in exchange_name:
             exchange = Exchange.NASDAQ
 
+        current_price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
+
         return MarketData(
             ticker=ticker.upper(),
             exchange=exchange,
-            current_price=info.get("currentPrice")
-            or info.get("regularMarketPrice"),
+            current_price=current_price,
             currency=info.get("currency", "USD"),
             market_cap=info.get("marketCap"),
             volume=info.get("volume"),
