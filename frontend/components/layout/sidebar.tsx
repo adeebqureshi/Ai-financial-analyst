@@ -1,137 +1,209 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  Bot,
+  BrainCircuit,
   Building2,
+  ChevronDown,
   FileText,
-  Home,
+  LayoutDashboard,
+  LineChart,
   Settings,
+  Sparkles,
+  Star,
   Wallet,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
-const items = [
+const navigation = [
   {
-    title: "Dashboard",
-    icon: Home,
-    href: "/",
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
   },
   {
-    title: "Companies",
+    name: "Markets",
+    href: "/markets",
+    icon: LineChart,
+  },
+  {
+    name: "Companies",
+    href: "/company",
     icon: Building2,
-    href: "/companies",
   },
   {
-    title: "AI Analysis",
-    icon: Bot,
-    href: "/analysis",
-  },
-  {
-    title: "Portfolio",
-    icon: Wallet,
+    name: "Portfolio",
     href: "/portfolio",
+    icon: Wallet,
   },
   {
-    title: "Reports",
-    icon: FileText,
+    name: "AI Analysis",
+    href: "/analysis",
+    icon: BrainCircuit,
+  },
+  {
+    name: "Reports",
     href: "/reports",
-  },
-  {
-    title: "Market",
-    icon: BarChart3,
-    href: "/market",
+    icon: FileText,
   },
 ];
 
-export function Sidebar() {
+const tools = [
+  {
+    name: "Watchlist",
+    href: "/watchlist",
+    icon: Star,
+  },
+  {
+    name: "Analytics",
+    href: "/analytics",
+    icon: BarChart3,
+  },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+
+    return pathname.startsWith(href);
+  };
+
   return (
-    <div className="flex h-full flex-col">
+    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[250px] flex-col border-r border-white/[0.07] bg-[#07080b] lg:flex">
       {/* Logo */}
-
-      <div className="px-6 py-8">
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 10,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          className="space-y-1"
+      <div className="flex h-[76px] items-center border-b border-white/[0.06] px-6">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3"
         >
-          <h1 className="text-xl font-semibold tracking-tight text-white">
-            FinPilot AI
-          </h1>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black">
+            <Sparkles size={18} />
+          </div>
 
-          <p className="text-xs text-zinc-500">
-            Enterprise Financial Intelligence
-          </p>
-        </motion.div>
+          <div>
+            <div className="text-sm font-semibold tracking-tight text-white">
+              AI Financial
+            </div>
+
+            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+              Analyst
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* Navigation */}
+      <div className="flex-1 overflow-y-auto px-3 py-6">
+        <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+          Workspace
+        </p>
 
-      <nav className="flex-1 px-3">
-        <div className="space-y-1">
-          {items.map((item, index) => (
-            <motion.div
-              key={item.title}
-              initial={{
-                opacity: 0,
-                x: -20,
-              }}
-              animate={{
-                opacity: 1,
-                x: 0,
-              }}
-              transition={{
-                delay: index * 0.05,
-              }}
-            >
+        <nav className="space-y-1">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+
+            return (
               <Link
+                key={item.name}
                 href={item.href}
-                className={cn(
-                  "group flex items-center gap-3",
-                  "rounded-2xl px-4 py-3",
-                  "text-zinc-400",
-                  "transition-all duration-300",
-                  "hover:bg-white/5",
-                  "hover:text-white"
-                )}
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                  active
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                }`}
               >
-                <item.icon
-                  size={20}
-                  className="transition-transform duration-300 group-hover:scale-110"
+                <Icon
+                  size={17}
+                  strokeWidth={active ? 2 : 1.7}
+                  className={
+                    active
+                      ? "text-white"
+                      : "text-zinc-600 group-hover:text-zinc-300"
+                  }
                 />
 
-                <span className="text-sm font-medium">
-                  {item.title}
-                </span>
+                <span>{item.name}</span>
+
+                {active && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400" />
+                )}
               </Link>
-            </motion.div>
-          ))}
-        </div>
-      </nav>
+            );
+          })}
+        </nav>
 
-      {/* Footer */}
+        <p className="mb-3 mt-8 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+          Tools
+        </p>
 
-      <div className="border-t border-white/5 p-4">
+        <nav className="space-y-1">
+          {tools.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                  active
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                }`}
+              >
+                <Icon
+                  size={17}
+                  className={
+                    active
+                      ? "text-white"
+                      : "text-zinc-600 group-hover:text-zinc-300"
+                  }
+                />
+
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Bottom */}
+      <div className="border-t border-white/[0.06] p-3">
         <Link
           href="/settings"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-zinc-400 transition-all hover:bg-white/5 hover:text-white"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 transition hover:bg-white/[0.04] hover:text-zinc-200"
         >
-          <Settings size={20} />
-
-          <span className="text-sm">
-            Settings
-          </span>
+          <Settings size={17} />
+          Settings
         </Link>
+
+        <div className="mt-2 flex items-center gap-3 rounded-xl bg-white/[0.03] p-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-violet-500 text-xs font-semibold text-white">
+            AQ
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium text-white">
+              Adeeb Qureshi
+            </p>
+
+            <p className="truncate text-[10px] text-zinc-600">
+              Personal workspace
+            </p>
+          </div>
+
+          <ChevronDown
+            size={14}
+            className="text-zinc-600"
+          />
+        </div>
       </div>
-    </div>
+    </aside>
   );
 }
