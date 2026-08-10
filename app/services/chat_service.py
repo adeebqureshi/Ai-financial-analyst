@@ -2,125 +2,120 @@
 Chat Service
 
 This module contains the business logic for the conversational AI chat
-endpoint. It uses the existing ``OpenAIClient`` for LLM generation and
-grounds answers in retrieved document context with source citations.
+endpoint. It delegates to the agentic pipeline (``CoordinatorAgent``) which:
 
-Design Decisions:
-    - **Document-first grounding**: Every message is first routed through the
-      existing retrieval engine (optionally scoped to one uploaded document).
-      Retrieved chunks are passed to the LLM together with their source
-      metadata so answers can cite filename + page.
-    - **No fabrication**: When retrieval returns no useful context the prompt
-      instructs the model to say the answer could not be found rather than
-      inventing content or page numbers.
-    - **Existing LLM preserved**: Generation continues to go through
-      ``OpenAIClient`` — no new LLM system is introduced.
+    1. classifies the question intent,
+    2. selects the minimal set of existing tools,
+    3. executes them (market data, financials, valuation, health, risk,
+       comparison, RAG retrieval, ...),
+    4. synthesizes an evidence-grounded answer,
+    5. audits it for fabrication / ticker isolation,
+    6. returns the answer together with real sources and the tools that ran.
+
+The endpoint's request contract (``message`` / ``ticker`` / ``document_id`` /
+``context``) and response model are preserved; ``plan`` and ``tools_used`` are
+added backward-compatibly for tool transparency.
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+from app.agents.financial_analyst import INSUFFICIENT_EVIDENCE_MESSAGE
 from app.core.config import Settings
 from app.core.logging import get_logger
-from app.llm.models import LLMRequest
-from app.llm.openai_client import OpenAIClient
-from app.retrieval.models import RetrievedChunk
-from app.schemas.responses import ChatResponseData, DocumentCitation
-from app.services.document_service import DocumentService
+from app.schemas.analysis import ChatRequest
+from app.schemas.responses import (
+    AgentToolExecutionData,
+    ChatResponseData,
+    DocumentCitation,
+)
+
+if TYPE_CHECKING:
+    from app.agents.coordinator import CoordinatorAgent
 
 logger = get_logger(__name__)
 
-_NOT_FOUND_MESSAGE = (
-    "I couldn't find sufficient information about that in the uploaded documents."
-)
+# Kept as an alias for callers / tests that referenced the previous constant.
+_NOT_FOUND_MESSAGE = INSUFFICIENT_EVIDENCE_MESSAGE
 
 
 class ChatService:
     """
-    Service for conversational AI chat grounded in uploaded documents.
+    Service for conversational AI chat grounded in the agentic pipeline.
     """
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        coordinator: CoordinatorAgent | None = None,
+    ) -> None:
         self._settings = settings
 
-        self._client = OpenAIClient()
+        if coordinator is None:
+            # Imported lazily to avoid a module-level import cycle between
+            # app.agents.coordinator -> tools -> services -> chat_service.
+            from app.agents.coordinator import CoordinatorAgent
 
-        self._documents = DocumentService(settings)
+            coordinator = CoordinatorAgent(settings)
 
-    def chat(self, request) -> ChatResponseData:
+        self._coordinator = coordinator
+
+    def chat(self, request: ChatRequest) -> ChatResponseData:
         """
-        Send a chat message and get a grounded AI response with citations.
+        Send a chat message and get an evidence-grounded AI response.
 
         Args:
             request: The validated chat request.
 
         Returns:
-            A ``ChatResponseData`` with the assistant reply and sources.
+            A ``ChatResponseData`` with the assistant reply, sources and the
+            tools that actually ran.
         """
-        context = self._documents.retrieve(
+        result = self._coordinator.run(
             query=request.message,
-            limit=self._settings.vector_top_k,
-            document_id=request.document_id,
-        )
-
-        sources = _build_citations(context.chunks)
-
-        context_text = _build_context_text(context.chunks)
-
-        prompt = _build_prompt(
-            question=request.message,
-            context_text=context_text,
             ticker=request.ticker,
+            document_id=request.document_id,
+            session_id=request.session_id,
         )
-
-        llm_response = self._client.generate(LLMRequest(prompt=prompt))
 
         return ChatResponseData(
-            message=llm_response.text,
-            ticker=request.ticker,
-            model=getattr(llm_response, "model", None),
-            sources=sources,
+            message=result.message or result.report.body,
+            ticker=result.tickers[0] if result.tickers else request.ticker,
+            model=result.model,
+            sources=_build_citations(result.sources),
+            plan=result.plan,
+            tools_used=[
+                AgentToolExecutionData(
+                    tool=item.get("tool", ""),
+                    status=item.get("status", "done"),
+                    detail=item.get("detail"),
+                )
+                for item in result.tools_used
+            ],
         )
 
 
-def _build_context_text(chunks: list[RetrievedChunk]) -> str:
+def _build_citations(chunks: list[dict]) -> list[DocumentCitation]:
     """
-    Render retrieved chunks with page/source metadata for the LLM.
-    """
-    blocks: list[str] = []
+    Convert retrieved chunks into stable source citations.
 
-    for chunk in chunks:
-        location = []
-
-        if chunk.filename:
-            location.append(chunk.filename)
-
-        if chunk.page is not None:
-            location.append(f"page {chunk.page}")
-
-        header = (
-            f"[{', '.join(location)}]"
-            if location
-            else "[source]"
-        )
-
-        blocks.append(f"{header}\n{chunk.text}")
-
-    return "\n\n".join(blocks)
-
-
-def _build_citations(chunks: list[RetrievedChunk]) -> list[DocumentCitation]:
-    """
-    Deduplicate chunk metadata into stable source citations.
+    Only chunks with a document id are cited — the answer can never reference
+    a source that was not actually retrieved.
     """
     citations: list[DocumentCitation] = []
 
     seen: set[tuple[str, int | None]] = set()
 
     for chunk in chunks:
-        if not chunk.document_id:
+        document_id = chunk.get("document_id")
+
+        if not document_id:
             continue
 
-        key = (chunk.document_id, chunk.page)
+        page = chunk.get("page")
+
+        key = (document_id, page)
 
         if key in seen:
             continue
@@ -129,48 +124,12 @@ def _build_citations(chunks: list[RetrievedChunk]) -> list[DocumentCitation]:
 
         citations.append(
             DocumentCitation(
-                document_id=chunk.document_id,
-                filename=chunk.filename or "Unknown document",
-                page=chunk.page,
-                chunk_id=chunk.chunk_id,
-                score=chunk.score or 0.0,
+                document_id=document_id,
+                filename=chunk.get("filename") or "Unknown document",
+                page=page,
+                chunk_id=chunk.get("chunk_id"),
+                score=chunk.get("score"),
             )
         )
 
     return citations
-
-
-def _build_prompt(
-    question: str,
-    context_text: str,
-    ticker: str | None,
-) -> str:
-    """
-    Build a grounded RAG prompt for the existing LLM client.
-    """
-    if not context_text:
-        return (
-            "You are a financial document analyst. You answer questions using "
-            "only information found in uploaded financial documents.\n\n"
-            f"Question: {question}\n\n"
-            f"If you cannot answer the question because no relevant document "
-            f"context is available, respond exactly with: "
-            f'"{_NOT_FOUND_MESSAGE}"\n'
-            "Do NOT make up information, and do NOT invent page numbers or sources."
-        )
-
-    ticker_line = f"\nTicker context: {ticker}" if ticker else ""
-
-    return (
-        "You are a financial document analyst. Answer the question using ONLY "
-        "the document context provided below.\n"
-        "Each context block is labelled with its source filename and page.\n"
-        "For every claim you make, cite the source and page, e.g. "
-        '"According to <filename> (page <N>), ...".\n'
-        "If the context does not contain the answer, respond exactly with: "
-        f'"{_NOT_FOUND_MESSAGE}"\n'
-        "Do NOT fabricate information, page numbers, or sources."
-        f"{ticker_line}\n\n"
-        f"Document context:\n{context_text}\n\n"
-        f"Question: {question}"
-    )

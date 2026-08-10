@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
+import { AgentWorkspace } from "@/features/agent";
 
 export default function HomePage() {
-  redirect("/dashboard");
+  return (
+    <AppShell>
+      <AgentWorkspace />
+    </AppShell>
+  );
 }

@@ -281,6 +281,8 @@ class ChatResponseData(BaseModel):
         ticker: Optional ticker context.
         model: LLM model used.
         sources: Grounding citations for the answer (document + page).
+        plan: High-level execution steps the agent actually ran.
+        tools_used: Tool-transparency metadata for the tools that ran.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -291,6 +293,14 @@ class ChatResponseData(BaseModel):
     sources: list[DocumentCitation] = Field(
         default_factory=list,
         description="Grounding citations for the answer.",
+    )
+    plan: list[str] = Field(
+        default_factory=list,
+        description="High-level execution steps the agent actually ran.",
+    )
+    tools_used: list[AgentToolExecutionData] = Field(
+        default_factory=list,
+        description="Tool-transparency metadata for the tools that ran.",
     )
 
 
@@ -313,6 +323,24 @@ class DocumentCitation(BaseModel):
     page: int | None = Field(default=None, description="Page number of the cited text.")
     chunk_id: str | None = Field(default=None, description="Stable chunk identifier.")
     score: float | None = Field(default=None, description="Relevance score of the cited chunk.")
+
+
+class AgentToolExecutionData(BaseModel):
+    """
+    Tool-transparency metadata for one tool the agent actually ran.
+
+    Attributes:
+        tool: The tool name (e.g. ``get_market_data``).
+        status: Execution status (``done`` / ``error`` / ``running`` /
+            ``skipped``).
+        detail: Short human-readable summary of what the tool did.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    tool: str = Field(..., description="Tool name.")
+    status: str = Field(..., description="Execution status (done/error/running/skipped).")
+    detail: str | None = Field(default=None, description="Short human-readable summary.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

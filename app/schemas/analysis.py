@@ -369,6 +369,7 @@ class ChatRequest(BaseModel):
         context: Optional retrieval context.
         ticker: Optional ticker context.
         document_id: Optional document ID to scope retrieval to one upload.
+        session_id: Optional session ID used to resolve follow-up context.
     """
 
     model_config = ConfigDict(
@@ -382,6 +383,11 @@ class ChatRequest(BaseModel):
     document_id: str | None = Field(
         default=None,
         description="Optional document ID to scope retrieval to one upload.",
+    )
+    session_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Optional session ID used to resolve follow-up context.",
     )
 
     @field_validator("ticker")

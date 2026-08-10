@@ -1,29 +1,53 @@
 from app.agents.planner import PlannerAgent
 
 
-def test_general_plan():
-
+def test_market_data_plan():
     planner = PlannerAgent()
 
-    tasks = planner.plan(
+    plan = planner.plan(
+        "What is Apple's current price?"
+    )
+
+    assert plan.tool_names == ["get_market_data"]
+
+    assert plan.tickers == ["AAPL"]
+
+
+def test_valuation_plan():
+    planner = PlannerAgent()
+
+    plan = planner.plan(
+        "Is Apple undervalued?"
+    )
+
+    assert "get_financials" in plan.tool_names
+
+    assert "calculate_valuation" in plan.tool_names
+
+    assert plan.tickers == ["AAPL"]
+
+
+def test_document_plan_uses_rag_only():
+    planner = PlannerAgent()
+
+    plan = planner.plan(
+        "What does Apple's annual report say about supply chain risk?"
+    )
+
+    assert plan.tool_names == ["search_documents"]
+
+    assert plan.needs_rag is True
+
+
+def test_company_research_fallback():
+    planner = PlannerAgent()
+
+    plan = planner.plan(
         "Tell me about Apple."
     )
 
-    assert len(tasks) == 2
+    assert "get_company" in plan.tool_names
 
-    assert tasks[0].name == "Retrieve Documents"
+    assert "get_financials" in plan.tool_names
 
-    assert tasks[1].name == "Generate Report"
-
-
-def test_dcf_plan():
-
-    planner = PlannerAgent()
-
-    tasks = planner.plan(
-        "Calculate DCF valuation."
-    )
-
-    assert len(tasks) == 3
-
-    assert tasks[1].name == "Run Valuation"
+    assert plan.tickers == ["AAPL"]

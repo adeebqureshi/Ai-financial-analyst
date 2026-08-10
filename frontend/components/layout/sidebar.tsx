@@ -4,129 +4,240 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  LayoutDashboard,
-  Building2,
   Bot,
+  BookOpen,
+  LayoutDashboard,
+  LineChart,
+  Scale,
   Briefcase,
   FileText,
-  BarChart3,
+  Search,
   Star,
   Settings,
-  FolderSearch,
-  Search,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 
-const items = [
+import { cn } from "@/lib/utils";
+
+type NavItem = {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const groups: NavGroup[] = [
   {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
+    label: "AI Financial Agent",
+    items: [
+      {
+        title: "Ask AI",
+        href: "/",
+        icon: Bot,
+      },
+    ],
   },
   {
-    title: "Companies",
-    href: "/company",
-    icon: Building2,
+    label: "Research",
+    items: [
+      {
+        title: "Documents",
+        href: "/research",
+        icon: BookOpen,
+      },
+      {
+        title: "Search",
+        href: "/search",
+        icon: Search,
+      },
+    ],
   },
   {
-    title: "AI Analysis",
-    href: "/analysis",
-    icon: Bot,
+    label: "Analysis",
+    items: [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Company Analysis",
+        href: "/analysis",
+        icon: LineChart,
+      },
+      {
+        title: "Compare",
+        href: "/compare",
+        icon: Scale,
+      },
+      {
+        title: "Portfolio",
+        href: "/portfolio",
+        icon: Briefcase,
+      },
+      {
+        title: "Watchlist",
+        href: "/watchlist",
+        icon: Star,
+      },
+    ],
   },
   {
-    title: "Portfolio",
-    href: "/portfolio",
-    icon: Briefcase,
-  },
-  {
-    title: "Reports",
-    href: "/reports",
-    icon: FileText,
-  },
-  {
-    title: "Research",
-    href: "/research",
-    icon: FolderSearch,
-  },
-  {
-    title: "Search",
-    href: "/search",
-    icon: Search,
-  },
-  {
-    title: "Compare",
-    href: "/compare",
-    icon: BarChart3,
-  },
-  {
-    title: "Watchlist",
-    href: "/watchlist",
-    icon: Star,
-  },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
+    label: "Output",
+    items: [
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: FileText,
+      },
+    ],
   },
 ];
 
-export function Sidebar() {
+type Props = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname();
 
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+
+    return (
+      pathname === href || pathname.startsWith(href + "/")
+    );
+  }
+
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-[#07080D]/80 backdrop-blur-2xl">
-      <div className="border-b border-white/10 p-8">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          AI Financial
-        </h1>
+    <>
+      {/* Mobile overlay */}
+      {open && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          aria-hidden="true"
+        />
+      )}
 
-        <p className="mt-2 text-sm text-zinc-500">
-          Enterprise Workspace
-        </p>
-      </div>
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-[#07080D]/95 backdrop-blur-2xl",
+          "transition-transform duration-300",
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+        aria-label="Primary navigation"
+      >
+        <div className="flex items-center justify-between border-b border-white/10 p-6">
+          <Link
+            href="/"
+            onClick={onClose}
+            className="flex items-center gap-3"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500">
+              <Bot size={22} className="text-white" />
+            </div>
 
-      <nav className="flex-1 space-y-2 p-4">
-        {items.map((item) => {
-          const Icon = item.icon;
+            <div>
+              <h1 className="text-sm font-bold leading-tight tracking-tight text-white">
+                AI Financial
+                <br />
+                Research Agent
+              </h1>
+            </div>
+          </Link>
 
-          const active = pathname === item.href;
-
-          return (
-            <Link
-              key={item.title}
-              href={item.href}
-            >
-              <motion.div
-                whileHover={{ x: 4 }}
-                className={`flex items-center gap-4 rounded-2xl px-4 py-3 transition-all ${
-                  active
-                    ? "bg-blue-500/15 text-white"
-                    : "text-zinc-500 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                <Icon size={20} />
-
-                <span>{item.title}</span>
-              </motion.div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-white/10 p-6">
-        <div className="rounded-3xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 p-5">
-          <p className="text-xs uppercase tracking-widest text-zinc-400">
-            AI Status
-          </p>
-
-          <h3 className="mt-2 font-semibold text-white">
-            Ready
-          </h3>
-
-          <p className="mt-2 text-sm text-zinc-400">
-            All AI agents are online.
-          </p>
+          <button
+            onClick={onClose}
+            aria-label="Close navigation"
+            className="rounded-xl border border-white/10 p-2 text-zinc-400 hover:text-white lg:hidden"
+          >
+            <X size={18} />
+          </button>
         </div>
-      </div>
-    </aside>
+
+        <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+          {groups.map((group) => (
+            <div key={group.label}>
+              <p className="px-4 pb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                {group.label}
+              </p>
+
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+
+                  const active = isActive(item.href);
+
+                  return (
+                    <Link
+                      key={item.title}
+                      href={item.href}
+                      onClick={onClose}
+                    >
+                      <motion.div
+                        whileHover={{ x: 3 }}
+                        className={cn(
+                          "flex items-center gap-4 rounded-2xl px-4 py-3 transition-all",
+                          active
+                            ? "bg-blue-500/15 text-white"
+                            : "text-zinc-500 hover:bg-white/5 hover:text-white"
+                        )}
+                      >
+                        <Icon size={20} />
+
+                        <span>{item.title}</span>
+
+                        {active && (
+                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400" />
+                        )}
+                      </motion.div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="border-t border-white/10 p-4">
+          <Link
+            href="/settings"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-4 rounded-2xl px-4 py-3 transition-all",
+              isActive("/settings")
+                ? "bg-blue-500/15 text-white"
+                : "text-zinc-500 hover:bg-white/5 hover:text-white"
+            )}
+          >
+            <Settings size={20} />
+
+            <span>Settings</span>
+          </Link>
+
+          <div className="mt-3 rounded-3xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 p-5">
+            <p className="text-xs uppercase tracking-widest text-zinc-400">
+              Agent Status
+            </p>
+
+            <h3 className="mt-2 flex items-center gap-2 font-semibold text-white">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Ready
+            </h3>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              Ask a research question to start.
+            </p>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }

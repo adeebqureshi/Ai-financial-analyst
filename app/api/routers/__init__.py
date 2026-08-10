@@ -30,6 +30,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.api.routes.analyze_company import router as analyze_company_router
 from app.api.routers.analysis import router as analysis_router
 from app.api.routers.chat import router as chat_router
 from app.api.routers.company import router as company_router
@@ -49,6 +50,7 @@ from app.api.routers.version import router as version_router
 api_router = APIRouter()
 
 # Include all routers
+api_router.include_router(analyze_company_router)
 api_router.include_router(root_router)
 api_router.include_router(health_router)
 api_router.include_router(version_router)
@@ -66,6 +68,7 @@ api_router.include_router(documents_router)
 
 __all__ = [
     "api_router",
+    "analyze_company_router",
     "root_router",
     "health_router",
     "version_router",
