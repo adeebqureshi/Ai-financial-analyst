@@ -1,23 +1,30 @@
-import type { ReactNode } from "react";
-import Sidebar from "./sidebar";
-import Topbar from "./topbar";
+import { Sidebar } from "./sidebar";
+import { Topbar } from "./topbar";
 
-export default function AppShell({
+type Props = {
+  children: React.ReactNode;
+};
+
+export function AppShell({
   children,
-}: {
-  children: ReactNode;
-}) {
+}: Props) {
   return (
-    <div className="min-h-screen bg-[#07080b] text-white">
+    <div className="min-h-screen bg-[#05060A] text-white">
+
       <Sidebar />
 
-      <div className="lg:pl-[250px]">
+      <div className="ml-72">
+
         <Topbar />
 
-        <main className="min-h-[calc(100vh-76px)]">
+        <main className="mx-auto max-w-[1700px] p-8">
+
           {children}
+
         </main>
+
       </div>
+
     </div>
   );
 }

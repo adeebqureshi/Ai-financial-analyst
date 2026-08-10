@@ -12,6 +12,7 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.models import FinancialStatement
 from app.financial.valuation import ValuationEngine
+from app.financial.wacc import WACC
 from app.schemas.analysis import ValuationRequest, IntrinsicValueRequest
 from app.schemas.responses import ValuationResultData, IntrinsicValueResponseData, ValuationResponseData
 
@@ -73,9 +74,32 @@ class ValuationService:
                 upside=result.upside,
                 recommendation=result.recommendation,
                 current_price=request.params.current_price,
-                discount_rate=0.0,
+                discount_rate=self._compute_discount_rate(request),
             ),
         )
+
+    def _compute_discount_rate(
+        self,
+        request: ValuationRequest | IntrinsicValueRequest,
+    ) -> float:
+        """Compute the WACC discount rate used by the DCF."""
+        statement = self._build_statement(request)
+        equity = statement.total_assets - statement.total_liabilities
+        cost_of_equity = WACC.cost_of_equity(
+            risk_free_rate=request.params.risk_free_rate,
+            beta=request.params.beta,
+            market_return=request.params.market_return,
+        )
+        try:
+            return WACC.calculate(
+                equity=equity,
+                debt=statement.debt,
+                cost_of_equity=cost_of_equity,
+                cost_of_debt=0.05,
+                tax_rate=request.params.tax_rate,
+            )
+        except ValueError:
+            return 0.0
 
     def intrinsic_value(self, request: IntrinsicValueRequest) -> IntrinsicValueResponseData:
         """

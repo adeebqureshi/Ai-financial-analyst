@@ -1,21 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-
 import "./globals.css";
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist",
-});
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
-});
+import { QueryProvider } from "@/providers/query-provider";
 
 export const metadata: Metadata = {
   title: "AI Financial Analyst",
-  description: "Enterprise AI Financial Workspace",
+  description: "Enterprise AI Financial Platform",
 };
 
 export default function RootLayout({
@@ -24,14 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-    >
-      <body
-        className={`${geist.variable} ${geistMono.variable}`}
-      >
-        {children}
+    <html lang="en">
+      <body>
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

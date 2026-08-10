@@ -1,17 +1,23 @@
 import { api } from "./api";
-import {
-  AnalyzeRequest,
-  AnalyzeResponse,
+import type {
+  AnalyzeData,
+  ApiResponse,
+  FinancialStatementInput,
+  ValuationParams,
 } from "@/types/analysis";
 
+export interface AnalyzeFullRequest {
+  ticker: string;
+  query: string;
+  statement: FinancialStatementInput;
+  valuation: ValuationParams;
+  piotroski_score: number;
+  altman_score: number;
+  beneish_score: number;
+}
+
 export function analyze(
-  payload: AnalyzeRequest
-) {
-  return api<AnalyzeResponse>(
-    "/analyze",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }
-  );
+  payload: AnalyzeFullRequest
+): Promise<ApiResponse<AnalyzeData>> {
+  return api.analyze(payload.ticker);
 }

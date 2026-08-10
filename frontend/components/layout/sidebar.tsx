@@ -2,206 +2,117 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
-  BarChart3,
-  BrainCircuit,
-  Building2,
-  ChevronDown,
-  FileText,
   LayoutDashboard,
-  LineChart,
-  Settings,
-  Sparkles,
+  Building2,
+  Bot,
+  Briefcase,
+  FileText,
+  BarChart3,
   Star,
-  Wallet,
+  Settings,
 } from "lucide-react";
 
-const navigation = [
+const items = [
   {
-    name: "Dashboard",
+    title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    name: "Markets",
-    href: "/markets",
-    icon: LineChart,
-  },
-  {
-    name: "Companies",
+    title: "Companies",
     href: "/company",
     icon: Building2,
   },
   {
-    name: "Portfolio",
-    href: "/portfolio",
-    icon: Wallet,
-  },
-  {
-    name: "AI Analysis",
+    title: "AI Analysis",
     href: "/analysis",
-    icon: BrainCircuit,
+    icon: Bot,
   },
   {
-    name: "Reports",
+    title: "Portfolio",
+    href: "/portfolio",
+    icon: Briefcase,
+  },
+  {
+    title: "Reports",
     href: "/reports",
     icon: FileText,
   },
-];
-
-const tools = [
   {
-    name: "Watchlist",
+    title: "Compare",
+    href: "/compare",
+    icon: BarChart3,
+  },
+  {
+    title: "Watchlist",
     href: "/watchlist",
     icon: Star,
   },
   {
-    name: "Analytics",
-    href: "/analytics",
-    icon: BarChart3,
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
   },
 ];
 
-export default function Sidebar() {
+export function Sidebar() {
   const pathname = usePathname();
 
-  const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-
-    return pathname.startsWith(href);
-  };
-
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[250px] flex-col border-r border-white/[0.07] bg-[#07080b] lg:flex">
-      {/* Logo */}
-      <div className="flex h-[76px] items-center border-b border-white/[0.06] px-6">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-3"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black">
-            <Sparkles size={18} />
-          </div>
+    <aside className="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-[#07080D]/80 backdrop-blur-2xl">
+      <div className="border-b border-white/10 p-8">
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          AI Financial
+        </h1>
 
-          <div>
-            <div className="text-sm font-semibold tracking-tight text-white">
-              AI Financial
-            </div>
-
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
-              Analyst
-            </div>
-          </div>
-        </Link>
+        <p className="mt-2 text-sm text-zinc-500">
+          Enterprise Workspace
+        </p>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto px-3 py-6">
-        <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
-          Workspace
-        </p>
+      <nav className="flex-1 space-y-2 p-4">
+        {items.map((item) => {
+          const Icon = item.icon;
 
-        <nav className="space-y-1">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
+          const active = pathname === item.href;
 
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+          return (
+            <Link
+              key={item.title}
+              href={item.href}
+            >
+              <motion.div
+                whileHover={{ x: 4 }}
+                className={`flex items-center gap-4 rounded-2xl px-4 py-3 transition-all ${
                   active
-                    ? "bg-white/[0.08] text-white"
-                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                    ? "bg-blue-500/15 text-white"
+                    : "text-zinc-500 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <Icon
-                  size={17}
-                  strokeWidth={active ? 2 : 1.7}
-                  className={
-                    active
-                      ? "text-white"
-                      : "text-zinc-600 group-hover:text-zinc-300"
-                  }
-                />
+                <Icon size={20} />
 
-                <span>{item.name}</span>
+                <span>{item.title}</span>
+              </motion.div>
+            </Link>
+          );
+        })}
+      </nav>
 
-                {active && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+      <div className="border-t border-white/10 p-6">
+        <div className="rounded-3xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 p-5">
+          <p className="text-xs uppercase tracking-widest text-zinc-400">
+            AI Status
+          </p>
 
-        <p className="mb-3 mt-8 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
-          Tools
-        </p>
+          <h3 className="mt-2 font-semibold text-white">
+            Ready
+          </h3>
 
-        <nav className="space-y-1">
-          {tools.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
-                  active
-                    ? "bg-white/[0.08] text-white"
-                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                }`}
-              >
-                <Icon
-                  size={17}
-                  className={
-                    active
-                      ? "text-white"
-                      : "text-zinc-600 group-hover:text-zinc-300"
-                  }
-                />
-
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Bottom */}
-      <div className="border-t border-white/[0.06] p-3">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 transition hover:bg-white/[0.04] hover:text-zinc-200"
-        >
-          <Settings size={17} />
-          Settings
-        </Link>
-
-        <div className="mt-2 flex items-center gap-3 rounded-xl bg-white/[0.03] p-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-violet-500 text-xs font-semibold text-white">
-            AQ
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-white">
-              Adeeb Qureshi
-            </p>
-
-            <p className="truncate text-[10px] text-zinc-600">
-              Personal workspace
-            </p>
-          </div>
-
-          <ChevronDown
-            size={14}
-            className="text-zinc-600"
-          />
+          <p className="mt-2 text-sm text-zinc-400">
+            All AI agents are online.
+          </p>
         </div>
       </div>
     </aside>

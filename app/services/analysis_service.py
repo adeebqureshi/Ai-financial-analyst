@@ -23,12 +23,14 @@ from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
 from app.financial.health import FinancialHealth
 from app.financial.models import FinancialStatement
+from app.financial.wacc import WACC
 from app.orchestrator.pipeline import FinancialPipeline
-from app.schemas.analysis import AnalyzeRequest
+from app.schemas.analysis import AnalyzeRequest, FinancialStatementInput
 from app.schemas.responses import (
     AnalyzeResponseData,
     CompanyData,
     HealthScoreData,
+    MarketDataResponse,
     ValuationResultData,
 )
 
@@ -66,6 +68,13 @@ class AnalysisService:
         if self._pipeline is None:
             self._pipeline = FinancialPipeline()
         return self._pipeline
+
+    @staticmethod
+    def _as_value(value: object) -> str | None:
+        """Return the enum value if the value is an enum, else the raw value."""
+        if value is None:
+            return None
+        return getattr(value, "value", value)
 
     def analyze(self, request: AnalyzeRequest) -> AnalyzeResponseData:
         """
@@ -112,6 +121,24 @@ class AnalysisService:
         company = result.get("company", {})
         market = result.get("market", {})
 
+        # Compute the WACC discount rate
+        equity = statement.total_assets - statement.total_liabilities
+        cost_of_equity = WACC.cost_of_equity(
+            risk_free_rate=request.valuation.risk_free_rate,
+            beta=request.valuation.beta,
+            market_return=request.valuation.market_return,
+        )
+        try:
+            discount_rate = WACC.calculate(
+                equity=equity,
+                debt=statement.debt,
+                cost_of_equity=cost_of_equity,
+                cost_of_debt=0.05,
+                tax_rate=request.valuation.tax_rate,
+            )
+        except ValueError:
+            discount_rate = 0.0
+
         # Compute health score
         health_score = FinancialHealth.score(
             request.piotroski_score,
@@ -132,12 +159,37 @@ class AnalysisService:
                 market_cap=getattr(company, "market_cap", None),
                 description=getattr(company, "description", None),
             ),
+            market=MarketDataResponse(
+                ticker=getattr(market, "ticker", request.ticker),
+                exchange=self._as_value(getattr(market, "exchange", None)),
+                current_price=getattr(market, "current_price", 0.0) or 0.0,
+                currency=getattr(market, "currency", "USD") or "USD",
+                market_cap=getattr(market, "market_cap", None),
+                volume=getattr(market, "volume", None),
+                beta=getattr(market, "beta", None),
+                pe_ratio=getattr(market, "pe_ratio", None),
+                eps=getattr(market, "eps", None),
+                dividend_yield=getattr(market, "dividend_yield", None),
+                week_52_high=getattr(market, "week_52_high", None),
+                week_52_low=getattr(market, "week_52_low", None),
+            ),
+            statement=FinancialStatementInput(
+                revenue=statement.revenue,
+                operating_income=statement.operating_income,
+                net_income=statement.net_income,
+                total_assets=statement.total_assets,
+                total_liabilities=statement.total_liabilities,
+                cash=statement.cash,
+                debt=statement.debt,
+                shares_outstanding=statement.shares_outstanding,
+                free_cash_flow=statement.free_cash_flow,
+            ),
             valuation=ValuationResultData(
                 intrinsic_value=getattr(analysis, "intrinsic_value", 0.0),
                 upside=getattr(analysis, "upside", 0.0),
                 recommendation=getattr(analysis, "recommendation", "HOLD"),
-                current_price=getattr(market, "current_price", 0.0),
-                discount_rate=0.0,
+                current_price=getattr(market, "current_price", 0.0) or 0.0,
+                discount_rate=discount_rate,
             ),
             health=HealthScoreData(
                 score=health_score,

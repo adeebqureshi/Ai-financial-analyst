@@ -1,89 +1,72 @@
 "use client";
 
-import {
-  Bell,
-  Command,
-  Menu,
-  Search,
-  Sparkles,
-} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Bell, Search, UserCircle2 } from "lucide-react";
 
-export default function Topbar() {
+const titles: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/company": "Companies",
+  "/analysis": "AI Analysis",
+  "/portfolio": "Portfolio",
+  "/reports": "Reports",
+  "/compare": "Compare",
+  "/watchlist": "Watchlist",
+  "/screener": "Screener",
+  "/settings": "Settings",
+};
+
+export function Topbar() {
+  const pathname = usePathname();
+
+  const segments = pathname.split("/").filter(Boolean);
+
+  let title = "Dashboard";
+
+  if (segments.length >= 2) {
+    title = titles[`/${segments[0]}`] ?? "Dashboard";
+  }
+
   return (
-    <header className="sticky top-0 z-40 flex h-[76px] items-center border-b border-white/[0.06] bg-[#07080b]/90 px-5 backdrop-blur-xl lg:px-8">
-      {/* Mobile menu */}
-      <button
-        type="button"
-        aria-label="Open menu"
-        className="rounded-lg p-2 text-zinc-500 hover:bg-white/[0.05] hover:text-white lg:hidden"
-      >
-        <Menu size={20} />
-      </button>
+    <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/10 bg-[#05060A]/70 px-10 backdrop-blur-xl">
 
-      {/* Search */}
-      <button
-        type="button"
-        className="group hidden h-10 w-[360px] items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-left transition hover:border-white/[0.12] hover:bg-white/[0.04] md:flex"
-      >
-        <Search
-          size={16}
-          className="text-zinc-600 group-hover:text-zinc-400"
-        />
+      <div>
+        <h2 className="text-xl font-semibold text-white">
+          {title}
+        </h2>
 
-        <span className="flex-1 text-xs text-zinc-600">
-          Search companies, markets, filings...
-        </span>
+        <p className="text-sm text-zinc-500">
+          AI Financial Workspace
+        </p>
+      </div>
 
-        <span className="flex items-center gap-1 rounded-md border border-white/[0.08] px-1.5 py-1 text-[10px] text-zinc-600">
-          <Command size={10} />
-          K
-        </span>
-      </button>
+      <div className="flex items-center gap-4">
 
-      {/* Right side */}
-      <div className="ml-auto flex items-center gap-2">
-        {/* AI status */}
-        <div className="hidden items-center gap-2 rounded-lg border border-emerald-400/10 bg-emerald-400/[0.04] px-3 py-2 sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+        <Link
+          href="/analysis"
+          className="flex h-12 w-96 items-center rounded-2xl border border-white/10 bg-white/5 px-4 transition hover:border-blue-500/30"
+        >
+          <Search
+            size={18}
+            className="text-zinc-500"
+          />
 
-          <span className="text-[11px] text-emerald-400">
-            AI Online
+          <span className="ml-3 text-sm text-zinc-500">
+            Search company or ask AI...
           </span>
-        </div>
+        </Link>
 
-        {/* AI assistant */}
-        <button
-          type="button"
-          aria-label="AI assistant"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-zinc-500 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white"
-        >
-          <Sparkles size={16} />
+        <button className="rounded-2xl border border-white/10 bg-white/5 p-3 text-zinc-400 hover:text-white">
+          <Bell size={20} />
         </button>
 
-        {/* Notifications */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-zinc-500 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white"
-        >
-          <Bell size={16} />
-
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-blue-400 ring-2 ring-[#07080b]" />
+        <button className="rounded-full border border-white/10 bg-white/5 p-2">
+          <UserCircle2
+            size={34}
+            className="text-white"
+          />
         </button>
 
-        {/* Profile */}
-        <button
-          type="button"
-          className="ml-1 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] p-1.5 pr-3 transition hover:bg-white/[0.05]"
-        >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-violet-500 text-[10px] font-semibold text-white">
-            AQ
-          </div>
-
-          <span className="hidden text-xs text-zinc-400 lg:block">
-            Adeeb
-          </span>
-        </button>
       </div>
     </header>
   );

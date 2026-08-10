@@ -22,10 +22,47 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.analysis import FinancialStatementInput
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Valuation / Analysis Sub-Responses
 # ──────────────────────────────────────────────────────────────────────────────
+
+
+class MarketDataResponse(BaseModel):
+    """
+    Live market snapshot payload.
+
+    Attributes:
+        ticker: Stock ticker symbol.
+        exchange: Listing exchange (NASDAQ, NYSE, AMEX, OTHER).
+        current_price: Current market price per share.
+        currency: Quote currency (default USD).
+        market_cap: Market capitalization.
+        volume: Trading volume.
+        beta: Stock beta.
+        pe_ratio: Trailing P/E ratio.
+        eps: Trailing earnings per share.
+        dividend_yield: Dividend yield (0.0-1.0).
+        week_52_high: 52-week high.
+        week_52_low: 52-week low.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    ticker: str = Field(..., description="Stock ticker symbol.")
+    exchange: str | None = Field(default=None, description="Listing exchange (NASDAQ, NYSE, AMEX, OTHER).")
+    current_price: float = Field(default=0.0, ge=0, description="Current market price per share ($).")
+    currency: str = Field(default="USD", description="Quote currency.")
+    market_cap: float | None = Field(default=None, ge=0, description="Market capitalization ($).")
+    volume: int | None = Field(default=None, ge=0, description="Trading volume.")
+    beta: float | None = Field(default=None, description="Stock beta.")
+    pe_ratio: float | None = Field(default=None, ge=0, description="Trailing P/E ratio.")
+    eps: float | None = Field(default=None, description="Trailing earnings per share ($).")
+    dividend_yield: float | None = Field(default=None, ge=0, description="Dividend yield (0.0-1.0).")
+    week_52_high: float | None = Field(default=None, ge=0, description="52-week high ($).")
+    week_52_low: float | None = Field(default=None, ge=0, description="52-week low ($).")
 
 
 class ValuationResultData(BaseModel):
@@ -257,6 +294,8 @@ class AnalyzeResponseData(BaseModel):
         ticker: Ticker symbol.
         query: Original analysis query.
         company: Company profile.
+        market: Live market snapshot.
+        statement: Financial statement data used for the analysis.
         valuation: Valuation result.
         health: Financial health score.
         recommendation: Overall investment recommendation.
@@ -267,6 +306,8 @@ class AnalyzeResponseData(BaseModel):
     ticker: str = Field(..., description="Ticker symbol.")
     query: str = Field(..., description="Original analysis query.")
     company: CompanyData = Field(..., description="Company profile.")
+    market: MarketDataResponse = Field(..., description="Live market snapshot.")
+    statement: FinancialStatementInput = Field(..., description="Financial statement data used for the analysis.")
     valuation: ValuationResultData = Field(..., description="Valuation result.")
     health: HealthScoreData = Field(..., description="Financial health score.")
     recommendation: str = Field(..., description="Overall investment recommendation.")

@@ -56,12 +56,13 @@ class BM25Index:
     ) -> list[str]:
         """
         Return ranked document IDs.
-        """
 
+        If the index has not been built yet (no documents ingested), an
+        empty list is returned so callers degrade gracefully instead of
+        crashing with a runtime error.
+        """
         if self.index is None:
-            raise RuntimeError(
-                "BM25 index has not been built."
-            )
+            return []
 
         tokens = query.lower().split()
 

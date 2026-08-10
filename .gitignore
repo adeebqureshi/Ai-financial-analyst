@@ -41,3 +41,6 @@ htmlcov/
 # Storage
 storage/cache/
 storage/logs/
+
+# Node (stray installs at repo root)
+node_modules/
