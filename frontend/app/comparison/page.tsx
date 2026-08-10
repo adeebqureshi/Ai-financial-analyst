@@ -1,6 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { ComparisonToolbar } from "@/components/comparison/comparison-toolbar";
-import { ComparisonTable } from "@/components/comparison/comparison-table";
+import { ComparisonWorkspace } from "@/components/comparison/comparison-workspace";
 
 export default function ComparisonPage() {
   return (
@@ -20,11 +19,7 @@ export default function ComparisonPage() {
 
         </div>
 
-        <ComparisonToolbar />
-
-        <div className="mt-10">
-          <ComparisonTable />
-        </div>
+        <ComparisonWorkspace />
 
       </div>
     </AppShell>

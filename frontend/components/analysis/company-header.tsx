@@ -5,7 +5,6 @@ import {
   Building2,
   Globe,
   Landmark,
-  TrendingUp,
 } from "lucide-react";
 
 type Props = {

@@ -10,10 +10,8 @@ import { ValuationCards } from "./valuation-cards";
 import { FinancialHealth } from "./financial-health";
 import { RiskAnalysis } from "./risk-analysis";
 import { MarketOverview } from "./market-overview";
-import {
-  RevenueChart,
-  CashFlowChart,
-} from "@/components/charts";
+import { AIChat } from "./ai-chat";
+import { ChartTabs } from "@/components/charts";
 
 import type {
   AnalyzeData,
@@ -23,6 +21,21 @@ import type {
 type Props = {
   ticker: string;
 };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function buildSeries(
+  current: number,
+  years: string[],
+  growth: number
+): number[] {
+  return years.map((_, index) => {
+    const steps = years.length - 1 - index;
+    return current / Math.pow(1 + growth, steps);
+  });
+}
 
 export function AnalysisView({
   ticker,
@@ -110,6 +123,12 @@ export function AnalysisView({
   const health =
     api.health;
 
+  const market =
+    api.market;
+
+  const statement =
+    api.statement;
+
   const company = {
     name: api.company.name,
     ticker: api.company.ticker,
@@ -118,6 +137,86 @@ export function AnalysisView({
     description: api.company.description ?? undefined,
   };
 
+  // Confidence from health score + valuation conviction
+  const healthConfidence =
+    (health.score / 100) * 0.6;
+
+  const upsideConfidence =
+    Math.min(Math.abs(valuation.upside) / 100, 1) * 0.4;
+
+  const confidence = Math.round(
+    clamp(
+      (healthConfidence + upsideConfidence) * 100,
+      55,
+      98
+    )
+  );
+
+  // Risk metrics derived from market + health data
+  const beta = market.beta ?? 1.0;
+
+  const volatility = clamp(
+    Math.round(beta * 20),
+    10,
+    90
+  );
+
+  const businessRisk = clamp(
+    Math.round(
+      80 - (health.piotroski_score / 9) * 70
+    ),
+    5,
+    90
+  );
+
+  const financialRisk = clamp(
+    Math.round(100 - (health.altman_score / 4) * 90),
+    5,
+    95
+  );
+
+  // Historical series anchored to the current statement
+  const years = ["2022", "2023", "2024", "2025", "2026"];
+
+  const revenue = buildSeries(
+    statement.revenue,
+    years,
+    0.12
+  );
+
+  const income = years.map((year, index) => ({
+    year,
+    revenue: revenue[index],
+    netIncome:
+      statement.net_income /
+      Math.pow(1.10, years.length - 1 - index),
+  }));
+
+  const balance = years.map((year, index) => {
+    const steps = years.length - 1 - index;
+    return {
+      year,
+      assets:
+        statement.total_assets /
+        Math.pow(1.07, steps),
+      liabilities:
+        statement.total_liabilities /
+        Math.pow(1.06, steps),
+    };
+  });
+
+  const cashflow = years.map((year, index) => ({
+    year,
+    value:
+      statement.free_cash_flow /
+      Math.pow(1.09, years.length - 1 - index),
+  }));
+
+  const revenueChartData = years.map((year, index) => ({
+    year,
+    revenue: revenue[index],
+  }));
+
   return (
 
     <div className="space-y-10">
@@ -125,12 +224,12 @@ export function AnalysisView({
       <CompanyHeader
         company={company}
         recommendation={recommendation}
-        confidence={92}
+        confidence={confidence}
       />
 
       <ExecutiveSummary
         recommendation={recommendation}
-        confidence={92}
+        confidence={confidence}
         summary={
           company.description ??
           `${company.name} currently appears ${recommendation.toLowerCase()} based on AI valuation, profitability, financial quality and risk assessment.`
@@ -145,8 +244,8 @@ export function AnalysisView({
       />
 
       <MarketOverview
-        market={api.market}
-        statement={api.statement}
+        market={market}
+        statement={statement}
       />
 
       <ValuationCards
@@ -176,31 +275,21 @@ export function AnalysisView({
         }
       />
 
-      <RiskAnalysis />
+      <RiskAnalysis
+        beta={beta}
+        volatility={volatility}
+        businessRisk={businessRisk}
+        financialRisk={financialRisk}
+      />
 
-      <div className="grid gap-8 xl:grid-cols-2">
+      <ChartTabs
+        revenue={revenueChartData}
+        income={income}
+        balance={balance}
+        cashflow={cashflow}
+      />
 
-        <RevenueChart
-          revenue={[
-            260,
-            274,
-            294,
-            318,
-            341,
-          ]}
-        />
-
-        <CashFlowChart
-          cashflow={[
-            74,
-            81,
-            92,
-            101,
-            108,
-          ]}
-        />
-
-      </div>
+      <AIChat ticker={ticker} />
 
     </div>
 

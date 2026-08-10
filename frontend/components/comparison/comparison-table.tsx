@@ -2,12 +2,9 @@
 
 import { useCompare } from "@/hooks/use-compare";
 
-const tickers = [
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "GOOGL",
-];
+type Props = {
+  tickers: string[];
+};
 
 const metrics = [
   "Intrinsic Value",
@@ -47,9 +44,19 @@ function getValue(
   }
 }
 
-export function ComparisonTable() {
+export function ComparisonTable({
+  tickers,
+}: Props) {
   const { data, isLoading, error } =
     useCompare(tickers);
+
+  if (tickers.length < 2) {
+    return (
+      <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-12 text-center text-zinc-400">
+        Add at least two tickers to compare.
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -62,12 +69,13 @@ export function ComparisonTable() {
   if (error) {
     return (
       <div className="rounded-[32px] border border-red-500/20 bg-red-500/5 p-12 text-center text-red-400">
-        Failed to load comparison.
+        Failed to load comparison. Please try again.
       </div>
     );
   }
 
   const result = data?.data?.results ?? [];
+  const best = data?.data?.best;
 
   return (
     <section className="overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.03]">
@@ -81,9 +89,19 @@ export function ComparisonTable() {
             {result.map((company) => (
               <th
                 key={company.ticker}
-                className="p-6 text-center text-white"
+                className={`p-6 text-center text-white ${
+                  best === company.ticker
+                    ? "bg-emerald-500/10"
+                    : ""
+                }`}
               >
                 {company.ticker}
+
+                {best === company.ticker && (
+                  <div className="mt-1 text-xs font-medium text-emerald-400">
+                    Best pick
+                  </div>
+                )}
               </th>
             ))}
           </tr>
@@ -102,7 +120,11 @@ export function ComparisonTable() {
               {result.map((company) => (
                 <td
                   key={`${company.ticker}-${metric}`}
-                  className="p-6 text-center text-white"
+                  className={`p-6 text-center text-white ${
+                    best === company.ticker
+                      ? "bg-emerald-500/10"
+                      : ""
+                  }`}
                 >
                   {getValue(company, metric)}
                 </td>

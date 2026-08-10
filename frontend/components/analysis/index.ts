@@ -6,3 +6,4 @@ export * from "./financial-health";
 export * from "./risk-analysis";
 export * from "./market-overview";
 export * from "./ai-chat";
+export * from "./report-viewer";
