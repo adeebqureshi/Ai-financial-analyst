@@ -107,6 +107,11 @@ function StatementRow({
   );
 }
 
+// Backend statement figures are expressed in $M (millions); convert to raw
+// dollars for display.
+const statementDollars = (value: number): number =>
+  value * 1_000_000;
+
 export function MarketOverview({
   market,
   statement,
@@ -268,22 +273,22 @@ export function MarketOverview({
 
           <StatementRow
             label="Total Assets"
-            value={formatCompact(statement.total_assets)}
+            value={formatCompact(statementDollars(statement.total_assets))}
           />
 
           <StatementRow
             label="Total Liabilities"
-            value={formatCompact(statement.total_liabilities)}
+            value={formatCompact(statementDollars(statement.total_liabilities))}
           />
 
           <StatementRow
             label="Cash"
-            value={formatCompact(statement.cash)}
+            value={formatCompact(statementDollars(statement.cash))}
           />
 
           <StatementRow
             label="Total Debt"
-            value={formatCompact(statement.debt)}
+            value={formatCompact(statementDollars(statement.debt))}
           />
 
           <StatementRow
@@ -314,22 +319,22 @@ export function MarketOverview({
 
           <StatementRow
             label="Revenue"
-            value={formatCompact(statement.revenue)}
+            value={formatCompact(statementDollars(statement.revenue))}
           />
 
           <StatementRow
             label="Operating Income"
-            value={formatCompact(statement.operating_income)}
+            value={formatCompact(statementDollars(statement.operating_income))}
           />
 
           <StatementRow
             label="Net Income"
-            value={formatCompact(statement.net_income)}
+            value={formatCompact(statementDollars(statement.net_income))}
           />
 
           <StatementRow
             label="Free Cash Flow"
-            value={formatCompact(statement.free_cash_flow)}
+            value={formatCompact(statementDollars(statement.free_cash_flow))}
           />
 
         </div>

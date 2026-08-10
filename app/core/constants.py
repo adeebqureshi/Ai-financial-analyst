@@ -255,6 +255,9 @@ DEFAULT_EMBEDDING_MODEL: Final[str] = "text-embedding-3-small"
 DEFAULT_VECTOR_TOP_K: Final[int] = 5
 """Default number of chunks retrieved per query in vector search."""
 
+DEFAULT_ENABLE_RERANKER: Final[bool] = False
+"""Whether the cross-encoder reranker runs after hybrid retrieval."""
+
 DEFAULT_CHUNK_SIZE: Final[int] = 1000
 """Default character length of text chunks during ingestion."""
 

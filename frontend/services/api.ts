@@ -4,6 +4,8 @@ import type {
   ChatData,
   CompareData,
   CompanyData,
+  DocumentData,
+  DocumentListData,
   FinancialRatiosData,
   ReportData,
   RiskAssessmentData,
@@ -159,6 +161,46 @@ export const api = {
     return request("/screen", {
       method: "POST",
       body: JSON.stringify(body),
+    });
+  },
+
+  uploadDocument(
+    file: File
+  ): Promise<ApiResponse<DocumentData>> {
+    const form = new FormData();
+
+    form.append("file", file);
+
+    return fetch(API + "/documents/upload", {
+      method: "POST",
+      body: form,
+    }).then(async (response) => {
+      if (!response.ok) {
+        const parsed = await response.json().catch(() => null);
+        const message =
+          parsed?.message ??
+          parsed?.detail ??
+          `Upload failed with status ${response.status}`;
+        throw new Error(message);
+      }
+
+      return response.json() as Promise<
+        ApiResponse<DocumentData>
+      >;
+    });
+  },
+
+  listDocuments(): Promise<
+    ApiResponse<DocumentListData>
+  > {
+    return request("/documents");
+  },
+
+  deleteDocument(
+    documentId: string
+  ): Promise<ApiResponse<{ document_id: string }>> {
+    return request(`/documents/${documentId}`, {
+      method: "DELETE",
     });
   },
 };

@@ -51,6 +51,7 @@ from app.core.constants import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
     DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_ENABLE_RERANKER,
     DEFAULT_LLM_MAX_TOKENS,
     DEFAULT_LLM_MODEL,
     DEFAULT_LLM_TEMPERATURE,
@@ -150,6 +151,10 @@ class Settings(BaseSettings):
     chunk_overlap: int = Field(
         default=DEFAULT_CHUNK_OVERLAP,
         description="Overlap between adjacent text chunks.",
+    )
+    enable_reranker: bool = Field(
+        default=DEFAULT_ENABLE_RERANKER,
+        description="Run the cross-encoder reranker after hybrid retrieval.",
     )
 
     # ── Sandbox ──────────────────────────────────────────────────────────

@@ -94,6 +94,10 @@ _TAGS_METADATA: list[dict[str, str]] = [
         "name": "Screen",
         "description": "Stock screening based on financial health and valuation criteria.",
     },
+    {
+        "name": "Documents",
+        "description": "Financial PDF upload, indexing, retrieval and document library.",
+    },
 ]
 
 _CONTACT = Contact(

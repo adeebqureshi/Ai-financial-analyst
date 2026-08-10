@@ -70,6 +70,10 @@ export interface SearchHitData {
   filing_date: string | null;
   section: string | null;
   source: string | null;
+  document_id: string | null;
+  filename: string | null;
+  page: number | null;
+  chunk_id: string | null;
 }
 
 export interface SearchResultData {
@@ -121,6 +125,29 @@ export interface ChatData {
   message: string;
   ticker: string | null;
   model: string | null;
+  sources: DocumentCitation[];
+}
+
+export interface DocumentCitation {
+  document_id: string;
+  filename: string;
+  page: number | null;
+  chunk_id: string | null;
+  score: number | null;
+}
+
+export interface DocumentData {
+  document_id: string;
+  filename: string;
+  pages: number;
+  chunks: number;
+  status: string;
+  created_at: string | null;
+}
+
+export interface DocumentListData {
+  documents: DocumentData[];
+  total: number;
 }
 
 export interface ScreenItemData {

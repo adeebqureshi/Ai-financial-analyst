@@ -7,8 +7,7 @@ High-level financial valuation engine.
 from __future__ import annotations
 
 from app.financial.dcf import DCFValuation
-from app.financial.models import FinancialStatement
-from app.financial.models import ValuationResult
+from app.financial.models import FinancialStatement, ValuationResult
 from app.financial.wacc import WACC
 
 
@@ -40,13 +39,20 @@ class ValuationEngine:
 
         cost_of_debt = 0.05
 
-        discount_rate = WACC.calculate(
-            equity=equity,
-            debt=statement.debt,
-            cost_of_equity=cost_of_equity,
-            cost_of_debt=cost_of_debt,
-            tax_rate=tax_rate,
-        )
+        try:
+            discount_rate = WACC.calculate(
+                equity=equity,
+                debt=statement.debt,
+                cost_of_equity=cost_of_equity,
+                cost_of_debt=cost_of_debt,
+                tax_rate=tax_rate,
+            )
+        except ValueError:
+            discount_rate = cost_of_equity
+
+        # Keep the discount rate above the terminal growth so the DCF
+        # terminal value stays finite.
+        discount_rate = max(discount_rate, terminal_growth + 0.01)
 
         intrinsic = DCFValuation.intrinsic_value(
             free_cash_flow=statement.free_cash_flow,
@@ -57,12 +63,17 @@ class ValuationEngine:
             shares_outstanding=statement.shares_outstanding,
         )
 
-        upside = (
-            (intrinsic - current_price)
-            / current_price
-        ) * 100
+        if current_price > 0:
+            upside = (
+                (intrinsic - current_price)
+                / current_price
+            ) * 100
+        else:
+            upside = 0.0
 
-        if upside >= 20:
+        if current_price <= 0:
+            recommendation = "HOLD"
+        elif upside >= 20:
             recommendation = "STRONG BUY"
         elif upside >= 10:
             recommendation = "BUY"

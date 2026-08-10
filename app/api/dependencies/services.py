@@ -42,6 +42,7 @@ from app.services.analysis_service import AnalysisService
 from app.services.chat_service import ChatService
 from app.services.compare_service import CompareService
 from app.services.company_service import CompanyService
+from app.services.document_service import DocumentService
 from app.services.health_service import HealthService
 from app.services.ratios_service import RatiosService
 from app.services.report_service import ReportService
@@ -169,4 +170,14 @@ def get_screen_service(
     FastAPI dependency that yields a ``ScreenService`` instance.
     """
     service = ScreenService(settings)
+    yield service
+
+
+def get_document_service(
+    settings: Settings = Depends(get_settings_dep),
+) -> Iterator[DocumentService]:
+    """
+    FastAPI dependency that yields a ``DocumentService`` instance.
+    """
+    service = DocumentService(settings)
     yield service

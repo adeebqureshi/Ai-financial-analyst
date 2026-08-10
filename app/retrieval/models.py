@@ -32,6 +32,14 @@ class RetrievedChunk:
 
     source: str
 
+    document_id: str | None = None
+
+    filename: str | None = None
+
+    page: int | None = None
+
+    chunk_id: str | None = None
+
 
 @dataclass(slots=True)
 class RetrievalContext:

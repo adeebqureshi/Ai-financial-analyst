@@ -17,7 +17,7 @@ Design Decisions:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -153,6 +153,10 @@ class SearchHitData(BaseModel):
         filing_date: Filing date.
         section: Document section.
         source: Source URL or identifier.
+        document_id: Document this chunk belongs to.
+        filename: Uploaded filename.
+        page: Page number within the document.
+        chunk_id: Stable chunk identifier.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -165,6 +169,10 @@ class SearchHitData(BaseModel):
     filing_date: date | None = Field(default=None, description="Filing date.")
     section: str | None = Field(default=None, description="Document section.")
     source: str | None = Field(default=None, description="Source URL or identifier.")
+    document_id: str | None = Field(default=None, description="Document this chunk belongs to.")
+    filename: str | None = Field(default=None, description="Uploaded filename.")
+    page: int | None = Field(default=None, description="Page number within the document.")
+    chunk_id: str | None = Field(default=None, description="Stable chunk identifier.")
 
 
 class SearchResultData(BaseModel):
@@ -272,6 +280,7 @@ class ChatResponseData(BaseModel):
         message: Assistant reply text.
         ticker: Optional ticker context.
         model: LLM model used.
+        sources: Grounding citations for the answer (document + page).
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -279,6 +288,74 @@ class ChatResponseData(BaseModel):
     message: str = Field(..., description="Assistant reply text.")
     ticker: str | None = Field(default=None, description="Optional ticker context.")
     model: str | None = Field(default=None, description="LLM model used.")
+    sources: list[DocumentCitation] = Field(
+        default_factory=list,
+        description="Grounding citations for the answer.",
+    )
+
+
+class DocumentCitation(BaseModel):
+    """
+    A single source citation attached to a RAG answer.
+
+    Attributes:
+        document_id: The uploaded document identifier.
+        filename: The uploaded filename.
+        page: Page number where the cited text was found.
+        chunk_id: Stable chunk identifier.
+        score: Relevance score of the cited chunk.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    document_id: str = Field(..., description="The uploaded document identifier.")
+    filename: str = Field(..., description="The uploaded filename.")
+    page: int | None = Field(default=None, description="Page number of the cited text.")
+    chunk_id: str | None = Field(default=None, description="Stable chunk identifier.")
+    score: float | None = Field(default=None, description="Relevance score of the cited chunk.")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Documents
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class DocumentData(BaseModel):
+    """
+    Indexed document payload.
+
+    Attributes:
+        document_id: Unique document identifier.
+        filename: Original uploaded filename.
+        pages: Number of pages in the document.
+        chunks: Number of indexed chunks.
+        status: Indexing status (indexed).
+        created_at: Indexing timestamp.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    document_id: str = Field(..., description="Unique document identifier.")
+    filename: str = Field(..., description="Original uploaded filename.")
+    pages: int = Field(default=0, ge=0, description="Number of pages in the document.")
+    chunks: int = Field(default=0, ge=0, description="Number of indexed chunks.")
+    status: str = Field(default="indexed", description="Indexing status.")
+    created_at: datetime | None = Field(default=None, description="Indexing timestamp.")
+
+
+class DocumentListData(BaseModel):
+    """
+    Document library payload.
+
+    Attributes:
+        documents: Indexed document records.
+        total: Number of documents returned.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    documents: list[DocumentData] = Field(default_factory=list, description="Indexed document records.")
+    total: int = Field(default=0, ge=0, description="Number of documents returned.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

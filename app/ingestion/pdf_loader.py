@@ -39,4 +39,5 @@ class PDFLoader(DocumentLoader):
                 filename=Path(path).name,
                 mime_type="application/pdf",
             ),
+            pages=pages,
         )

@@ -18,8 +18,10 @@ class DenseRetriever:
         self,
         vector: list[float],
         limit: int = 5,
+        document_id: str | None = None,
     ):
         return self.store.search(
             vector=vector,
             limit=limit,
+            document_id=document_id,
         )

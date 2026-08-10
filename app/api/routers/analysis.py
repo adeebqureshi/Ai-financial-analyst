@@ -2,11 +2,15 @@
 Analysis Router
 
 This module defines the analysis endpoint (``POST /analyze``) which performs
-a comprehensive AI-driven financial analysis of a company.
+a comprehensive AI-driven financial analysis of a company using real,
+company-specific financial data.
 
 Design Decisions:
     - **No business logic in route**: The route handler delegates entirely
-      to ``AnalysisService.analyze()``.
+      to ``AnalysisService.analyze_ticker()``.
+    - **Frontend contract**: The frontend only supplies a ticker; the service
+      fetches the real financial statements, market data and risk scores for
+      that ticker instead of using placeholder values.
     - **Dependency injection**: ``AnalysisService`` is injected via
       ``Depends(get_analysis_service)``, making it overridable in tests.
     - **Standard response format**: Returns ``APIResponse[AnalyzeResponseData]``
@@ -16,14 +20,9 @@ Design Decisions:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.api.dependencies.services import get_analysis_service
-from app.schemas.analysis import (
-    AnalyzeRequest,
-    FinancialStatementInput,
-    ValuationParams,
-)
 from app.schemas.base import APIResponse
 from app.schemas.responses import AnalyzeResponseData
 from app.services.analysis_service import AnalysisService
@@ -35,8 +34,8 @@ class AnalyzeTickerRequest(BaseModel):
     """
     Frontend payload for ``POST /analyze``.
 
-    The frontend only supplies a ticker; the full ``AnalyzeRequest`` is
-    built internally from placeholder analysis inputs.
+    The frontend only supplies a ticker; the full analysis inputs are
+    built server-side from real company-specific financial data.
     """
 
     ticker: str = Field(
@@ -45,6 +44,20 @@ class AnalyzeTickerRequest(BaseModel):
         max_length=5,
         description="Ticker symbol (1-5 letters).",
     )
+    query: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Optional analysis query.",
+    )
+
+    @field_validator("ticker")
+    @classmethod
+    def validate_ticker_symbol(cls, v: str) -> str:
+        """Normalize and validate the ticker symbol."""
+        ticker = v.strip().upper()
+        if not (1 <= len(ticker) <= 5) or not ticker.isalpha():
+            raise ValueError("Ticker must be 1-5 uppercase letters (e.g., 'AAPL').")
+        return ticker
 
 
 @router.post(
@@ -53,7 +66,8 @@ class AnalyzeTickerRequest(BaseModel):
     summary="Analyze a company",
     description=(
         "Performs a comprehensive AI-driven financial analysis of a company "
-        "including valuation, financial health, and an investment recommendation."
+        "using real company-specific financial statements, market data, "
+        "valuation, financial health, and an investment recommendation."
     ),
 )
 async def analyze(
@@ -64,42 +78,18 @@ async def analyze(
     Analyze endpoint.
 
     Args:
-        payload: The frontend payload containing only the ticker.
+        payload: The frontend payload containing the ticker.
         service: Injected ``AnalysisService`` instance.
 
     Returns:
         An ``APIResponse`` containing the analysis results.
     """
-    request = AnalyzeRequest(
+    result = service.analyze_ticker(
         ticker=payload.ticker,
-        query=f"Analyze {payload.ticker}",
-        statement=FinancialStatementInput(
-            revenue=394_328.0,
-            operating_income=114_301.0,
-            net_income=96_995.0,
-            total_assets=352_583.0,
-            total_liabilities=279_486.0,
-            cash=30_545.0,
-            debt=111_088.0,
-            shares_outstanding=15_431.0,
-            free_cash_flow=99_584.0,
-        ),
-        valuation=ValuationParams(
-            current_price=191.58,
-            growth_rate=0.08,
-            risk_free_rate=0.0425,
-            beta=1.24,
-            market_return=0.10,
-            tax_rate=0.21,
-        ),
-        piotroski_score=9,
-        altman_score=3.5,
-        beneish_score=-2.4,
+        query=payload.query,
     )
 
-    result = service.analyze(request)
-
     return APIResponse.success_response(
-        message=f"Analysis completed for {request.ticker}",
+        message=f"Analysis completed for {result.ticker}",
         data=result,
     )

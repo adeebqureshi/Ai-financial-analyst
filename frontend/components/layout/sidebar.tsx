@@ -12,6 +12,8 @@ import {
   BarChart3,
   Star,
   Settings,
+  FolderSearch,
+  Search,
 } from "lucide-react";
 
 const items = [
@@ -39,6 +41,16 @@ const items = [
     title: "Reports",
     href: "/reports",
     icon: FileText,
+  },
+  {
+    title: "Research",
+    href: "/research",
+    icon: FolderSearch,
+  },
+  {
+    title: "Search",
+    href: "/search",
+    icon: Search,
   },
   {
     title: "Compare",

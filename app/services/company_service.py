@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from app.core.config import Settings
 from app.core.logging import get_logger
+from app.financial.data import FinancialDataService
 from app.ingestion.services.sec_service import SECService
 from app.schemas.responses import CompanyData
 
@@ -27,9 +28,15 @@ class CompanyService:
     """
     Service for retrieving company profile information.
 
+    The profile (name, sector, industry, market cap, description) is fetched
+    from the existing market-data provider (Yahoo) so the returned values
+    always correspond to the requested company. SEC EDGAR is used as a
+    fallback when the market provider is unavailable.
+
     Attributes:
         _settings: Application settings instance.
         _sec: SEC EDGAR service for company data.
+        _financial_data: Financial data service for company profiles.
     """
 
     def __init__(self, settings: Settings) -> None:
@@ -41,6 +48,7 @@ class CompanyService:
         """
         self._settings = settings
         self._sec = SECService()
+        self._financial_data = FinancialDataService()
 
     def get_company(self, ticker: str) -> CompanyData:
         """
@@ -52,19 +60,38 @@ class CompanyService:
         Returns:
             A ``CompanyData`` with the company profile.
         """
+        ticker = ticker.upper()
+
         try:
-            company = self._sec.get_company(ticker)
+            data = self._financial_data.load(ticker)
             return CompanyData(
                 ticker=ticker,
-                name=getattr(company, "name", ticker),
-                sector=getattr(company, "sector", None),
-                industry=getattr(company, "industry", None),
-                market_cap=getattr(company, "market_cap", None),
-                description=getattr(company, "description", None),
+                name=data.name,
+                sector=data.sector,
+                industry=data.industry,
+                market_cap=data.market_cap,
+                description=data.description,
             )
         except Exception as exc:
-            logger.warning("Failed to retrieve company data for %s: %s", ticker, exc)
-            return CompanyData(
-                ticker=ticker,
-                name=ticker,
+            logger.warning(
+                "Failed to retrieve market profile for %s: %s. "
+                "Falling back to SEC.",
+                ticker,
+                exc,
             )
+            try:
+                company = self._sec.get_company(ticker)
+                return CompanyData(
+                    ticker=ticker,
+                    name=getattr(company, "name", ticker),
+                    sector=getattr(company, "sector", None),
+                    industry=getattr(company, "industry", None),
+                    market_cap=getattr(company, "market_cap", None),
+                    description=getattr(company, "description", None),
+                )
+            except Exception as exc2:
+                logger.warning("SEC fallback also failed for %s: %s", ticker, exc2)
+                return CompanyData(
+                    ticker=ticker,
+                    name=ticker,
+                )

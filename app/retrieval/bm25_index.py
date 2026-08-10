@@ -40,6 +40,11 @@ class BM25Index:
 
         self.documents = documents
 
+        if not documents:
+            self.index = None
+
+            return
+
         tokenized = [
             doc.lower().split()
             for doc in documents

@@ -294,6 +294,7 @@ class SearchRequest(BaseModel):
     Attributes:
         query: Search query string.
         limit: Maximum number of results to return.
+        document_id: Optional document ID to restrict the search to.
     """
 
     model_config = ConfigDict(
@@ -303,6 +304,10 @@ class SearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=1000, description="Search query.")
     limit: int = Field(default=5, ge=1, le=50, description="Max results (1-50).")
+    document_id: str | None = Field(
+        default=None,
+        description="Optional document ID to restrict the search to.",
+    )
 
 
 class CompanyRequest(BaseModel):
@@ -363,6 +368,7 @@ class ChatRequest(BaseModel):
         message: User chat message.
         context: Optional retrieval context.
         ticker: Optional ticker context.
+        document_id: Optional document ID to scope retrieval to one upload.
     """
 
     model_config = ConfigDict(
@@ -373,6 +379,10 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000, description="User chat message.")
     context: str | None = Field(default=None, description="Optional retrieval context.")
     ticker: str | None = Field(default=None, min_length=1, max_length=5, description="Optional ticker context.")
+    document_id: str | None = Field(
+        default=None,
+        description="Optional document ID to scope retrieval to one upload.",
+    )
 
     @field_validator("ticker")
     @classmethod

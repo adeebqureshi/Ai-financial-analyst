@@ -14,11 +14,6 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
 from app.api.dependencies.services import get_report_service
-from app.schemas.analysis import (
-    FinancialStatementInput,
-    ReportRequest,
-    ValuationParams,
-)
 from app.schemas.base import APIResponse
 from app.schemas.responses import ReportData
 from app.services.report_service import ReportService
@@ -31,7 +26,7 @@ class ReportTickerRequest(BaseModel):
     Frontend payload for ``POST /report``.
 
     The frontend only supplies a ticker and an optional query; the full
-    ``ReportRequest`` is built internally from default analysis inputs.
+    analysis inputs are built server-side from real company-specific data.
     """
 
     ticker: str = Field(
@@ -77,36 +72,12 @@ async def report(
     Returns:
         An ``APIResponse`` containing the generated report.
     """
-    request = ReportRequest(
+    result = service.generate_ticker_report(
         ticker=payload.ticker,
-        query=payload.query or f"Generate a comprehensive financial report for {payload.ticker}",
-        statement=FinancialStatementInput(
-            revenue=394_328.0,
-            operating_income=114_301.0,
-            net_income=96_995.0,
-            total_assets=352_583.0,
-            total_liabilities=279_486.0,
-            cash=30_545.0,
-            debt=111_088.0,
-            shares_outstanding=15_431.0,
-            free_cash_flow=99_584.0,
-        ),
-        valuation=ValuationParams(
-            current_price=191.58,
-            growth_rate=0.08,
-            risk_free_rate=0.0425,
-            beta=1.24,
-            market_return=0.10,
-            tax_rate=0.21,
-        ),
-        piotroski_score=9,
-        altman_score=3.5,
-        beneish_score=-2.4,
+        query=payload.query,
     )
 
-    result = service.generate(request)
-
     return APIResponse.success_response(
-        message=f"Report generated for {request.ticker}",
+        message=f"Report generated for {result.ticker}",
         data=result,
     )

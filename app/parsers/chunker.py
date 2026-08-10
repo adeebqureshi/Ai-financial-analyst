@@ -19,6 +19,7 @@ class Chunk:
     text: str
     section: str
     token_count: int
+    page: int = 0
 
 
 class Chunker:
@@ -95,6 +96,40 @@ class Chunker:
             for chunk in section_chunks:
 
                 chunk.chunk_id = next_chunk
+
+                next_chunk += 1
+
+                results.append(chunk)
+
+        return results
+
+    def chunk_pages(
+        self,
+        pages: list[str],
+        section: str = "Document",
+    ) -> list[Chunk]:
+        """
+        Chunk a list of page texts while preserving each chunk's page number.
+
+        Args:
+            pages: One text entry per page (1-indexed by position).
+            section: Section label applied to every chunk.
+
+        Returns:
+            A flat list of chunks with ``page`` set to the 1-based page index.
+        """
+
+        results: list[Chunk] = []
+
+        next_chunk = 0
+
+        for page_number, page_text in enumerate(pages, start=1):
+
+            for chunk in self.chunk_section(section, page_text):
+
+                chunk.chunk_id = next_chunk
+
+                chunk.page = page_number
 
                 next_chunk += 1
 

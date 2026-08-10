@@ -21,11 +21,12 @@ from __future__ import annotations
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
+from app.financial.data import FinancialDataService
 from app.financial.health import FinancialHealth
 from app.financial.models import FinancialStatement
 from app.financial.wacc import WACC
 from app.orchestrator.pipeline import FinancialPipeline
-from app.schemas.analysis import AnalyzeRequest, FinancialStatementInput
+from app.schemas.analysis import AnalyzeRequest, FinancialStatementInput, ValuationParams
 from app.schemas.responses import (
     AnalyzeResponseData,
     CompanyData,
@@ -35,6 +36,9 @@ from app.schemas.responses import (
 )
 
 logger = get_logger(__name__)
+
+_RISK_FREE_RATE = 0.0425
+_MARKET_RETURN = 0.10
 
 
 class AnalysisService:
@@ -57,6 +61,7 @@ class AnalysisService:
         self._settings = settings
         self._pipeline: FinancialPipeline | None = None
         self._engine = FinancialAnalysisEngine()
+        self._financial_data = FinancialDataService()
 
     def _get_pipeline(self) -> FinancialPipeline:
         """
@@ -75,6 +80,73 @@ class AnalysisService:
         if value is None:
             return None
         return getattr(value, "value", value)
+
+    def analyze_ticker(self, ticker: str, query: str | None = None) -> AnalyzeResponseData:
+        """
+        Analyze a company using real, company-specific financial data.
+
+        This is the Phase 2 entry point used by ``POST /analyze``: the
+        frontend only supplies a ticker, so the service fetches the actual
+        financial statements, market data and company profile for that
+        ticker, computes the risk scores from the real data, and runs the
+        full analysis pipeline.
+
+        Args:
+            ticker: The ticker symbol (e.g. ``"AAPL"``).
+            query: Optional natural-language analysis query.
+
+        Returns:
+            An ``AnalyzeResponseData`` with company-specific results.
+
+        Raises:
+            RetrievalError: If the data provider cannot supply the data.
+        """
+        ticker = ticker.upper()
+
+        data = self._financial_data.load(ticker)
+        statement = data.statement
+
+        request = AnalyzeRequest(
+            ticker=ticker,
+            query=query or f"Analyze {ticker}",
+            statement=FinancialStatementInput(
+                revenue=statement.revenue,
+                operating_income=statement.operating_income,
+                net_income=statement.net_income,
+                total_assets=statement.total_assets,
+                total_liabilities=statement.total_liabilities,
+                cash=statement.cash,
+                debt=statement.debt,
+                shares_outstanding=statement.shares_outstanding,
+                free_cash_flow=statement.free_cash_flow,
+            ),
+            valuation=ValuationParams(
+                current_price=data.current_price or 1.0,
+                growth_rate=data.growth_rate,
+                risk_free_rate=_RISK_FREE_RATE,
+                beta=data.beta or 1.0,
+                market_return=_MARKET_RETURN,
+                tax_rate=data.tax_rate,
+            ),
+            piotroski_score=data.piotroski_score,
+            altman_score=data.altman_score,
+            beneish_score=data.beneish_score,
+        )
+
+        result = self.analyze(request)
+
+        return result.model_copy(
+            update={
+                "company": CompanyData(
+                    ticker=ticker,
+                    name=data.name,
+                    sector=data.sector,
+                    industry=data.industry,
+                    market_cap=data.market_cap,
+                    description=data.description,
+                ),
+            }
+        )
 
     def analyze(self, request: AnalyzeRequest) -> AnalyzeResponseData:
         """

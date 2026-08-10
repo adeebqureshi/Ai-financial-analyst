@@ -19,6 +19,7 @@ class FinancialDocument:
     metadata: DocumentMetadata
     tables: list[str] = field(default_factory=list)
     sections: list[str] = field(default_factory=list)
+    pages: list[str] = field(default_factory=list)
 
     @property
     def word_count(self) -> int:

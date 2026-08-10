@@ -2,13 +2,16 @@
 Search Service
 
 This module contains the business logic for performing semantic search over
-the retrieval engine. It delegates to the existing ``RetrievalEngine`` and
-wraps the results in typed response DTOs.
+the retrieval engine. It delegates to the existing ``DocumentService``
+(which wraps ``RetrievalEngine``) and wraps the results in typed response
+DTOs, preserving document / page citation metadata.
 
 Design Decisions:
     - **Wraps existing retrieval engine**: Rather than reimplementing the
-      retrieval logic, this service calls ``RetrievalEngine.retrieve()``
+      retrieval logic, this service calls ``DocumentService.retrieve()``
       and transforms the ``RetrievalContext`` into a typed ``SearchResultData``.
+    - **Document scoping**: An optional ``document_id`` restricts the search
+      to a single uploaded document.
     - **Settings injection**: Consistent with other services, the constructor
       accepts ``Settings`` for dependency injection and testability.
 """
@@ -17,9 +20,9 @@ from __future__ import annotations
 
 from app.core.config import Settings
 from app.core.logging import get_logger
-from app.retrieval.retrieval_engine import RetrievalEngine
 from app.schemas.analysis import SearchRequest
 from app.schemas.responses import SearchHitData, SearchResultData
+from app.services.document_service import DocumentService
 
 logger = get_logger(__name__)
 
@@ -30,7 +33,7 @@ class SearchService:
 
     Attributes:
         _settings: Application settings instance.
-        _engine: Retrieval engine instance.
+        _documents: Document service providing document-scoped retrieval.
     """
 
     def __init__(self, settings: Settings) -> None:
@@ -41,7 +44,8 @@ class SearchService:
             settings: The application settings instance.
         """
         self._settings = settings
-        self._engine = RetrievalEngine()
+
+        self._documents = DocumentService(settings)
 
     def search(self, request: SearchRequest) -> SearchResultData:
         """
@@ -53,9 +57,10 @@ class SearchService:
         Returns:
             A ``SearchResultData`` with the retrieval hits.
         """
-        context = self._engine.retrieve(
+        context = self._documents.retrieve(
             query=request.query,
             limit=request.limit,
+            document_id=request.document_id,
         )
 
         hits = [
@@ -68,6 +73,10 @@ class SearchService:
                 filing_date=chunk.filing_date,
                 section=chunk.section,
                 source=chunk.source,
+                document_id=chunk.document_id,
+                filename=chunk.filename,
+                page=chunk.page,
+                chunk_id=chunk.chunk_id,
             )
             for chunk in context.chunks
         ]
