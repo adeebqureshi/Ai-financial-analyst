@@ -1,10 +1,12 @@
 from app.llm.models import LLMRequest
 from app.llm.openai_client import OpenAIClient
+from app.llm.provider_config import ProviderConfig
 
 
 def test_generate():
 
-    client = OpenAIClient()
+    # Explicitly use mock provider for unit tests so they never hit the network
+    client = OpenAIClient(config=ProviderConfig(provider="mock"))
 
     response = client.generate(
         LLMRequest(prompt="Hello")

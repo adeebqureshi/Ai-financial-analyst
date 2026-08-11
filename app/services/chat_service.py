@@ -39,6 +39,30 @@ logger = get_logger(__name__)
 # Kept as an alias for callers / tests that referenced the previous constant.
 _NOT_FOUND_MESSAGE = INSUFFICIENT_EVIDENCE_MESSAGE
 
+# Process-wide coordinator shared by every ``ChatService``. The coordinator
+# owns ``ConversationMemory`` which is keyed by ``session_id`` and therefore
+# must outlive individual HTTP requests — a per-request coordinator would
+# forget every session and multi-turn follow-ups ("what about its valuation?")
+# would never resolve. The coordinator and its underlying services are
+# otherwise stateless per run, so a single shared instance is safe.
+_coordinator: CoordinatorAgent | None = None
+
+
+def _get_coordinator(settings: Settings) -> CoordinatorAgent:
+    """
+    Return the process-wide coordinator, building it once on first use.
+    """
+    global _coordinator
+
+    if _coordinator is None:
+        # Imported lazily to avoid a module-level import cycle between
+        # app.agents.coordinator -> tools -> services -> chat_service.
+        from app.agents.coordinator import CoordinatorAgent
+
+        _coordinator = CoordinatorAgent(settings)
+
+    return _coordinator
+
 
 class ChatService:
     """
@@ -53,11 +77,7 @@ class ChatService:
         self._settings = settings
 
         if coordinator is None:
-            # Imported lazily to avoid a module-level import cycle between
-            # app.agents.coordinator -> tools -> services -> chat_service.
-            from app.agents.coordinator import CoordinatorAgent
-
-            coordinator = CoordinatorAgent(settings)
+            coordinator = _get_coordinator(settings)
 
         self._coordinator = coordinator
 

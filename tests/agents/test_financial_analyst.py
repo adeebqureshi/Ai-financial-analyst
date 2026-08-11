@@ -1,8 +1,12 @@
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from app.agents.financial_analyst import FinancialAnalystAgent
+from app.agents.financial_analyst import (
+    LLM_UNAVAILABLE_MESSAGE,
+    FinancialAnalystAgent,
+)
+from app.agents.intents import AgentIntent
 from app.financial.models import FinancialStatement
+from app.llm.exceptions import ProviderError
 
 
 @patch("app.agents.financial_analyst.FinancialAnalysisEngine")
@@ -44,3 +48,33 @@ def test_financial_analyst(mock_engine):
     assert result == "analysis"
 
     engine.analyze.assert_called_once()
+
+
+class FailingLLM:
+    """LLM substitute that raises a typed provider error."""
+
+    def generate(self, request):
+        raise ProviderError("OPENAI_API_KEY is not set.")
+
+
+def test_synthesize_degrades_gracefully_when_llm_unavailable():
+    agent = FinancialAnalystAgent()
+
+    agent._client = FailingLLM()
+
+    answer, model = agent.synthesize(
+        query="Is Apple undervalued?",
+        intents=[AgentIntent.VALUATION],
+        evidence={
+            "get_market_data": [
+                {"result": {"ticker": "AAPL", "current_price": 220.10}}
+            ]
+        },
+        sources=[],
+        tickers=["AAPL"],
+    )
+
+    # A provider failure must not crash the request: a clean fallback is
+    # returned and no model name is claimed.
+    assert answer == LLM_UNAVAILABLE_MESSAGE
+    assert model is None

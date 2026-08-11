@@ -122,6 +122,14 @@ class Settings(BaseSettings):
     )
 
     # ── LLM ──────────────────────────────────────────────────────────────
+    llm_provider: str = Field(
+        default="mock",
+        description=(
+            "LLM provider name used by OpenAIClient. Set to 'openai' (or any "
+            "name registered in ProviderFactory) in production; 'mock' is the "
+            "safe default for tests and offline development."
+        ),
+    )
     llm_model: str = Field(
         default=DEFAULT_LLM_MODEL,
         description="Default OpenAI chat completion model.",

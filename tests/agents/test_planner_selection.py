@@ -182,3 +182,82 @@ def test_follow_up_resolves_which_one():
     plan = planner.plan("Which one has better valuation?", session_id=session)
 
     assert plan.tickers == ["AAPL"]
+
+
+# ──────────────────────────────────────────────────────────────────────
+# TEST 9 — complex mixed question (Phase 5)
+# ──────────────────────────────────────────────────────────────────────
+
+
+def test_compare_nvidia_amd_mixed_uses_tools_and_rag():
+    plan = PlannerAgent().plan(
+        "Compare Nvidia and AMD using their financials and annual reports, "
+        "assess valuation, health and risks."
+    )
+
+    assert plan.tickers == ["NVDA", "AMD"]
+
+    tools = set(plan.tool_names)
+
+    assert {
+        "get_financials",
+        "calculate_valuation",
+        "calculate_financial_health",
+        "calculate_risk",
+        "search_documents",
+        "compare_companies",
+    } <= tools
+
+    assert plan.needs_rag is True
+
+    # one retrieval per company — never a cross-company RAG mix
+    assert plan.tool_names.count("search_documents") == 2
+
+    assert plan.tool_names.count("calculate_valuation") == 2
+
+    assert plan.tool_names.count("calculate_risk") == 2
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Conversational context — implicit follow-up without a pronoun (Phase 5)
+# ──────────────────────────────────────────────────────────────────────
+
+
+def test_follow_up_inherits_ticker_without_pronoun():
+    planner = PlannerAgent()
+
+    session = "test-session-3"
+
+    planner.plan("Analyze Apple.", session_id=session)
+
+    plan = planner.plan("What is the revenue?", session_id=session)
+
+    assert plan.tickers == ["AAPL"]
+
+    assert "get_financials" in plan.tool_names
+
+
+def test_follow_up_does_not_leak_ticker_on_topic_switch():
+    planner = PlannerAgent()
+
+    session = "test-session-4"
+
+    planner.plan("Analyze Apple.", session_id=session)
+
+    plan = planner.plan("What is the weather today?", session_id=session)
+
+    assert plan.tickers == []
+
+
+def test_follow_up_switching_company_ignores_previous():
+    planner = PlannerAgent()
+
+    session = "test-session-5"
+
+    planner.plan("Analyze Apple.", session_id=session)
+
+    plan = planner.plan("Compare Nvidia and AMD.", session_id=session)
+
+    assert plan.tickers == ["NVDA", "AMD"]
+
+    assert "AAPL" not in plan.tickers

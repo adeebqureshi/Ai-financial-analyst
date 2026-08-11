@@ -167,3 +167,140 @@ def test_audit_passes_when_rag_returned_nothing():
     )
 
     assert audit.passed
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Numerical-claim grounding (Phase 5)
+# ──────────────────────────────────────────────────────────────────────
+
+
+def test_audit_accepts_figure_from_tool_evidence():
+    plan = _plan(["calculate_valuation"], ["AAPL"])
+
+    evidence = {
+        "calculate_valuation": [
+            _result(
+                "calculate_valuation",
+                {
+                    "ticker": "AAPL",
+                    "current_price": 220.10,
+                    "intrinsic_value": 245.30,
+                    "upside": 11.45,
+                },
+            )
+        ]
+    }
+
+    audit = _audit(
+        plan,
+        evidence,
+        "AAPL is trading at $220.10 with an intrinsic value of $245.30, "
+        "implying 11.45% upside.",
+    )
+
+    assert audit.passed
+
+
+def test_audit_accepts_rounded_figure():
+    plan = _plan(["get_market_data"], ["AAPL"])
+
+    evidence = {
+        "get_market_data": [
+            _result("get_market_data", {"ticker": "AAPL", "current_price": 220.10})
+        ]
+    }
+
+    audit = _audit(plan, evidence, "AAPL is trading at roughly $220.")
+
+    assert audit.passed
+
+
+def test_audit_accepts_percentage_equivalent_of_fraction():
+    plan = _plan(["get_financials"], ["AAPL"])
+
+    evidence = {
+        "get_financials": [
+            _result(
+                "get_financials",
+                {
+                    "ticker": "AAPL",
+                    "statement": {"revenue": 394_328.0},
+                    "growth_rate": 0.08,
+                },
+            )
+        ]
+    }
+
+    audit = _audit(plan, evidence, "AAPL's revenue is $394,328 million and its growth rate is 8%.")
+
+    assert audit.passed
+
+
+def test_audit_rejects_fabricated_financial_figure():
+    plan = _plan(["calculate_valuation"], ["AAPL"])
+
+    evidence = {
+        "calculate_valuation": [
+            _result(
+                "calculate_valuation",
+                {
+                    "ticker": "AAPL",
+                    "current_price": 220.10,
+                    "intrinsic_value": 245.30,
+                    "upside": 11.45,
+                },
+            )
+        ]
+    }
+
+    audit = _audit(
+        plan,
+        evidence,
+        "AAPL is trading at $220.10 and is worth $999.99 per share.",
+    )
+
+    assert not audit.passed
+
+    assert any("999.99" in issue for issue in audit.issues)
+
+
+def test_audit_rejects_invented_percentage():
+    plan = _plan(["get_market_data"], ["AAPL"])
+
+    evidence = {
+        "get_market_data": [
+            _result("get_market_data", {"ticker": "AAPL", "current_price": 220.10})
+        ]
+    }
+
+    audit = _audit(plan, evidence, "AAPL trades at $220.10 with 45% upside.")
+
+    assert not audit.passed
+
+    assert any("45.00%" in issue for issue in audit.issues)
+
+
+def test_audit_accepts_number_quoted_from_retrieved_document():
+    plan = _plan(["search_documents"], ["AAPL"])
+
+    chunk = {
+        "document_id": "doc1",
+        "filename": "Apple 10-K.pdf",
+        "page": 42,
+        "text": "The company generated revenue of $394,328 million in the fiscal year.",
+    }
+
+    evidence = {
+        "search_documents": [
+            _result("search_documents", {"chunks": [chunk]})
+        ]
+    }
+
+    audit = _audit(
+        plan,
+        evidence,
+        "According to Apple 10-K.pdf (page 42), the company generated $394,328 million in revenue.",
+        sources=[chunk],
+    )
+
+    assert audit.passed

@@ -24,9 +24,11 @@ from typing import Any
 from app.agents.audit_result import AuditResult
 from app.agents.auditor import AuditorAgent
 from app.agents.financial_analyst import FinancialAnalystAgent
+from app.agents.intents import AgentIntent
 from app.agents.memory import ConversationMemory
 from app.agents.planner import PlannerAgent
 from app.agents.report import InvestmentReport
+from app.agents.report_writer_v2 import ReportWriterAgent
 from app.agents.research_plan import ResearchPlan
 from app.agents.tools import ToolRegistry
 from app.agents.workflow_result import WorkflowResult
@@ -53,6 +55,7 @@ class CoordinatorAgent:
         tools: ToolRegistry | None = None,
         analyst: FinancialAnalystAgent | None = None,
         auditor: AuditorAgent | None = None,
+        report_writer: ReportWriterAgent | None = None,
     ) -> None:
         settings = settings or get_settings()
 
@@ -68,6 +71,8 @@ class CoordinatorAgent:
         self.analyst = analyst or FinancialAnalystAgent(settings)
 
         self.auditor = auditor or AuditorAgent()
+
+        self.report_writer = report_writer or ReportWriterAgent()
 
     def run(
         self,
@@ -131,6 +136,86 @@ class CoordinatorAgent:
             report=report,
             success=audit.passed,
             message=answer,
+            model=model,
+            sources=sources,
+            plan=steps,
+            tools_used=tools_used,
+            intents=[intent.value for intent in plan.intents],
+            tickers=plan.tickers,
+            audit=audit,
+        )
+
+    def run_report(
+        self,
+        query: str,
+        ticker: str | None = None,
+        document_id: str | None = None,
+        session_id: str | None = None,
+    ) -> WorkflowResult:
+        """
+        Execute the full agentic pipeline and generate a structured investment report.
+
+        This is used when the user explicitly requests a report (REPORT_GENERATION intent).
+
+        Args:
+            query: The user question/request.
+            ticker: Optional explicit ticker context.
+            document_id: Optional document the question is scoped to.
+            session_id: Optional session id for follow-up context.
+
+        Returns:
+            A :class:`WorkflowResult` with the structured report, sources and tools.
+        """
+        plan = self.planner.plan(
+            query=query,
+            ticker=ticker,
+            document_id=document_id,
+            session_id=session_id,
+        )
+
+        evidence, steps, tools_used, sources = self._execute(plan)
+
+        # Generate the structured report using the ReportWriterAgent
+        report_content, model = self.report_writer.write(
+            query=plan.query,
+            intents=plan.intents,
+            evidence=evidence,
+            sources=sources,
+            tickers=plan.tickers,
+        )
+
+        # Audit the report content
+        audit = self.auditor.audit_evidence(
+            plan=plan,
+            evidence=evidence,
+            answer=report_content,
+            sources=sources,
+            model=model,
+        )
+
+        if not audit.passed:
+            report_content = f"{report_content}{_AUDITOR_NOTE}"
+
+        if session_id:
+            self._memory.remember(
+                session_id,
+                plan.tickers,
+                query,
+                report_content,
+            )
+
+        company = plan.tickers[0] if plan.tickers else "Research"
+
+        report = InvestmentReport(
+            company=company,
+            title=f"{company} Investment Research Report",
+            body=report_content,
+        )
+
+        return WorkflowResult(
+            report=report,
+            success=audit.passed,
+            message=report_content,
             model=model,
             sources=sources,
             plan=steps,

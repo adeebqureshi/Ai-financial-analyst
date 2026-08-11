@@ -24,8 +24,9 @@ Design Decisions:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from app.agents.companies import TICKER_HINTS, company_names_for
 from app.core.config import Settings, get_settings
@@ -38,8 +39,8 @@ from app.financial.ratios import FinancialRatios
 from app.financial.valuation import ValuationEngine
 from app.financial.wacc import WACC
 from app.ingestion.services.market_service import MarketService
-from app.services.compare_service import CompareService
 from app.services.company_service import CompanyService
+from app.services.compare_service import CompareService
 from app.services.document_service import DocumentService
 from app.services.report_service import ReportService
 
@@ -455,9 +456,19 @@ class ToolRegistry:
         document_id = args.get("document_id")
         limit = int(args.get("limit") or DEFAULT_RETRIEVAL_LIMIT)
 
+        # When the retrieval is scoped to a company we pull a wider candidate
+        # pool and then filter by ticker. This keeps the correct company's
+        # chunks from being crowded out by other filings in the top-N, which
+        # is what grounds an Apple question in Apple's own documents.
+        candidate_limit = (
+            max(limit * 3, DEFAULT_RETRIEVAL_LIMIT)
+            if ticker
+            else limit
+        )
+
         context = self._documents.retrieve(
             query=query,
-            limit=limit,
+            limit=candidate_limit,
             document_id=document_id,
         )
 
@@ -484,7 +495,7 @@ class ToolRegistry:
                 if _chunk_belongs_to_ticker(chunk, ticker)
             ]
             if filtered:
-                chunks = filtered
+                chunks = filtered[:limit]
                 ticker_filtered = True
 
         return ToolResult(

@@ -34,6 +34,43 @@ _CITATION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Numbers appearing in plain text (used to index retrieved chunk text so that
+# numbers quoted from a retrieved document count as grounded). The optional
+# unit suffix lets "$394,328 million" and "394.3 billion" register at scale.
+_TEXT_NUMBER_PATTERN = re.compile(
+    r"(-?\d[\d,]*(?:\.\d+)?)\s*"
+    r"(thousand|million|billion|trillion|mn|bn|k|m|b)?",
+    re.IGNORECASE,
+)
+
+# Financial figure claims the answer may assert: dollar amounts (with an
+# optional unit suffix) and percentages.
+_DOLLAR_CLAIM_PATTERN = re.compile(
+    r"\$\s*(-?\d[\d,]*(?:\.\d+)?)\s*"
+    r"(thousand|million|billion|trillion|mn|bn|k|m|b)?",
+    re.IGNORECASE,
+)
+_PERCENT_CLAIM_PATTERN = re.compile(r"(-?\d+(?:\.\d+)?)\s*%")
+
+_UNIT_MULTIPLIERS = {
+    "thousand": 1e3,
+    "k": 1e3,
+    "million": 1e6,
+    "m": 1e6,
+    "mn": 1e6,
+    "billion": 1e9,
+    "b": 1e9,
+    "bn": 1e9,
+    "trillion": 1e12,
+}
+
+# Relative tolerance used when matching a claimed figure to tool evidence:
+# a claim matches when it is within 2% (or $1 for small figures) of a value
+# the tool layer actually produced, so rounded/restated figures pass while
+# invented ones are rejected.
+_NUMERIC_TOLERANCE = 1.0
+_NUMERIC_RELATIVE_TOLERANCE = 0.02
+
 
 class AuditorAgent:
     """
@@ -167,6 +204,23 @@ class AuditorAgent:
                 "the valuation engine."
             )
 
+        # 7. Every financial figure in the answer must come from the evidence
+        #    (tool output or retrieved document text). A dollar or percentage
+        #    claim that no tool produced is a fabrication.
+        if evidence:
+            known = _gather_known_numbers(evidence, sources)
+
+            unsupported = _unsupported_figures(answer, known)
+
+            if unsupported:
+                rendered = ", ".join(
+                    f"{value:,.2f}{kind}" for value, kind in unsupported
+                )
+                issues.append(
+                    "Answer states financial figures that no executed tool "
+                    f"produced: {rendered}."
+                )
+
         passed = len(issues) == 0
 
         logger.debug(
@@ -269,4 +323,128 @@ def _mentions_recommendation(answer: str) -> bool:
             "recommend",
             "investment thesis",
         )
+    )
+
+
+def _gather_known_numbers(
+    evidence: dict[str, Any],
+    sources: list[dict[str, Any]],
+) -> set[float]:
+    """
+    Collect every numeric value the tool layer actually produced.
+
+    This includes numeric fields in tool results plus numbers found in the
+    retrieved chunk text, so a figure quoted verbatim from a retrieved
+    document counts as grounded. Fractions below 1.0 also register their
+    percentage equivalent so a rate expressed as "9%" matches evidence stored
+    as ``0.09``.
+    """
+    known: set[float] = set()
+
+    def add(value: float) -> None:
+        known.add(value)
+        if value != 0 and abs(value) < 1.0:
+            known.add(value * 100.0)
+
+    def walk(obj: Any) -> None:
+        if isinstance(obj, bool):
+            return
+
+        if isinstance(obj, (int, float)):
+            add(float(obj))
+            return
+
+        if isinstance(obj, str):
+            for match in _TEXT_NUMBER_PATTERN.finditer(obj):
+                raw = match.group(1).replace(",", "")
+                suffix = (match.group(2) or "").lower()
+                try:
+                    add(float(raw) * _UNIT_MULTIPLIERS.get(suffix, 1.0))
+                except ValueError:
+                    pass
+            return
+
+        if isinstance(obj, dict):
+            for value in obj.values():
+                walk(value)
+            return
+
+        if isinstance(obj, (list, tuple)):
+            for value in obj:
+                walk(value)
+
+    for results in evidence.values():
+        for result in results:
+            payload = getattr(result, "result", None)
+            if isinstance(payload, dict):
+                walk(payload)
+
+    for source in sources:
+        walk(source)
+
+    return known
+
+
+def _unsupported_figures(
+    answer: str,
+    known: set[float],
+) -> list[tuple[float, str]]:
+    """
+    Return every ``(value, kind)`` financial figure claimed by ``answer`` that
+    no tool produced.
+    """
+    unsupported: list[tuple[float, str]] = []
+
+    for value, kind in _financial_claims(answer):
+        if any(_figures_match(value, candidate) for candidate in known):
+            continue
+        unsupported.append((value, kind))
+
+    return unsupported
+
+
+def _financial_claims(answer: str) -> list[tuple[float, str]]:
+    """Extract ``(value, kind)`` dollar / percentage figures from ``answer``."""
+    claims: list[tuple[float, str]] = []
+
+    for match in _DOLLAR_CLAIM_PATTERN.finditer(answer):
+        raw = match.group(1).replace(",", "")
+
+        suffix = (match.group(2) or "").lower()
+
+        try:
+            value = float(raw) * _UNIT_MULTIPLIERS.get(suffix, 1.0)
+        except ValueError:
+            continue
+
+        claims.append((value, "$"))
+
+    for match in _PERCENT_CLAIM_PATTERN.finditer(answer):
+        try:
+            claims.append((float(match.group(1)), "%"))
+        except ValueError:
+            continue
+
+    return claims
+
+
+def _figures_match(claim: float, candidate: float) -> bool:
+    if _close_enough(claim, candidate):
+        return True
+
+    # The claim may be expressed in a different scale to the stored value
+    # (e.g. "$394,328 million" vs a statement figure stored in $M, or a
+    # "$3.2 trillion" market cap stored in raw dollars). Compare the claim
+    # scaled down through common units before declaring it unsupported.
+    for divisor in (1e3, 1e6, 1e9, 1e12):
+        if _close_enough(claim / divisor, candidate):
+            return True
+
+    return False
+
+
+def _close_enough(claim: float, candidate: float) -> bool:
+    return abs(claim - candidate) <= max(
+        _NUMERIC_TOLERANCE,
+        abs(candidate) * _NUMERIC_RELATIVE_TOLERANCE,
     )

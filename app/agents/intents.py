@@ -142,6 +142,7 @@ _REPORT_PHRASES = (
     "investment thesis",
     "build an investment thesis",
     "research report",
+    "investment research report",
 )
 
 _PORTFOLIO_PHRASES = (
@@ -193,7 +194,9 @@ _DOCUMENT_GATE_PHRASES = (
     "generate a report",
     "generate report",
     "write a report",
+    "create a report",
     "investment thesis",
+    "investment research report",
     "portfolio",
 )
 

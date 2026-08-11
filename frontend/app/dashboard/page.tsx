@@ -3,7 +3,6 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AISearch } from "@/components/dashboard/ai-search";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { MarketChart } from "@/components/dashboard/market-chart";
-import { AgentStatus } from "@/components/dashboard/agent-status";
 import { Watchlist } from "@/components/dashboard/watchlist";
 import { NewsFeed } from "@/components/dashboard/news-feed";
 import { PortfolioAllocation } from "@/components/dashboard/portfolio-allocation";
@@ -82,9 +81,8 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="mt-10 grid gap-8 xl:grid-cols-[2fr_1fr]">
+      <section className="mt-10">
         <MarketChart />
-        <AgentStatus />
       </section>
 
       <section className="mt-10 grid gap-8 xl:grid-cols-2">

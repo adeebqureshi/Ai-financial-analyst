@@ -26,6 +26,7 @@ from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
 from app.financial.models import FinancialStatement
+from app.llm.exceptions import LLMError
 from app.llm.models import LLMRequest
 from app.llm.openai_client import OpenAIClient
 
@@ -35,6 +36,13 @@ INSUFFICIENT_EVIDENCE_MESSAGE = (
     "I couldn't find sufficient evidence to answer that question. "
     "No financial tool returned usable data and no uploaded document "
     "contained the information."
+)
+
+LLM_UNAVAILABLE_MESSAGE = (
+    "I could not complete the synthesis because the language model is "
+    "currently unavailable (missing or invalid API key, provider error, "
+    "timeout, or rate limit). The structured tool results were computed but "
+    "could not be summarized."
 )
 
 
@@ -129,7 +137,18 @@ class FinancialAnalystAgent:
             has_sources=bool(sources),
         )
 
-        response = self._client.generate(LLMRequest(prompt=prompt))
+        try:
+            response = self._client.generate(LLMRequest(prompt=prompt))
+        except LLMError:
+            # Missing/invalid key, provider error, timeout or rate limit.
+            # Degrade gracefully instead of crashing the request; the tool
+            # results are still returned as metadata. Nothing sensitive is
+            # logged (the exception text never contains the API key).
+            logger.warning(
+                "LLM synthesis failed for query: %s",
+                query[:120],
+            )
+            return LLM_UNAVAILABLE_MESSAGE, None
 
         return response.text, getattr(response, "model", None)
 
@@ -235,7 +254,10 @@ def _build_synthesis_prompt(
             "insufficient, say so."
         )
 
-    sections.append("**Sources** — list the document sources actually cited.")
+    if has_sources:
+        sections.append(
+            "**Sources** — list the document sources actually cited."
+        )
 
     section_list = "\n".join(
         f"{index}. {section}" for index, section in enumerate(sections, start=1)

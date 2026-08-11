@@ -1,16 +1,21 @@
+import pytest
+
+from app.llm.exceptions import ProviderError
 from app.llm.models import LLMRequest
 from app.llm.providers.openai_provider import OpenAIProvider
 
 
-def test_openai_provider():
+def test_openai_provider_missing_key_fails_fast():
 
     provider = OpenAIProvider()
 
-    response = provider.generate(
-        LLMRequest(
-            prompt="Hello",
-        )
-    )
+    # Without an OPENAI_API_KEY the real provider must NOT silently echo the
+    # prompt — it raises a typed, key-free error the caller can degrade on.
+    assert provider.client is None
 
-    assert response.model == "openai"
-    assert "Hello" in response.text
+    with pytest.raises(ProviderError):
+        provider.generate(
+            LLMRequest(
+                prompt="Hello",
+            )
+        )

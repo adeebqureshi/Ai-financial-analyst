@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 from app.agents.coordinator import CoordinatorAgent
-from app.agents.research_plan import ResearchPlan
 from app.agents.tools import ToolResult
 from app.llm.models import LLMResponse
 
@@ -101,7 +100,7 @@ def test_run_valuation_question_uses_financials_and_valuation():
 
     coordinator = _coordinator(tools, analyst=analyst)
 
-    result = coordinator.run("Is Apple undervalued?")
+    coordinator.run("Is Apple undervalued?")
 
     tool_names = [call[0] for call in tools.calls]
 
@@ -186,3 +185,76 @@ def test_run_no_evidence_does_not_fabricate():
 
     # The auditor must not flag a fabricated citation: nothing was claimed.
     assert result.audit is not None
+
+
+def test_run_document_answer_cannot_fabricate_citation():
+    tools = FakeTools({
+        "search_documents": ToolResult(
+            tool="search_documents",
+            status="done",
+            detail="Searched Apple documents",
+            result={
+                "chunks": [
+                    {
+                        "document_id": "doc1",
+                        "filename": "Apple 10-K.pdf",
+                        "page": 42,
+                        "text": "Apple faces supply chain concentration risk.",
+                        "score": 0.9,
+                    }
+                ],
+                "total": 1,
+            },
+        ),
+    })
+
+    analyst = MagicMock()
+    analyst.synthesize.return_value = (
+        "According to Apple 10-K.pdf (page 99), Apple faces supply chain risk.",
+        "fake",
+    )
+
+    coordinator = _coordinator(tools, analyst=analyst)
+
+    result = coordinator.run(
+        "What does Apple's annual report say about supply chain risk?"
+    )
+
+    # A citation to a page that was never retrieved is rejected by the auditor.
+    assert result.success is False
+
+    assert result.audit is not None
+
+    assert result.audit.passed is False
+
+    assert "Auditor note" in result.message
+
+
+def test_run_followup_resolves_pronoun_across_turns():
+    from app.agents.coordinator import CoordinatorAgent
+
+    tools = FakeTools({})
+
+    analyst = MagicMock()
+    analyst.synthesize.return_value = ("Grounded answer.", "fake")
+
+    coordinator = CoordinatorAgent()
+    coordinator.tools = tools
+    coordinator.analyst = analyst
+
+    session = "coordinator-session-1"
+
+    first = coordinator.run("Analyze Apple.", session_id=session)
+
+    assert first.tickers == ["AAPL"]
+
+    second = coordinator.run(
+        "Compare it with Microsoft.",
+        session_id=session,
+    )
+
+    assert second.tickers == ["AAPL", "MSFT"]
+
+    tool_names = [call[0] for call in tools.calls]
+
+    assert "compare_companies" in tool_names

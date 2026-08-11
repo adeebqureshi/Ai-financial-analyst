@@ -46,6 +46,45 @@ _PRONOUN_MARKERS = (
     " both companies ",
 )
 
+# Financial terms that reference the previous turn's subject even without a
+# pronoun ("What is the revenue?", "How is the cash flow?", "What about debt?").
+_FOLLOWUP_KEYWORDS = (
+    "valuation",
+    "price",
+    "revenue",
+    "earnings",
+    "income",
+    "risk",
+    "health",
+    "financials",
+    "margin",
+    "growth",
+    "profitability",
+    "ratio",
+    "dcf",
+    "intrinsic",
+    "undervalued",
+    "overvalued",
+    "dividend",
+    "stock",
+    "share",
+    "buy",
+    "sell",
+    "recommend",
+    "investment",
+    "thesis",
+    "report",
+    "performance",
+    "cash flow",
+    "balance sheet",
+    "income statement",
+    "debt",
+    "liquidity",
+    "solvency",
+    "asset",
+    "liabilit",
+)
+
 
 class ConversationMemory:
     """
@@ -139,9 +178,26 @@ class ConversationMemory:
                 return merged
             return detected
 
-        # No ticker detected at all and the query refers back to the previous
-        # subject ("and it's valuation?", "is it undervalued?").
-        if any(marker in text for marker in _PRONOUN_MARKERS):
+        # No ticker detected at all: inherit the previous subject when the
+        # query clearly refers back to it — via a pronoun, a question opener,
+        # or a financial keyword ("and it's valuation?", "what is the
+        # revenue?"). A topic switch ("thank you", "what is 2+2?") gets no
+        # inherited ticker so no tool runs needlessly.
+        if _references_previous_subject(text):
             return list(previous_tickers)
 
         return detected
+
+
+def _references_previous_subject(text: str) -> bool:
+    """
+    True when ``text`` (a space-padded lowercased query) points back to the
+    subject of the previous turn rather than starting a brand-new topic.
+
+    Only a pronoun or a financial keyword counts as a reference, so a topic
+    switch ("What is the weather today?", "thank you") inherits nothing.
+    """
+    if any(marker in text for marker in _PRONOUN_MARKERS):
+        return True
+
+    return any(keyword in text for keyword in _FOLLOWUP_KEYWORDS)

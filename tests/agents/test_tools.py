@@ -228,6 +228,34 @@ def test_search_documents_never_leaks_other_company():
     assert filenames == ["Microsoft 10-K.pdf"]
 
 
+def test_search_documents_uses_wider_candidate_pool_when_ticker_scoped():
+    registry = _registry()
+
+    registry.execute(
+        "search_documents",
+        {"query": "growth", "ticker": "MSFT"},
+    )
+
+    query, limit, document_id = registry._documents.queries[0]
+
+    assert query == "growth"
+
+    # ticker scoping pulls a wider pool so the correct company is not
+    # crowded out, then trims back to the requested limit.
+    assert limit == 15
+
+    assert document_id is None
+
+    registry.execute(
+        "search_documents",
+        {"query": "growth"},
+    )
+
+    _query, unscoped_limit, _document_id = registry._documents.queries[1]
+
+    assert unscoped_limit == 5
+
+
 def test_unknown_tool_returns_error_result():
     registry = _registry()
 

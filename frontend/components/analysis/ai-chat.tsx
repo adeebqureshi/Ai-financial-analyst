@@ -17,6 +17,19 @@ type Props = {
 };
 
 export function AIChat({ ticker }: Props) {
+  // A stable per-widget session id lets the backend resolve follow-ups like
+  // "what about its valuation?" against the previous turn's company. It is
+  // generated lazily on first send (an event handler, not render).
+  const sessionIdRef = useRef<string | null>(null);
+
+  function getSessionId(): string {
+    if (sessionIdRef.current === null) {
+      sessionIdRef.current = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    return sessionIdRef.current;
+  }
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -40,6 +53,7 @@ export function AIChat({ ticker }: Props) {
       const response = await api.chat({
         message: text,
         ticker,
+        session_id: getSessionId(),
       });
 
       const reply =
