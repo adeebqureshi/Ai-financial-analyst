@@ -299,6 +299,7 @@ class PlannerAgent:
                 AgentIntent.REPORT_GENERATION.value,
                 AgentIntent.PORTFOLIO_ANALYSIS.value,
                 AgentIntent.COMPANY_RESEARCH.value,
+                AgentIntent.CALCULATION.value,
             )
         ):
             for ticker in plan.tickers:
@@ -386,6 +387,28 @@ class PlannerAgent:
                     f"Assessed financial risk for {ticker}",
                 )
 
+        # ── Custom sandboxed calculations ─────────────────────────────
+        # Deterministic engines (valuation/DCF) still handle their own
+        # questions; the sandbox is only used when the user explicitly asks
+        # for a calculation that the fixed engine set does not cover.
+        if (
+            AgentIntent.CALCULATION.value in intent_names
+            and AgentIntent.VALUATION.value not in intent_names
+        ):
+            if plan.tickers:
+                for ticker in plan.tickers:
+                    add(
+                        "run_calculation",
+                        {"question": query, "ticker": ticker},
+                        f"Sandboxed calculation for {ticker}",
+                    )
+            else:
+                add(
+                    "run_calculation",
+                    {"question": query},
+                    "Sandboxed calculation",
+                )
+
         # ── Comparison ────────────────────────────────────────────────
         if AgentIntent.COMPARISON.value in intent_names and len(plan.tickers) >= 2:
             add(
@@ -420,6 +443,7 @@ class PlannerAgent:
             AgentIntent.COMPARISON.value: "Company comparison question",
             AgentIntent.PORTFOLIO_ANALYSIS.value: "Portfolio question",
             AgentIntent.REPORT_GENERATION.value: "Report generation question",
+            AgentIntent.CALCULATION.value: "Calculation question",
         }
 
         reasons = [

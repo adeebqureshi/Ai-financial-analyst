@@ -43,7 +43,18 @@ class OpenAIClient:
 
         self.config = config or ProviderConfig.from_settings(settings)
 
-        self.provider = provider or ProviderFactory.create(self.config.provider)
+        if provider is None:
+            factory_kwargs: dict[str, str] = {}
+
+            if self.config.provider.lower() == "openai" and settings.openai_api_key_str:
+                # The key is configured in ``Settings`` (from ``.env``); the
+                # provider itself only inspects the process environment, so the
+                # configured credentials are injected here.
+                factory_kwargs["api_key"] = settings.openai_api_key_str
+
+            provider = ProviderFactory.create(self.config.provider, **factory_kwargs)
+
+        self.provider = provider
 
     def generate(
         self,

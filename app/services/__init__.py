@@ -8,6 +8,8 @@ into routers via FastAPI's dependency injection system.
 Submodules:
     - ``health_service``: Application health check logic.
     - ``version_service``: Version info retrieval logic.
+    - ``filing_service``: SEC filing retrieval logic.
+    - ``market_service``: Market data retrieval logic.
 
 Design Principle:
     Routers contain no business logic — they parse input, call a service,
@@ -28,6 +30,8 @@ from app.services.risk_service import RiskService
 from app.services.report_service import ReportService
 from app.services.compare_service import CompareService
 from app.services.screen_service import ScreenService
+from app.services.filing_service import FilingService
+from app.services.market_service import MarketService
 
 __all__ = [
     "HealthService",
@@ -42,4 +46,6 @@ __all__ = [
     "ReportService",
     "CompareService",
     "ScreenService",
+    "FilingService",
+    "MarketService",
 ]

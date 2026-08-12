@@ -36,6 +36,7 @@ class AgentIntent(str, Enum):
     COMPARISON = "COMPARISON"
     PORTFOLIO_ANALYSIS = "PORTFOLIO_ANALYSIS"
     REPORT_GENERATION = "REPORT_GENERATION"
+    CALCULATION = "CALCULATION"
 
 
 _DOCUMENT_PHRASES = (
@@ -149,6 +150,26 @@ _PORTFOLIO_PHRASES = (
     "portfolio",
     "my holdings",
     "diversification",
+)
+
+_CALCULATION_PHRASES = (
+    "calculate",
+    "compute",
+    "calculation",
+    "wacc",
+    "weighted average cost of capital",
+    "cost of equity",
+    "cost of debt",
+    "capm",
+    "net present value",
+    "npv",
+    "internal rate of return",
+    "irr",
+    "cagr",
+    "compound annual growth",
+    "gordon growth",
+    "discounted cash flow",
+    "formula",
 )
 
 _ANALYSIS_PHRASES = (
@@ -285,6 +306,9 @@ class IntentClassifier:
             and AgentIntent.FINANCIAL_ANALYSIS not in intents
         ):
             intents.append(AgentIntent.FINANCIAL_ANALYSIS)
+
+        if _contains(text, _CALCULATION_PHRASES):
+            intents.append(AgentIntent.CALCULATION)
 
         # Company research fallback: a question that names a company but does
         # not map to any specific analysis capability.

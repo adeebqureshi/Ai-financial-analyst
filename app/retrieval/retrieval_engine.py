@@ -13,9 +13,12 @@ document by ``document_id``.
 from __future__ import annotations
 
 import time
+from datetime import date
 
 from app.core.logging import get_logger
 from app.embeddings.embedding_service import EmbeddingService
+from app.rag.temporal_metadata import TemporalMetadata
+from app.retrieval.filters import apply_temporal_filter
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.retrieval.metadata_store import MetadataStore
 from app.retrieval.models import RetrievalContext, RetrievedChunk
@@ -96,6 +99,8 @@ class RetrievalEngine:
 
             chunk_id = payload.get("chunk_id") or str(point.id)
 
+            temporal = TemporalMetadata.from_dict(payload)
+
             chunk = RetrievedChunk(
                 id=chunk_id,
                 chunk_id=chunk_id,
@@ -109,6 +114,10 @@ class RetrievalEngine:
                 filing_date=None,
                 section=payload.get("section") or "",
                 source=payload.get("source") or "",
+                parser_used=payload.get("parser_used"),
+                valid_from=temporal.valid_from,
+                valid_until=temporal.valid_until,
+                transaction_time=temporal.transaction_time,
             )
 
             ids.append(chunk_id)
@@ -152,24 +161,53 @@ class RetrievalEngine:
         query: str,
         limit: int = 5,
         document_id: str | None = None,
+        as_of_date: date | None = None,
     ) -> RetrievalContext:
+        """
+        Retrieve relevant chunks, optionally scoped to a single document.
 
+        Args:
+            query: The search query.
+            limit: Maximum number of chunks to return.
+            document_id: Optional document to scope retrieval to.
+            as_of_date: Optional historical date. When provided, only chunks
+                whose bitemporal metadata proves the information was known
+                and valid by ``as_of_date`` are returned. This is the
+                look-ahead-bias guard: future information (transaction_time >
+                as_of_date) can never reach the evidence set.
+        """
         start = time.perf_counter()
 
         vector = self.embedder.embed_text(
             query,
         )
 
+        # Candidate pool is intentionally wider than ``limit`` when a
+        # historical date is requested so that temporal filtering does not
+        # starve the final evidence set.
+        candidate_limit = (
+            limit * 3 if as_of_date is not None else limit
+        )
+
         ids = self.retriever.search(
             vector=vector,
             query=query,
-            limit=limit,
+            limit=candidate_limit,
             document_id=document_id,
         )
 
         chunks = self.metadata.get_many(
             ids,
         )
+
+        # Temporal filtering happens BEFORE reranking so future documents
+        # cannot influence the reranker's scoring.
+        if as_of_date is not None:
+            chunks = apply_temporal_filter(
+                chunks,
+                as_of_date,
+            )
+            chunks = chunks[:limit]
 
         chunks = self._rerank(
             query,

@@ -28,6 +28,8 @@ class FinancialStatement:
 
     free_cash_flow: float
 
+    gross_profit: float = 0.0
+
 
 @dataclass(slots=True)
 class ValuationResult:

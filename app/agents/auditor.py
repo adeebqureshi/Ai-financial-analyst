@@ -131,6 +131,7 @@ class AuditorAgent:
         """
         issues: list[str] = []
         warnings: list[str] = []
+        notes: list[str] = []
 
         tool_names = set(plan.tool_names)
 
@@ -221,18 +222,42 @@ class AuditorAgent:
                     f"produced: {rendered}."
                 )
 
+        # 8. Sandboxed calculation provenance. A ``run_calculation`` result is
+        #    only trustworthy when the sandbox actually computed it. This makes
+        #    the sandbox-computed result distinguishable from an LLM claim:
+        #    the value flows from ``result.result["result"]``, marked with
+        #    ``computed_by="sandbox"``.
+        if "run_calculation" in tool_names:
+            for result in self._results_for(evidence, "run_calculation"):
+                payload = result.result or {}
+
+                if result.status != "done" or payload.get("status") != "computed":
+                    issues.append(
+                        "A sandboxed calculation failed; its value must not be "
+                        "cited in the answer."
+                    )
+                    continue
+
+                if payload.get("computed_by") == "sandbox":
+                    notes.append(
+                        "Calculation result was computed by the sandbox from "
+                        "application-supplied context, not asserted by the LLM."
+                    )
+
         passed = len(issues) == 0
 
         logger.debug(
-            "Audit %s: %d issues, %d warnings",
+            "Audit %s: %d issues, %d warnings, %d notes",
             "passed" if passed else "failed",
             len(issues),
             len(warnings),
+            len(notes),
         )
 
         return AuditResult(
             passed=passed,
             issues=issues,
+            notes=notes,
         )
 
     # ──────────────────────────────────────────────────────────────────
@@ -377,7 +402,15 @@ def _gather_known_numbers(
         for result in results:
             payload = getattr(result, "result", None)
             if isinstance(payload, dict):
-                walk(payload)
+                # For sandboxed calculations only the computed ``result`` (and
+                # the supplied context values) count as grounded — the code,
+                # question and printed output could echo an invented number.
+                numeric_payload = {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in ("code", "question", "output")
+                }
+                walk(numeric_payload)
 
     for source in sources:
         walk(source)
@@ -396,7 +429,7 @@ def _unsupported_figures(
     unsupported: list[tuple[float, str]] = []
 
     for value, kind in _financial_claims(answer):
-        if any(_figures_match(value, candidate) for candidate in known):
+        if any(_figures_match(value, kind, candidate) for candidate in known):
             continue
         unsupported.append((value, kind))
 
@@ -428,7 +461,16 @@ def _financial_claims(answer: str) -> list[tuple[float, str]]:
     return claims
 
 
-def _figures_match(claim: float, candidate: float) -> bool:
+def _figures_match(claim: float, kind: str, candidate: float) -> bool:
+    if kind == "%":
+        # Percentages are compared directly with a relative tolerance only —
+        # a percentage claim is never scaled through dollar units and never
+        # benefits from the $\1 absolute tolerance. (Fractions under 1.0 have
+        # their percentage equivalent registered in the known set.)
+        return abs(claim - candidate) <= (
+            abs(candidate) * _NUMERIC_RELATIVE_TOLERANCE + 1e-6
+        )
+
     if _close_enough(claim, candidate):
         return True
 

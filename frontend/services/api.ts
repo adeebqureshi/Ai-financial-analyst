@@ -1,9 +1,11 @@
 import type {
+  AgentToolExecution,
   AnalyzeData,
   ApiResponse,
   ChatData,
   CompareData,
   CompanyData,
+  DocumentCitation,
   DocumentData,
   DocumentListData,
   FinancialRatiosData,
@@ -51,6 +53,144 @@ async function request<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+export interface ChatStreamPlanData {
+  tickers?: string[];
+  intents?: string[];
+  steps?: string[];
+  tools_used?: AgentToolExecution[];
+}
+
+export interface ChatStreamDoneData {
+  message: string;
+  model: string | null;
+  tickers?: string[];
+  sources?: DocumentCitation[];
+  steps?: string[];
+  tools_used?: AgentToolExecution[];
+}
+
+export interface ChatStreamHandlers {
+  onPlan?: (data: ChatStreamPlanData) => void;
+  onDelta?: (delta: string) => void;
+  onDone?: (data: ChatStreamDoneData) => void;
+  onError?: (message: string) => void;
+}
+
+function handleStreamFrame(
+  frame: string,
+  handlers: ChatStreamHandlers
+): void {
+  let event = "message";
+  let data = "";
+
+  for (const line of frame.split("\n")) {
+    if (line.startsWith("event: ")) {
+      event = line.slice(7);
+    } else if (line.startsWith("data: ")) {
+      data += line.slice(6);
+    }
+  }
+
+  if (!data) return;
+
+  let payload: unknown;
+
+  try {
+    payload = JSON.parse(data);
+  } catch {
+    return;
+  }
+
+  switch (event) {
+    case "plan":
+      handlers.onPlan?.(payload as ChatStreamPlanData);
+      break;
+    case "token": {
+      const delta = (payload as { delta?: string })?.delta ?? "";
+      if (delta) handlers.onDelta?.(delta);
+      break;
+    }
+    case "done":
+      handlers.onDone?.(payload as ChatStreamDoneData);
+      break;
+    case "error": {
+      const message =
+        (payload as { message?: string })?.message ??
+        "The chat stream failed unexpectedly.";
+      handlers.onError?.(message);
+      break;
+    }
+  }
+}
+
+/**
+ * Consume the Server-Sent Events stream from ``POST /chat/stream``.
+ *
+ * Calls ``onDelta`` for every streamed token so the UI can render progressive
+ * output, then ``onDone`` with the complete result.
+ */
+async function requestChatStream(
+  body: unknown,
+  handlers: ChatStreamHandlers,
+  signal?: AbortSignal
+): Promise<void> {
+  const response = await fetch(API + "/chat/stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+
+    let message = `Request failed with status ${response.status}`;
+
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed?.message ?? parsed?.detail ?? message;
+    } catch {
+      if (text) message = text;
+    }
+
+    handlers.onError?.(message);
+    return;
+  }
+
+  if (!response.body) {
+    handlers.onError?.("Streaming is not supported by this browser.");
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = buffer.indexOf("\n\n");
+
+    while (boundary !== -1) {
+      const frame = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      handleStreamFrame(frame, handlers);
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+
+  if (buffer.trim()) {
+    handleStreamFrame(buffer, handlers);
+  }
 }
 
 export const api = {
@@ -142,6 +282,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     });
+  },
+
+  chatStream(
+    body: unknown,
+    handlers: ChatStreamHandlers,
+    signal?: AbortSignal
+  ): Promise<void> {
+    return requestChatStream(body, handlers, signal);
   },
 
   search(

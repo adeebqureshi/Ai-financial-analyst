@@ -43,7 +43,9 @@ from app.services.chat_service import ChatService
 from app.services.compare_service import CompareService
 from app.services.company_service import CompanyService
 from app.services.document_service import DocumentService
+from app.services.filing_service import FilingService
 from app.services.health_service import HealthService
+from app.services.market_service import MarketService
 from app.services.ratios_service import RatiosService
 from app.services.report_service import ReportService
 from app.services.risk_service import RiskService
@@ -180,4 +182,24 @@ def get_document_service(
     FastAPI dependency that yields a ``DocumentService`` instance.
     """
     service = DocumentService(settings)
+    yield service
+
+
+def get_filing_service(
+    settings: Settings = Depends(get_settings_dep),
+) -> Iterator[FilingService]:
+    """
+    FastAPI dependency that yields a ``FilingService`` instance.
+    """
+    service = FilingService(settings)
+    yield service
+
+
+def get_market_service(
+    settings: Settings = Depends(get_settings_dep),
+) -> Iterator[MarketService]:
+    """
+    FastAPI dependency that yields a ``MarketService`` instance.
+    """
+    service = MarketService(settings)
     yield service

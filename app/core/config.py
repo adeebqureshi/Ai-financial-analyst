@@ -95,6 +95,13 @@ class Settings(BaseSettings):
         default=SecretStr(""),
         description="Financial Modeling Prep API key.",
     )
+    llama_parse_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "LlamaParse API key. Optional: enables layout-aware Markdown PDF "
+            "parsing. Without it the pipeline falls back to Marker/PyMuPDF."
+        ),
+    )
 
     # ── Logging ──────────────────────────────────────────────────────────
     log_level: LogLevel = Field(default=LogLevel.INFO, description="Minimum log level.")
@@ -243,6 +250,11 @@ class Settings(BaseSettings):
     def fmp_api_key_str(self) -> str:
         """Return the FMP API key as a plain string."""
         return self.fmp_api_key.get_secret_value()
+
+    @property
+    def llama_parse_api_key_str(self) -> str:
+        """Return the LlamaParse API key as a plain string."""
+        return self.llama_parse_api_key.get_secret_value()
 
     def validate_required_keys(self) -> None:
         """Validate that required API keys are set for non-test environments."""

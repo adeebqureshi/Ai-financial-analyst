@@ -24,6 +24,7 @@ class ProviderRegistry:
     def create(
         self,
         name: str,
+        **kwargs: object,
     ) -> BaseLLMProvider:
 
         key = name.lower()
@@ -31,4 +32,4 @@ class ProviderRegistry:
         if key not in self._providers:
             raise ValueError(f"Unknown provider: {name}")
 
-        return self._providers[key]()
+        return self._providers[key](**kwargs)

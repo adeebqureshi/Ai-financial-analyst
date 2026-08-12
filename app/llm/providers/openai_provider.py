@@ -49,12 +49,14 @@ class OpenAIProvider(BaseLLMProvider):
     def __init__(
         self,
         config: ProviderConfig | None = None,
+        api_key: str | None = None,
     ) -> None:
         self.config = config or ProviderConfig()
         self.retry = RetryPolicy()
         self.client = None
 
-        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key is None:
+            api_key = os.getenv("OPENAI_API_KEY")
 
         if api_key:
             self.client = OpenAI(

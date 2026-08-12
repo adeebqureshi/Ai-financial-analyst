@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { motion } from "framer-motion";
 import {
@@ -249,6 +249,12 @@ export function AgentWorkspace() {
 
   const [chat, setChat] = useState<ChatData | null>(null);
 
+  const [streaming, setStreaming] = useState(false);
+
+  const [streamError, setStreamError] = useState<string | null>(null);
+
+  const abortRef = useRef<AbortController | null>(null);
+
   const documentsQuery = useQuery({
     queryKey: ["documents"],
     queryFn: () => api.listDocuments(),
@@ -258,21 +264,7 @@ export function AgentWorkspace() {
   const documents: DocumentData[] =
     documentsQuery.data?.data?.documents ?? [];
 
-  const chatMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const response = await api.chat({
-        message,
-        ...(documentId ? { document_id: documentId } : {}),
-      });
-
-      return (response.data ?? null) as ChatData | null;
-    },
-    onSuccess: (data) => {
-      setChat(data);
-    },
-  });
-
-  const pending = chatMutation.isPending;
+  const pending = streaming;
 
   const detected = useMemo(
     () => (question ? detectTickers(question) : []),
@@ -283,24 +275,90 @@ export function AgentWorkspace() {
     (doc) => doc.document_id === documentId
   );
 
-  function runResearch(prompt: string) {
+  async function runResearch(prompt: string) {
     const trimmed = prompt.trim();
 
-    if (!trimmed || pending) return;
+    if (!trimmed || streaming) return;
+
+    abortRef.current?.abort();
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setQuestion(trimmed);
     setChat(null);
     setInput("");
+    setStreamError(null);
+    setStreaming(true);
 
-    chatMutation.mutate(trimmed);
+    const partial: ChatData = {
+      message: "",
+      ticker: null,
+      model: null,
+      sources: [],
+      plan: [],
+      tools_used: [],
+    };
+
+    setChat(partial);
+
+    try {
+      await api.chatStream(
+        {
+          message: trimmed,
+          ...(documentId ? { document_id: documentId } : {}),
+        },
+        {
+          onPlan: (data) => {
+            partial.plan = data.steps ?? [];
+            partial.tools_used = data.tools_used ?? [];
+            if (!partial.ticker) partial.ticker = data.tickers?.[0] ?? null;
+            setChat({ ...partial });
+          },
+          onDelta: (delta) => {
+            partial.message += delta;
+            setChat({ ...partial });
+          },
+          onDone: (data) => {
+            setChat({
+              message: data.message ?? partial.message,
+              ticker: partial.ticker ?? data.tickers?.[0] ?? null,
+              model: data.model ?? null,
+              sources: data.sources ?? [],
+              plan: data.steps ?? partial.plan,
+              tools_used: data.tools_used ?? partial.tools_used,
+            });
+          },
+          onError: (message) => {
+            setStreamError(message);
+          },
+        },
+        controller.signal
+      );
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+
+      setStreamError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while researching your question. Please try again."
+      );
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      setStreaming(false);
+    }
   }
 
   function reset() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+
     setQuestion("");
     setChat(null);
     setInput("");
     setDocumentId("");
-    chatMutation.reset();
+    setStreamError(null);
+    setStreaming(false);
   }
 
   const tools = chat ? buildTools(chat) : [];
@@ -535,17 +593,13 @@ export function AgentWorkspace() {
           )}
 
           {/* Error */}
-          {chatMutation.isError && (
+          {streamError && (
             <div className="rounded-[32px] border border-red-500/20 bg-red-500/10 p-8">
               <h3 className="text-lg font-semibold text-white">
                 Research failed
               </h3>
 
-              <p className="mt-3 text-zinc-300">
-                {chatMutation.error instanceof Error
-                  ? chatMutation.error.message
-                  : "Something went wrong while researching your question. Please try again."}
-              </p>
+              <p className="mt-3 text-zinc-300">{streamError}</p>
             </div>
           )}
 

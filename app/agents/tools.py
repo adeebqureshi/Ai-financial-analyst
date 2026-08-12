@@ -39,6 +39,7 @@ from app.financial.ratios import FinancialRatios
 from app.financial.valuation import ValuationEngine
 from app.financial.wacc import WACC
 from app.ingestion.services.market_service import MarketService
+from app.sandbox.code_agent import FinancialCodeAgent
 from app.services.company_service import CompanyService
 from app.services.compare_service import CompareService
 from app.services.document_service import DocumentService
@@ -85,6 +86,10 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "compare_companies": "Compare multiple companies using each company's own data.",
     "search_documents": "Search uploaded documents with source metadata.",
     "generate_report": "Generate a structured markdown investment report.",
+    "run_calculation": (
+        "Execute a custom financial calculation in a restricted sandbox using "
+        "only application-provided data."
+    ),
 }
 
 Handler = Callable[[dict[str, Any]], ToolResult]
@@ -126,6 +131,7 @@ class ToolRegistry:
         compare: CompareService | None = None,
         documents: DocumentService | None = None,
         report: ReportService | None = None,
+        code_agent: FinancialCodeAgent | None = None,
     ) -> None:
         settings = settings or get_settings()
 
@@ -135,6 +141,7 @@ class ToolRegistry:
         self._compare = compare or CompareService(settings)
         self._documents = documents or DocumentService(settings)
         self._report = report or ReportService(settings)
+        self._code_agent = code_agent or FinancialCodeAgent(settings)
 
         self._valuation = ValuationEngine()
 
@@ -149,6 +156,7 @@ class ToolRegistry:
             "compare_companies": self._compare_companies,
             "search_documents": self._search_documents,
             "generate_report": self._generate_report,
+            "run_calculation": self._run_calculation,
         }
 
     @property
@@ -534,6 +542,81 @@ class ToolRegistry:
                 "title": report.title,
                 "content": report.content,
                 "format": report.format,
+            },
+        )
+
+
+    # ──────────────────────────────────────────────────────────────────
+    # Sandboxed calculations
+    # ──────────────────────────────────────────────────────────────────
+
+    def _run_calculation(self, args: dict[str, Any]) -> ToolResult:
+        """
+        Execute a custom calculation for ``question`` with sandboxed code.
+
+        The calculation context is built from real application data (the
+        company's financial statements and market data) — never from
+        LLM-invented numbers. An explicit ``context`` passed by a caller is
+        merged in, but the authoritative source remains the application's
+        data layer.
+        """
+        question = str(args["question"])
+
+        ticker = str(args["ticker"]).upper() if args.get("ticker") else None
+
+        explicit = args.get("context") or {}
+        if not isinstance(explicit, dict):
+            raise ValueError("run_calculation 'context' must be a mapping")
+
+        context = dict(explicit)
+
+        if ticker:
+            data = self._financials.load(ticker)
+
+            context.update({
+                "ticker": data.ticker,
+                "name": data.name,
+                "current_price": data.current_price,
+                "market_cap": data.market_cap,
+                "beta": data.beta,
+                "tax_rate": data.tax_rate,
+                "growth_rate": data.growth_rate,
+                "risk_free_rate": _RISK_FREE_RATE,
+                "market_return": _MARKET_RETURN,
+                "cost_of_debt": _COST_OF_DEBT,
+            })
+            context.update(_statement_payload(data))
+
+        result = self._code_agent.run(question=question, context=context)
+
+        if not result.success:
+            return ToolResult(
+                tool="run_calculation",
+                status="error",
+                detail=f"Calculation failed: {result.error}",
+                error=result.error,
+                result={
+                    "question": question,
+                    "ticker": ticker,
+                    "status": "failed",
+                    "error": result.error,
+                    "output": result.output,
+                    "code": result.code,
+                },
+            )
+
+        return ToolResult(
+            tool="run_calculation",
+            status="done",
+            detail=f"Computed: {question}",
+            result={
+                "question": question,
+                "ticker": ticker,
+                "status": "computed",
+                "result": result.result,
+                "output": result.output,
+                "code": result.code,
+                "computed_by": "sandbox",
             },
         )
 

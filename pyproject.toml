@@ -27,6 +27,10 @@ dev = [
     "mypy>=1.8.0",
     "ruff>=0.3.0",
 ]
+document-parsing = [
+    "llama-parse>=0.4.0",
+    "marker-pdf>=1.0.0",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -19,12 +19,11 @@ calls the planner selected, and never fabricates a result when a tool fails.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 
-from app.agents.audit_result import AuditResult
 from app.agents.auditor import AuditorAgent
 from app.agents.financial_analyst import FinancialAnalystAgent
-from app.agents.intents import AgentIntent
 from app.agents.memory import ConversationMemory
 from app.agents.planner import PlannerAgent
 from app.agents.report import InvestmentReport
@@ -36,6 +35,26 @@ from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _async_model_name(analyst: Any) -> str | None:
+    """
+    Best-effort model name for the streaming synthesis.
+
+    Reads the model off the analyst's async provider. Returns ``None`` when the
+    analyst does not expose an async client (e.g. injected test doubles).
+    """
+    ensure = getattr(analyst, "ensure_async_client", None)
+
+    if not callable(ensure):
+        return None
+
+    try:
+        provider = ensure().provider
+    except Exception:
+        return None
+
+    return getattr(provider, "MODEL", None)
 
 _AUDITOR_NOTE = (
     "\n\n_Auditor note: this response could not be fully verified against "
@@ -224,6 +243,116 @@ class CoordinatorAgent:
             tickers=plan.tickers,
             audit=audit,
         )
+
+    async def stream_run(
+        self,
+        query: str,
+        ticker: str | None = None,
+        document_id: str | None = None,
+        session_id: str | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """
+        Execute the agentic pipeline and stream the synthesized answer.
+
+        The planning and tool execution phases run to completion first (they
+        are synchronous, real-data operations); only the final LLM synthesis is
+        streamed progressively. This keeps the response evidence-grounded while
+        giving the client progressive output.
+
+        Args:
+            query: The user question.
+            ticker: Optional explicit ticker context.
+            document_id: Optional document the question is scoped to.
+            session_id: Optional session id for follow-up context.
+
+        Yields:
+            A sequence of event dicts:
+            - ``{"type": "plan", ...}``   — planning / tool metadata.
+            - ``{"type": "token", "delta": ...}`` — a text delta.
+            - ``{"type": "done", ...}``   — the final result.
+            - ``{"type": "error", "message": ...}`` — a pipeline failure.
+        """
+        try:
+            plan = self.planner.plan(
+                query=query,
+                ticker=ticker,
+                document_id=document_id,
+                session_id=session_id,
+            )
+
+            evidence, steps, tools_used, sources = self._execute(plan)
+        except Exception as exc:
+            logger.warning(
+                "Streaming pipeline failed before synthesis: %s",
+                exc,
+            )
+            yield {
+                "type": "error",
+                "message": "Research failed before the answer could be generated.",
+            }
+            return
+
+        yield {
+            "type": "plan",
+            "tickers": plan.tickers,
+            "intents": [intent.value for intent in plan.intents],
+            "steps": steps,
+            "tools_used": tools_used,
+        }
+
+        usable = {
+            tool: results
+            for tool, results in evidence.items()
+            if any(r.status == "done" and r.result for r in results)
+        }
+
+        buffer: list[str] = []
+
+        async for delta in self.analyst.stream_synthesize(
+            query=plan.query,
+            intents=plan.intents,
+            evidence=usable,
+            sources=sources,
+            tickers=plan.tickers,
+        ):
+            buffer.append(delta)
+            yield {"type": "token", "delta": delta}
+
+        answer = "".join(buffer)
+
+        model = _async_model_name(self.analyst)
+
+        audit = self.auditor.audit_evidence(
+            plan=plan,
+            evidence=evidence,
+            answer=answer,
+            sources=sources,
+            model=model,
+        )
+
+        if not audit.passed:
+            answer = f"{answer}{_AUDITOR_NOTE}"
+            yield {"type": "token", "delta": _AUDITOR_NOTE}
+
+        if session_id:
+            self._memory.remember(
+                session_id,
+                plan.tickers,
+                query,
+                answer,
+            )
+
+        yield {
+            "type": "done",
+            "message": answer,
+            "model": model,
+            "success": audit.passed,
+            "tickers": plan.tickers,
+            "intents": [intent.value for intent in plan.intents],
+            "sources": sources,
+            "steps": steps,
+            "tools_used": tools_used,
+        }
 
     # ──────────────────────────────────────────────────────────────────
     # Internal pipeline

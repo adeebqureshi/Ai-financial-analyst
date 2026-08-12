@@ -22,6 +22,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -295,6 +297,10 @@ class SearchRequest(BaseModel):
         query: Search query string.
         limit: Maximum number of results to return.
         document_id: Optional document ID to restrict the search to.
+        as_of_date: Optional historical date (YYYY-MM-DD). When provided,
+            only chunks whose bitemporal metadata proves the information
+            was known and valid by that date are returned — preventing
+            look-ahead bias for historical questions.
     """
 
     model_config = ConfigDict(
@@ -307,6 +313,14 @@ class SearchRequest(BaseModel):
     document_id: str | None = Field(
         default=None,
         description="Optional document ID to restrict the search to.",
+    )
+    as_of_date: date | None = Field(
+        default=None,
+        description=(
+            "Optional historical as-of date (YYYY-MM-DD). When provided, "
+            "retrieval excludes information the system did not know by that "
+            "date, preventing look-ahead bias."
+        ),
     )
 
 
@@ -370,6 +384,8 @@ class ChatRequest(BaseModel):
         ticker: Optional ticker context.
         document_id: Optional document ID to scope retrieval to one upload.
         session_id: Optional session ID used to resolve follow-up context.
+        as_of_date: Optional historical date (YYYY-MM-DD) which anchors the
+            research to information known by that date.
     """
 
     model_config = ConfigDict(
@@ -388,6 +404,14 @@ class ChatRequest(BaseModel):
         default=None,
         max_length=128,
         description="Optional session ID used to resolve follow-up context.",
+    )
+    as_of_date: date | None = Field(
+        default=None,
+        description=(
+            "Optional historical as-of date (YYYY-MM-DD). When provided, "
+            "document retrieval excludes information the system did not "
+            "know by that date."
+        ),
     )
 
     @field_validator("ticker")

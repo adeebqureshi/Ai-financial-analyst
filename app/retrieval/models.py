@@ -40,6 +40,22 @@ class RetrievedChunk:
 
     chunk_id: str | None = None
 
+    parser_used: str | None = None
+
+    # ── Bitemporal metadata (Phase 5) ─────────────────────────────────
+    # valid_from: Earliest date the information was true/relevant in the
+    #     real world (inclusive). ``None`` = not bounded.
+    # valid_until: Last date the information was true/relevant (inclusive).
+    #     ``None`` = open-ended / still valid.
+    # transaction_time: Date the system ingested the information.
+    #     ``None`` = unknown ingestion date (treated conservatively for
+    #     historical as-of queries).
+    valid_from: date | None = None
+
+    valid_until: date | None = None
+
+    transaction_time: date | None = None
+
 
 @dataclass(slots=True)
 class RetrievalContext:

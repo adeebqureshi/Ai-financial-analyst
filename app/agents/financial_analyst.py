@@ -19,6 +19,7 @@ Two responsibilities:
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 from app.agents.intents import AgentIntent
@@ -26,6 +27,7 @@ from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
 from app.financial.models import FinancialStatement
+from app.llm.async_openai_client import AsyncOpenAIClient
 from app.llm.exceptions import LLMError
 from app.llm.models import LLMRequest
 from app.llm.openai_client import OpenAIClient
@@ -52,12 +54,26 @@ class FinancialAnalystAgent:
         self,
         settings: Settings | None = None,
         llm_client: OpenAIClient | None = None,
+        async_client: AsyncOpenAIClient | None = None,
     ) -> None:
         settings = settings or get_settings()
 
         self._settings = settings
         self._client = llm_client or OpenAIClient()
+        self._async_client = async_client
         self.engine = FinancialAnalysisEngine()
+
+    def ensure_async_client(self) -> AsyncOpenAIClient:
+        """
+        Return the async LLM client, building it once on first use.
+
+        The client is built lazily so that synchronous callers (``synthesize``)
+        never construct the async provider unnecessarily.
+        """
+        if self._async_client is None:
+            self._async_client = AsyncOpenAIClient()
+
+        return self._async_client
 
     # ──────────────────────────────────────────────────────────────────
     # Legacy quantitative analysis (used by FinancialPipeline)
@@ -151,6 +167,67 @@ class FinancialAnalystAgent:
             return LLM_UNAVAILABLE_MESSAGE, None
 
         return response.text, getattr(response, "model", None)
+
+    # ──────────────────────────────────────────────────────────────────
+    # Streaming evidence-grounded synthesis (agentic chat pipeline)
+    # ──────────────────────────────────────────────────────────────────
+
+    async def stream_synthesize(
+        self,
+        query: str,
+        intents: list[AgentIntent],
+        evidence: dict[str, Any],
+        sources: list[dict[str, Any]],
+        tickers: list[str],
+    ) -> AsyncIterator[str]:
+        """
+        Stream the final research answer token-by-token.
+
+        Shares the exact prompt contract with :meth:`synthesize` so the
+        streamed answer is identical to the non-streamed one. On LLM failure
+        the graceful ``LLM_UNAVAILABLE_MESSAGE`` is yielded and nothing
+        sensitive is logged.
+
+        Args:
+            query: The user question.
+            intents: Detected intents (drives the answer structure).
+            evidence: Tool results keyed by tool name.
+            sources: Retrieved document chunks.
+            tickers: Tickers referenced by the answer.
+
+        Yields:
+            Progressive text deltas of the synthesized answer.
+        """
+        if not evidence:
+            yield INSUFFICIENT_EVIDENCE_MESSAGE
+            return
+
+        evidence_block = json.dumps(
+            _normalize_evidence(evidence),
+            indent=2,
+            default=str,
+        )
+
+        sources_block = _format_sources(sources)
+
+        prompt = _build_synthesis_prompt(
+            query=query,
+            intents=intents,
+            tickers=tickers,
+            evidence=evidence_block,
+            sources=sources_block,
+            has_sources=bool(sources),
+        )
+
+        try:
+            async for token in self.ensure_async_client().stream(LLMRequest(prompt=prompt)):
+                yield token
+        except LLMError:
+            logger.warning(
+                "Streaming LLM synthesis failed for query: %s",
+                query[:120],
+            )
+            yield LLM_UNAVAILABLE_MESSAGE
 
 
 def _normalize_evidence(evidence: dict[str, Any]) -> dict[str, Any]:

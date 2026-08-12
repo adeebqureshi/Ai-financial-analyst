@@ -61,6 +61,7 @@ class SearchService:
             query=request.query,
             limit=request.limit,
             document_id=request.document_id,
+            as_of_date=request.as_of_date,
         )
 
         hits = [

@@ -19,6 +19,8 @@ added backward-compatibly for tool transparency.
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from app.agents.financial_analyst import INSUFFICIENT_EVIDENCE_MESSAGE
@@ -115,6 +117,45 @@ class ChatService:
             ],
         )
 
+    async def stream_chat(self, request: ChatRequest) -> AsyncIterator[str]:
+        """
+        Stream an evidence-grounded AI response as Server-Sent Events.
+
+        Each yielded string is a complete SSE frame of the form::
+
+            event: <type>
+            data: <json>
+
+        Event types:
+            - ``plan``  — planning / tool metadata (steps, tools_used, tickers).
+            - ``token`` — a progressive text delta of the answer.
+            - ``done``  — the final result (message, model, sources, ...).
+            - ``error`` — a clean failure frame (never a raw exception).
+
+        Args:
+            request: The validated chat request.
+
+        Yields:
+            SSE-formatted frames for the streaming ``POST /chat/stream`` route.
+        """
+        try:
+            async for event in self._coordinator.stream_run(
+                query=request.message,
+                ticker=request.ticker,
+                document_id=request.document_id,
+                session_id=request.session_id,
+            ):
+                frame = dict(event)
+                event_type = frame.pop("type", "message")
+                yield _format_sse(event_type, frame)
+        except Exception as exc:
+            logger.warning(
+                "Streaming chat failed for query %s: %s",
+                request.message[:120],
+                exc,
+            )
+            yield _format_sse("error", {"message": "The chat stream failed unexpectedly."})
+
 
 def _build_citations(chunks: list[dict]) -> list[DocumentCitation]:
     """
@@ -153,3 +194,17 @@ def _build_citations(chunks: list[dict]) -> list[DocumentCitation]:
         )
 
     return citations
+
+
+def _format_sse(event: str, data: dict) -> str:
+    """
+    Serialize a chat event into a Server-Sent Events frame.
+
+    Args:
+        event: The SSE event type (``plan`` / ``token`` / ``done`` / ``error``).
+        data: Serializable event payload.
+
+    Returns:
+        A single SSE frame terminated by a blank line.
+    """
+    return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"

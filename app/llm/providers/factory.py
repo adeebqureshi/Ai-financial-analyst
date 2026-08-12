@@ -31,6 +31,7 @@ class ProviderFactory:
     def create(
         cls,
         provider: str,
+        **kwargs: object,
     ) -> BaseLLMProvider:
 
-        return cls._registry.create(provider)
+        return cls._registry.create(provider, **kwargs)

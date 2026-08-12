@@ -287,6 +287,7 @@ class FinancialDataService:
         net_income = self._first(
             income, ["Net Income", "Net Income Common Stockholders"], 0
         )
+        gross_profit = self._value(income, "Gross Profit", 0)
         total_assets = self._value(balance, "Total Assets", 0)
         total_liabilities = self._first(
             balance,
@@ -347,6 +348,7 @@ class FinancialDataService:
             debt=(debt or 0.0) / _MILLION,
             shares_outstanding=shares / _MILLION,
             free_cash_flow=(free_cash_flow or 0.0) / _MILLION,
+            gross_profit=(gross_profit or 0.0) / _MILLION,
         )
 
     # ──────────────────────────────────────────────────────────────────────

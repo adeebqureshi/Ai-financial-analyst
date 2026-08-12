@@ -7,7 +7,8 @@ Flow::
 
     PDF upload
         → validation
-        → existing PDF loader (page-preserving)
+        → unified document parser (LlamaParse → Marker → PyMuPDF),
+          layout-aware and page-preserving
         → page-aware chunking (existing chunker)
         → existing embedding service
         → existing Qdrant vector store
@@ -27,7 +28,7 @@ import re
 import tempfile
 import uuid
 import zlib
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
@@ -36,7 +37,7 @@ from app.core.config import Settings
 from app.core.exceptions import ParserError, ValidationError
 from app.core.logging import get_logger
 from app.embeddings.embedding_service import EmbeddingService
-from app.ingestion.pdf_loader import PDFLoader
+from app.ingestion.document_parser import UnifiedDocumentParser
 from app.ingestion.storage.file_manager import FileManager
 from app.ingestion.storage.path_manager import PathManager
 from app.parsers.chunker import Chunker
@@ -110,7 +111,9 @@ class DocumentService:
 
         self._paths = PathManager()
 
-        self._loader = PDFLoader()
+        self._parser = UnifiedDocumentParser(
+            api_key=settings.llama_parse_api_key_str,
+        )
 
         self._chunker = Chunker(
             chunk_size=settings.chunk_size,
@@ -212,7 +215,10 @@ class DocumentService:
         tmp_path = self._write_temp(content)
 
         try:
-            document = self._loader.load(tmp_path)
+            result = self._parser.parse(
+                tmp_path,
+                filename=filename,
+            )
         except Exception as exc:
             raise ParserError(
                 message=f"Failed to parse PDF: {exc}",
@@ -222,14 +228,14 @@ class DocumentService:
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
-        if document.is_empty:
+        if result.is_empty:
             raise ParserError(
                 message="No text could be extracted from the PDF.",
                 error_code="DOC_PARSE_002",
                 details={"filename": filename},
             )
 
-        pages = document.pages or [document.text]
+        pages = result.pages or [result.text]
 
         chunks = self._chunker.chunk_pages(pages)
 
@@ -241,9 +247,31 @@ class DocumentService:
 
         ticker = _detect_ticker(filename)
 
+        tables_by_page: dict[int, list[dict[str, object]]] = {}
+
+        for table in result.tables:
+            if table.source_page is None:
+                continue
+
+            tables_by_page.setdefault(table.source_page, []).append(
+                table.to_dict()
+            )
+
         ids: list[int] = []
 
         payloads: list[dict] = []
+
+        # Bitemporal metadata for uploaded documents (Phase 5).
+        #
+        # transaction_time = the actual ingestion timestamp: the date the
+        #   system became aware of this information. This is the primary
+        #   guard against look-ahead bias for historical as-of queries.
+        #
+        # valid_from / valid_until = left as None for generic PDF uploads.
+        #   These are only populated when real document/filing metadata is
+        #   available (e.g. SEC date extraction). We deliberately do NOT use
+        #   today's date as the document's *valid* date.
+        transaction_time = datetime.now(UTC).date()
 
         for index, chunk in enumerate(chunks):
             chunk_id = f"{document_id}:{index:06d}"
@@ -265,6 +293,9 @@ class DocumentService:
                     "ticker": ticker or "",
                     "filing_type": filing_type or "PDF",
                     "source": f"{filename}:page-{page}",
+                    "parser_used": result.parser_used,
+                    "tables": tables_by_page.get(page, []),
+                    "transaction_time": transaction_time.isoformat(),
                 }
             )
 
@@ -279,6 +310,8 @@ class DocumentService:
             "filename": filename,
             "pages": len(pages),
             "chunks": len(chunks),
+            "tables": len(result.tables),
+            "parser_used": result.parser_used,
             "status": "indexed",
             "created_at": datetime.now(UTC).isoformat(),
         }
@@ -288,10 +321,12 @@ class DocumentService:
         self.refresh_engine()
 
         logger.info(
-            "Indexed document %s (%d pages, %d chunks)",
+            "Indexed document %s (%d pages, %d chunks, %d tables, %s)",
             document_id,
             len(pages),
             len(chunks),
+            len(result.tables),
+            result.parser_used,
         )
 
         return record
@@ -384,9 +419,18 @@ class DocumentService:
         query: str,
         limit: int = 5,
         document_id: str | None = None,
+        as_of_date: date | None = None,
     ) -> RetrievalContext:
         """
         Retrieve relevant chunks, optionally scoped to a single document.
+
+        Args:
+            query: The search query.
+            limit: Maximum number of chunks to return.
+            document_id: Optional document to scope retrieval to.
+            as_of_date: Optional historical date. When provided, only chunks
+                whose bitemporal metadata proves the information was known
+                and valid by ``as_of_date`` are returned (no look-ahead).
         """
         self.refresh_engine()
 
@@ -394,4 +438,5 @@ class DocumentService:
             query=query,
             limit=limit,
             document_id=document_id,
+            as_of_date=as_of_date,
         )

@@ -43,7 +43,7 @@ _EXCLUDED_WORDS = {
     "AI", "ETF", "SEC", "CEO", "CFO", "COO", "GDP", "IPO", "ROE", "ROA",
     "EPS", "FED", "USA", "PDF", "RAG", "API", "EV", "EBITDA", "IT", "US",
     "UK", "COVID", "10K", "10Q", "10-K", "DCF", "FY", "USD", "Q1", "Q2",
-    "Q3", "Q4",
+    "Q3", "Q4", "WACC", "CAPM", "IRR", "NPV", "PEG",
 }
 
 
