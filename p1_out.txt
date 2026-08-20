@@ -1,0 +1,7 @@
+UPLOAD 200 True
+DOC 708e78fb3fd6418f91a748e880bfeb07 chunks=1 pages=1 status=indexed
+SEARCH 200 total=1
+HIT doc=708e78fb3fd6418f91a748e880bfeb07 page=1 text='Apple faces significant risk factors. The company depends on a concentrated supp'
+CHAT 200
+CHAT_MSG 'LLM_RESPONSE:\n\nYou are the final research analyst in an evidence-grounded financial agent.\n\nA real tool layer already produced the structured evidence below. The evidence\ncomes exclusively from execut'
+CHAT_SOURCES [{"document_id": "708e78fb3fd6418f91a748e880bfeb07", "filename": "AAPL 10-K.pdf", "page": 1, "chunk_id": "708e78fb3fd6418f91a748e880bfeb07:000000", "score": 0.0}]
