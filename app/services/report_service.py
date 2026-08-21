@@ -55,7 +55,7 @@ class ReportService:
             A ``ReportData`` with the generated report.
         """
         ticker = ticker.upper()
-        report_query = query or f"Create a complete investment research report on {ticker} using its financials and annual report."
+        report_query = query or f"Create a complete investment research report on {ticker} analyzing its valuation, financial health and risk profile."
 
         coordinator = self._get_coordinator_instance()
         result = coordinator.run_report(
