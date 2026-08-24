@@ -1,13 +1,41 @@
 """
-Financial ratio calculations.
+ratio_engine.py
+
+Financial ratio calculation engine (canonical location).
+
+This module consolidates the legacy ``app.finance`` ratio engine into the
+canonical ``app.financial`` package. It preserves the exact ``RatioEngine``
+behaviour and the ``FinancialRatios`` value object previously provided by
+``app.finance.ratio_engine``/``app.finance.ratios`` so existing callers
+(such as ``app.agents.QuantAgent``) are unaffected.
 """
 
 from __future__ import annotations
 
-from app.finance.ratios import FinancialRatios
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class FinancialRatios:
+    """Value object holding a set of calculated financial ratios."""
+
+    current_ratio: float
+
+    debt_to_equity: float
+
+    return_on_assets: float
+
+    return_on_equity: float
+
+    gross_margin: float
+
+    operating_margin: float
+
+    net_margin: float
 
 
 class RatioEngine:
+    """Financial ratio calculations."""
 
     def calculate(
         self,

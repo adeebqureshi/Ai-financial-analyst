@@ -5,8 +5,8 @@ Quantitative analysis agent.
 from __future__ import annotations
 
 from app.agents.analysis_result import AnalysisResult
-from app.finance.ratio_engine import RatioEngine
 from app.financial.data import FinancialDataService
+from app.financial.ratio_engine import RatioEngine
 
 
 class QuantAgent:
