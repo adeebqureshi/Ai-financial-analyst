@@ -1,0 +1,39 @@
+# Docker build context exclusions
+# Used when building from the project root, e.g.:
+#   docker build -f docker/Dockerfile -t ai-financial-analyst .
+
+# Version control
+.git/
+.gitignore
+
+# Secrets / local environment files (never bake into an image)
+.env
+.env.local
+.env.*.local
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Node / frontend build artifacts
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log

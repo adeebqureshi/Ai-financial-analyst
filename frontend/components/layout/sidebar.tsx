@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,15 +9,11 @@ import {
   LayoutDashboard,
   LineChart,
   Scale,
-  Briefcase,
   FileText,
   Search,
-  Star,
-  Settings,
   X,
   type LucideIcon,
 } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -75,16 +71,6 @@ const groups: NavGroup[] = [
         href: "/compare",
         icon: Scale,
       },
-      {
-        title: "Portfolio",
-        href: "/portfolio",
-        icon: Briefcase,
-      },
-      {
-        title: "Watchlist",
-        href: "/watchlist",
-        icon: Star,
-      },
     ],
   },
   {
@@ -110,9 +96,7 @@ export function Sidebar({ open, onClose }: Props) {
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
 
-    return (
-      pathname === href || pathname.startsWith(href + "/")
-    );
+    return pathname === href || pathname.startsWith(href + "/");
   }
 
   return (
@@ -172,7 +156,6 @@ export function Sidebar({ open, onClose }: Props) {
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-
                   const active = isActive(item.href);
 
                   return (
@@ -207,22 +190,7 @@ export function Sidebar({ open, onClose }: Props) {
         </nav>
 
         <div className="border-t border-white/10 p-4">
-          <Link
-            href="/settings"
-            onClick={onClose}
-            className={cn(
-              "flex items-center gap-4 rounded-2xl px-4 py-3 transition-all",
-              isActive("/settings")
-                ? "bg-blue-500/15 text-white"
-                : "text-zinc-500 hover:bg-white/5 hover:text-white"
-            )}
-          >
-            <Settings size={20} />
-
-            <span>Settings</span>
-          </Link>
-
-          <div className="mt-3 rounded-3xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 p-5">
+          <div className="rounded-3xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 p-5">
             <p className="text-xs uppercase tracking-widest text-zinc-400">
               Agent Status
             </p>

@@ -45,6 +45,9 @@ document-parsing = [
     "marker-pdf>=1.0.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
