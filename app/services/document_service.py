@@ -34,6 +34,7 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile
 
 from app.core.config import Settings
+from app.auth.exceptions import AuthorizationError
 from app.core.exceptions import ParserError, ValidationError
 from app.core.logging import get_logger
 from app.embeddings.embedding_service import EmbeddingService
@@ -196,9 +197,18 @@ class DocumentService:
     # Upload / index
     # ──────────────────────────────────────────────────────────────────
 
-    def upload(self, file: UploadFile) -> dict:
+    def upload(
+        self,
+        file: UploadFile,
+        owner_id: str | None = None,
+    ) -> dict:
         """
         Parse, chunk, embed and index an uploaded PDF.
+
+        Args:
+            file: The uploaded PDF file.
+            owner_id: Optional id of the authenticated owner. When set, the
+                document is scoped to that user for list/delete operations.
 
         Returns:
             A document record with ``document_id``, ``filename``,
@@ -314,6 +324,7 @@ class DocumentService:
             "parser_used": result.parser_used,
             "status": "indexed",
             "created_at": datetime.now(UTC).isoformat(),
+            "owner_id": owner_id,
         }
 
         self._save_record(record)
@@ -344,8 +355,23 @@ class DocumentService:
     # Library
     # ──────────────────────────────────────────────────────────────────
 
-    def list_documents(self) -> dict:
+    def list_documents(self, owner_id: str | None = None) -> dict:
+        """
+        List documents in the library.
+
+        Args:
+            owner_id: When provided, only documents owned by this user are
+                returned (anonymous/legacy records with no owner remain
+                visible to everyone).
+        """
         records = self._list_records()
+
+        if owner_id is not None:
+            records = [
+                record
+                for record in records
+                if record.get("owner_id") in (None, owner_id)
+            ]
 
         return {
             "documents": records,
@@ -384,11 +410,36 @@ class DocumentService:
 
         return record
 
-    def delete_document(self, document_id: str) -> dict:
-        if self._load_record(document_id) is None:
+    def delete_document(
+        self,
+        document_id: str,
+        owner_id: str | None = None,
+    ) -> dict:
+        """
+        Delete a document and its vectors.
+
+        Args:
+            document_id: The document to delete.
+            owner_id: When provided, deletion is refused (403) for documents
+                owned by a different user.
+
+        Raises:
+            AuthorizationError: When the document belongs to another user.
+        """
+        record = self._load_record(document_id)
+
+        if record is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Document '{document_id}' was not found.",
+            )
+
+        if (
+            owner_id is not None
+            and record.get("owner_id") not in (None, owner_id)
+        ):
+            raise AuthorizationError(
+                "You do not have access to this document."
             )
 
         self._store.delete_by_document_id(document_id)

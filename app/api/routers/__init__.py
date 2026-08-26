@@ -28,7 +28,7 @@ Design Decision:
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.api.routes.analyze_company import router as analyze_company_router
 from app.api.routers.analysis import router as analysis_router
@@ -45,29 +45,37 @@ from app.api.routers.screen import router as screen_router
 from app.api.routers.search import router as search_router
 from app.api.routers.valuation import router as valuation_router
 from app.api.routers.version import router as version_router
+from app.auth.dependencies import get_current_user
+from app.auth.router import router as auth_router
 
 # Aggregated API router — included in the FastAPI app
 api_router = APIRouter()
 
-# Include all routers
-api_router.include_router(analyze_company_router)
+_AUTH_GUARD = [Depends(get_current_user)]
+
+# Public: auth, root, health, version
+api_router.include_router(auth_router)
 api_router.include_router(root_router)
 api_router.include_router(health_router)
 api_router.include_router(version_router)
-api_router.include_router(analysis_router)
-api_router.include_router(search_router)
-api_router.include_router(company_router)
-api_router.include_router(valuation_router)
-api_router.include_router(chat_router)
-api_router.include_router(ratios_router)
-api_router.include_router(risk_router)
-api_router.include_router(report_router)
-api_router.include_router(compare_router)
-api_router.include_router(screen_router)
-api_router.include_router(documents_router)
+
+# Business endpoints require authentication (401 without a valid token).
+api_router.include_router(analyze_company_router, dependencies=_AUTH_GUARD)
+api_router.include_router(analysis_router, dependencies=_AUTH_GUARD)
+api_router.include_router(search_router, dependencies=_AUTH_GUARD)
+api_router.include_router(company_router, dependencies=_AUTH_GUARD)
+api_router.include_router(valuation_router, dependencies=_AUTH_GUARD)
+api_router.include_router(chat_router, dependencies=_AUTH_GUARD)
+api_router.include_router(ratios_router, dependencies=_AUTH_GUARD)
+api_router.include_router(risk_router, dependencies=_AUTH_GUARD)
+api_router.include_router(report_router, dependencies=_AUTH_GUARD)
+api_router.include_router(compare_router, dependencies=_AUTH_GUARD)
+api_router.include_router(screen_router, dependencies=_AUTH_GUARD)
+api_router.include_router(documents_router, dependencies=_AUTH_GUARD)
 
 __all__ = [
     "api_router",
+    "auth_router",
     "analyze_company_router",
     "root_router",
     "health_router",

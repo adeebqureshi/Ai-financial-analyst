@@ -182,6 +182,32 @@ class Settings(BaseSettings):
         description="Max memory (MB) for sandboxed processes.",
     )
 
+    # ── Authentication / Authorization ───────────────────────────────────
+    auth_enabled: bool = Field(
+        default=True,
+        description=(
+            "Require authentication on business endpoints. Secure by "
+            "default; set AUTH_ENABLED=false only for trusted local "
+            "development or legacy test harnesses."
+        ),
+    )
+    auth_secret_key: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "JWT signing secret. REQUIRED in production when auth is "
+            "enabled; when empty an ephemeral process-random secret is "
+            "used (tokens invalidate on restart)."
+        ),
+    )
+    access_token_expire_minutes: int = Field(
+        default=60,
+        description="Lifetime of issued JWT access tokens, in minutes.",
+    )
+    auth_database_url: str = Field(
+        default="sqlite:///./data/auth.db",
+        description="SQLAlchemy URL for the user account store.",
+    )
+
     # ── Pydantic Settings Configuration ──────────────────────────────────
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -207,6 +233,16 @@ class Settings(BaseSettings):
         """Ensure chunk overlap is non-negative."""
         if v < 0:
             raise ValueError("chunk_overlap must be non-negative")
+        return v
+
+    @field_validator("access_token_expire_minutes")
+    @classmethod
+    def validate_token_expiry(cls, v: int) -> int:
+        """Ensure access tokens have a positive, sane lifetime."""
+        if not 1 <= v <= 24 * 60:
+            raise ValueError(
+                "access_token_expire_minutes must be between 1 and 1440"
+            )
         return v
 
     # ── Post-Init Environment Adjustments ────────────────────────────────
@@ -255,6 +291,11 @@ class Settings(BaseSettings):
     def llama_parse_api_key_str(self) -> str:
         """Return the LlamaParse API key as a plain string."""
         return self.llama_parse_api_key.get_secret_value()
+
+    @property
+    def auth_secret_key_str(self) -> str:
+        """Return the JWT signing secret as a plain string."""
+        return self.auth_secret_key.get_secret_value()
 
     def validate_required_keys(self) -> None:
         """Validate that required API keys are set for non-test environments."""

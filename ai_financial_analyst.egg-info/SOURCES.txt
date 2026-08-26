@@ -58,6 +58,15 @@ app/api/routers/search.py
 app/api/routers/valuation.py
 app/api/routers/version.py
 app/api/routes/analyze_company.py
+app/auth/__init__.py
+app/auth/database.py
+app/auth/dependencies.py
+app/auth/exceptions.py
+app/auth/models.py
+app/auth/router.py
+app/auth/schemas.py
+app/auth/security.py
+app/auth/service.py
 app/comparison/__init__.py
 app/comparison/company_metric.py
 app/comparison/comparator.py

@@ -42,6 +42,11 @@ from app.core.exceptions import (
     SandboxError,
     ValidationError,
 )
+from app.auth.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    EmailAlreadyRegisteredError,
+)
 from app.core.logging import get_logger
 from app.schemas.base import APIResponse, ErrorDetail
 
@@ -127,6 +132,55 @@ async def financial_anyst_error_handler(
     return JSONResponse(
         status_code=status_code,
         content=response.model_dump(mode="json"),
+    )
+
+
+async def auth_error_handler(
+    request: Request,
+    exc: AuthenticationError | AuthorizationError | EmailAlreadyRegisteredError,
+) -> JSONResponse:
+    """
+    Handle authentication/authorization errors.
+
+    Maps ``AuthenticationError`` to 401 (with the standard
+    ``WWW-Authenticate: Bearer`` challenge header), ``AuthorizationError``
+    to 403 and ``EmailAlreadyRegisteredError`` to 409, all in the uniform
+    ``APIResponse`` error shape.
+    """
+    if isinstance(exc, EmailAlreadyRegisteredError):
+        status_code = 409
+    elif isinstance(exc, AuthorizationError):
+        status_code = 403
+    else:
+        status_code = 401
+
+    logger.warning(
+        "Auth exception: %s (code=%s) | %s %s | %d",
+        exc.__class__.__name__,
+        exc.error_code,
+        request.method,
+        request.url.path,
+        status_code,
+    )
+
+    error_detail = ErrorDetail(
+        message=exc.message,
+        code=exc.error_code,
+    )
+
+    response = APIResponse.error_response(
+        message=exc.message,
+        errors=[error_detail],
+    )
+
+    headers = (
+        {"WWW-Authenticate": "Bearer"} if status_code == 401 else None
+    )
+
+    return JSONResponse(
+        status_code=status_code,
+        content=response.model_dump(mode="json"),
+        headers=headers,
     )
 
 
@@ -281,6 +335,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         app: The FastAPI application instance.
     """
     app.add_exception_handler(FinancialAnalystError, financial_anyst_error_handler)
+    app.add_exception_handler(AuthenticationError, auth_error_handler)
+    app.add_exception_handler(AuthorizationError, auth_error_handler)
+    app.add_exception_handler(EmailAlreadyRegisteredError, auth_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)

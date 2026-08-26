@@ -20,11 +20,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.api.dependencies.services import get_document_service
+from app.auth.dependencies import get_current_user
+from app.auth.models import User
 from app.schemas.base import APIResponse
 from app.schemas.responses import DocumentData, DocumentListData
 from app.services.document_service import DocumentService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
+
+
+def _owner_id(current_user: User | None) -> str | None:
+    """Return the owner id for the caller (None when auth is disabled)."""
+    return current_user.id if current_user is not None else None
 
 
 @router.post(
@@ -39,6 +46,7 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 async def upload_document(
     file: UploadFile = File(...),
     service: DocumentService = Depends(get_document_service),
+    current_user: User | None = Depends(get_current_user),
 ) -> APIResponse[DocumentData]:
     """
     Upload endpoint.
@@ -46,11 +54,12 @@ async def upload_document(
     Args:
         file: The multipart PDF file.
         service: Injected ``DocumentService`` instance.
+        current_user: The authenticated owner (``None`` when auth disabled).
 
     Returns:
         An ``APIResponse`` containing the indexed document record.
     """
-    result = service.upload(file)
+    result = service.upload(file, owner_id=_owner_id(current_user))
 
     return APIResponse.success_response(
         message="Document indexed successfully",
@@ -66,17 +75,19 @@ async def upload_document(
 )
 async def list_documents(
     service: DocumentService = Depends(get_document_service),
+    current_user: User | None = Depends(get_current_user),
 ) -> APIResponse[DocumentListData]:
     """
     Document library endpoint.
 
     Args:
         service: Injected ``DocumentService`` instance.
+        current_user: The authenticated owner (``None`` when auth disabled).
 
     Returns:
         An ``APIResponse`` containing the document library.
     """
-    result = service.list_documents()
+    result = service.list_documents(owner_id=_owner_id(current_user))
 
     return APIResponse.success_response(
         message=f"{result['total']} documents found",
@@ -96,6 +107,7 @@ async def list_documents(
 async def delete_document(
     document_id: str,
     service: DocumentService = Depends(get_document_service),
+    current_user: User | None = Depends(get_current_user),
 ) -> APIResponse[dict]:
     """
     Delete endpoint.
@@ -103,11 +115,15 @@ async def delete_document(
     Args:
         document_id: The document to delete.
         service: Injected ``DocumentService`` instance.
+        current_user: The authenticated owner (``None`` when auth disabled).
 
     Returns:
         An ``APIResponse`` confirming deletion.
     """
-    result = service.delete_document(document_id)
+    result = service.delete_document(
+        document_id,
+        owner_id=_owner_id(current_user),
+    )
 
     return APIResponse.success_response(
         message="Document deleted",

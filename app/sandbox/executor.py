@@ -1,55 +1,19 @@
-"""
-executor.py
-
-Restricted Python execution environment for LLM-generated financial code.
-
-Threat model
-------------
-Code produced by an LLM is treated as **untrusted input**. The sandbox is a
-defence-in-depth layer: an AST-level validation pass runs first and rejects
-dangerous constructs before any execution; the runtime then provides a
-controlled namespace with a restricted ``builtins`` dictionary and no modules.
-
-Guarantees provided here (in-process):
-    - No arbitrary imports (``import`` / ``from`` statements are rejected).
-    - No ``exec`` / ``eval`` / ``compile`` / ``__import__``.
-    - No ``open`` or filesystem access.
-    - No ``subprocess`` / system calls (no ``sys``, ``os``, ``subprocess``).
-    - No network clients (no ``socket``, ``urllib``, ``http``, ``requests``).
-    - No ``__builtins__``, object/class hierarchy or ``globals()`` escape
-      (dunder attribute access is rejected, as are ``globals``/``locals``).
-    - stdout is captured; exceptions are converted into a structured
-      :class:`SandboxResult`; the final answer is read from ``result``.
-
-Limitations (documented, not hidden)
-------------------------------------
-This is a **restricted in-process ``exec()`` sandbox**, *not* an OS-level
-process/container sandbox. It is intended to stop accidental or opportunistic
-escapes by generated code, not a determined local attacker who already has
-Python interpreter access on the host.
-
-    - Timeout enforcement uses ``SIGALRM`` where the platform provides it
-      (POSIX, main thread). On Windows there is no ``SIGALRM``, so an
-      infinite loop cannot be interrupted from within the process; a
-      production deployment that executes untrusted code must run it in a
-      separate process/container with a hard kill timer and memory limits.
-    - Memory limits require OS-level controls (e.g. ``resource.setrlimit`` /
-      container ``--memory``) and are not applied here.
-    - The sandbox verifies **arithmetic** — it does not verify whether the
-      input financial data is true. Real data must be supplied by the
-      application's financial-data tools (see ``app.sandbox.code_agent``).
-"""
-
 from __future__ import annotations
 
 import ast
 import builtins
 import contextlib
 import io
+import json
 import math
+import os
 import signal
+import subprocess
+import sys
+import tempfile
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Final
 
 from app.core.logging import get_logger
@@ -60,6 +24,12 @@ MAX_CODE_LENGTH: Final[int] = 8000
 """Maximum number of characters of sandboxed code. Static cost guard."""
 
 SANDBOX_SOURCE_NAME: Final[str] = "<sandbox>"
+
+# Default wall-clock budget (seconds) when the caller passes none.
+_DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
+
+# Extra grace (seconds) beyond the timeout before we hard-kill a worker.
+_KILL_GRACE_SECONDS: Final[int] = 5
 
 
 class SandboxSecurityError(Exception):
@@ -379,8 +349,13 @@ class PythonSandbox:
             for the documented limitation.
     """
 
-    def __init__(self, timeout: int | None = None) -> None:
+    def __init__(
+        self,
+        timeout: int | None = None,
+        memory_limit_mb: int | None = None,
+    ) -> None:
         self.timeout = timeout
+        self.memory_limit_mb = memory_limit_mb
 
     # ──────────────────────────────────────────────────────────────────────
     # Public API
@@ -398,20 +373,19 @@ class PythonSandbox:
         timeout: int | None = None,
     ) -> SandboxResult:
         """
-        Validate and execute ``code`` inside the restricted namespace.
+        Validate and execute ``code`` inside an isolated subprocess worker.
 
         Args:
             code: The untrusted Python source to run.
             context: Explicit values the code may reference. Every value is
-                injected into the namespace under its key; no other data is
-                visible to the code.
-            timeout: Optional override for the configured timeout.
+                injected into the worker namespace under its key; no other
+                data (environment, filesystem, secrets) is visible to it.
+            timeout: Optional override for the configured timeout. The worker
+                is hard-killed if it exceeds the budget.
 
         Returns:
             A structured :class:`SandboxResult`. Exceptions never propagate.
         """
-        namespace = self._build_namespace(context)
-
         reason = self.validate(code)
         if reason:
             return SandboxResult(
@@ -420,28 +394,14 @@ class PythonSandbox:
                 error=f"security: {reason}",
             )
 
-        try:
-            compiled = compile(code, SANDBOX_SOURCE_NAME, "exec")
-        except SyntaxError as exc:
-            return SandboxResult(
-                success=False,
-                output="",
-                error=f"syntax error: {exc.msg}",
-            )
+        effective_timeout = timeout if timeout is not None and timeout > 0 else self.timeout
+        effective_timeout = effective_timeout or _DEFAULT_TIMEOUT_SECONDS
 
-        output, error = self._execute(compiled, namespace, timeout)
-
-        if error is not None:
-            return SandboxResult(
-                success=False,
-                output=output,
-                error=error,
-            )
-
-        return SandboxResult(
-            success=True,
-            output=output,
-            return_value=namespace.get("result"),
+        return _run_in_subprocess(
+            code=code,
+            context=context,
+            timeout=effective_timeout,
+            memory_limit_mb=self.memory_limit_mb,
         )
 
     # ──────────────────────────────────────────────────────────────────────
@@ -529,3 +489,214 @@ class PythonSandbox:
 
 def _raise_timeout(signum: int, frame: Any) -> None:
     raise SandboxTimeoutError("sandbox execution exceeded the timeout budget")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Subprocess isolation
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def execute_untrusted(
+    code: str,
+    context: dict[str, Any] | None = None,
+) -> SandboxResult:
+    """
+    Validate and execute ``code`` inline with the restricted namespace.
+
+    This is the **worker-side** path: the untrusted code runs inside the
+    already-isolated child process. It deliberately does *not* spawn another
+    subprocess (avoiding recursion). The parent's kill-timer remains the hard
+    safety net for timeouts/memory.
+
+    Args:
+        code: The untrusted Python source to run.
+        context: Explicit values the code may reference.
+
+    Returns:
+        A structured :class:`SandboxResult`. Exceptions never propagate.
+    """
+    sandbox = PythonSandbox()
+
+    reason = sandbox.validate(code)
+    if reason:
+        return SandboxResult(
+            success=False,
+            output="",
+            error=f"security: {reason}",
+        )
+
+    try:
+        compiled = compile(code, SANDBOX_SOURCE_NAME, "exec")
+    except SyntaxError as exc:
+        return SandboxResult(
+            success=False,
+            output="",
+            error=f"syntax error: {exc.msg}",
+        )
+
+    namespace = sandbox._build_namespace(context)  # noqa: SLF001 - internal worker path
+
+    output, error = sandbox._execute(compiled, namespace, None)  # noqa: SLF001 - internal worker path
+
+    if error is not None:
+        return SandboxResult(
+            success=False,
+            output=output,
+            error=error,
+        )
+
+    return SandboxResult(
+        success=True,
+        output=output,
+        return_value=namespace.get("result"),
+    )
+
+
+def _run_in_subprocess(
+    *,
+    code: str,
+    context: dict[str, Any] | None,
+    timeout: int,
+    memory_limit_mb: int | None,
+) -> SandboxResult:
+    """
+    Run ``code`` in a fresh, hard-killable worker process.
+
+    The worker is spawned with a minimal, secret-free environment and an empty
+    working directory. Input (code + context) is sent over stdin as JSON; the
+    result is read back from stdout. If the worker exceeds ``timeout`` it is
+    terminated and then forcibly killed (whole process group on POSIX).
+    """
+    project_root = Path(__file__).resolve().parent.parent.parent
+    worker_script = project_root / "app" / "sandbox" / "worker.py"
+
+    # Spawn the worker with a secret-free environment.
+    #
+    # On POSIX we start from a minimal map. On Windows the interpreter needs
+    # system variables (SYSTEMROOT, PATH, ...), so we start from a copy of the
+    # current environment but strip everything that looks like a secret or a
+    # provider credential. Either way the untrusted code never sees secrets.
+    if os.name == "posix":
+        worker_env: dict[str, str] | None = {
+            "PYTHONPATH": str(project_root),
+            "PYTHONIOENCODING": "utf-8",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
+    else:
+        worker_env = dict(os.environ)
+        _SECRET_MARKERS = (
+            "KEY", "SECRET", "TOKEN", "PASSWORD", "PASSWD",
+            "CREDENTIAL", "IDENTITY", "APIKEY",
+        )
+        for _var in list(worker_env):
+            _upper = _var.upper()
+            if any(_marker in _upper for _marker in _SECRET_MARKERS):
+                worker_env.pop(_var, None)
+        worker_env["PYTHONPATH"] = str(project_root)
+        worker_env["PYTHONIOENCODING"] = "utf-8"
+        worker_env["PYTHONDONTWRITEBYTECODE"] = "1"
+
+    payload = json.dumps(
+        {
+            "code": code,
+            "context": context or {},
+            "timeout": timeout,
+            "memory_limit_mb": memory_limit_mb,
+        }
+    )
+
+    working_dir = Path(tempfile.mkdtemp(prefix="sandbox-cwd-"))
+
+    proc: subprocess.Popen | None = None
+
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "-u", str(worker_script)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=worker_env,
+            cwd=str(working_dir),
+            start_new_session=True,
+        )
+
+        out_bytes, err_bytes = proc.communicate(
+            input=payload.encode("utf-8"),
+            timeout=timeout + _KILL_GRACE_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        _terminate_worker(proc, exc)
+        out_bytes, err_bytes = proc.communicate() if proc is not None else (b"", b"")
+        return SandboxResult(
+            success=False,
+            output="",
+            error=f"timeout: sandbox execution exceeded {timeout}s and was terminated safely",
+        )
+    finally:
+        if proc is not None and proc.poll() is None:
+            _terminate_worker(proc, None)
+        try:
+            working_dir.rmdir()
+        except OSError:
+            pass
+
+    if proc is None or proc.returncode != 0:
+        stderr = ""
+        if err_bytes:
+            stderr = err_bytes.decode("utf-8", errors="replace").strip()
+        logger.warning("Sandbox worker failed (exit=%s): %s",
+                       proc.returncode if proc else "?", stderr)
+        return SandboxResult(
+            success=False,
+            output="",
+            error=f"sandbox process failed to execute code (exit {proc.returncode if proc else '?'})",
+        )
+
+    try:
+        data = json.loads(out_bytes.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        logger.warning("Sandbox worker returned malformed output: %s",
+                       err_bytes.decode("utf-8", errors="replace").strip())
+        return SandboxResult(
+            success=False,
+            output="",
+            error="sandbox produced no usable result",
+        )
+
+    return SandboxResult(
+        success=bool(data.get("success")),
+        output=data.get("output") or "",
+        error=data.get("error"),
+        return_value=data.get("return_value"),
+    )
+
+
+def _terminate_worker(proc: subprocess.Popen, _exc: Any) -> None:
+    """
+    Safely stop a runaway worker: terminate gracefully, then force-kill the
+    whole process group so no descendant survives.
+    """
+    if proc is None or proc.poll() is not None:
+        return
+
+    try:
+        proc.terminate()
+    except OSError:
+        pass
+
+    # Give it a moment, then SIGKILL the process group (POSIX).
+    try:
+        proc.wait(timeout=1.0)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), 9)  # type: ignore[attr-defined]
+        except (AttributeError, OSError, ProcessLookupError):
+            # Windows: no killpg / getpgid; fall back to kill().
+            try:
+                proc.kill()
+            except OSError:
+                pass
+        try:
+            proc.wait(timeout=2.0)
+        except subprocess.TimeoutExpired:
+            pass
