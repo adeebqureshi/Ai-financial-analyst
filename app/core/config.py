@@ -208,6 +208,68 @@ class Settings(BaseSettings):
         description="SQLAlchemy URL for the user account store.",
     )
 
+    # ── Rate Limiting ────────────────────────────────────────────────────
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable rate limiting on expensive endpoints.",
+    )
+    rate_limit_redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis URL for distributed rate limiting. Falls back to local memory when unavailable.",
+    )
+    rate_limit_default_per_minute: int = Field(
+        default=60,
+        description="Default requests per minute per user/IP.",
+    )
+    rate_limit_default_per_hour: int = Field(
+        default=1000,
+        description="Default requests per hour per user/IP.",
+    )
+    rate_limit_chat_per_minute: int = Field(
+        default=20,
+        description="Chat endpoint requests per minute per user/IP.",
+    )
+    rate_limit_chat_per_hour: int = Field(
+        default=200,
+        description="Chat endpoint requests per hour per user/IP.",
+    )
+    rate_limit_analyze_per_minute: int = Field(
+        default=10,
+        description="Analysis endpoint requests per minute per user/IP.",
+    )
+    rate_limit_analyze_per_hour: int = Field(
+        default=100,
+        description="Analysis endpoint requests per hour per user/IP.",
+    )
+    rate_limit_documents_per_minute: int = Field(
+        default=10,
+        description="Documents endpoint requests per minute per user/IP.",
+    )
+    rate_limit_documents_per_hour: int = Field(
+        default=100,
+        description="Documents endpoint requests per hour per user/IP.",
+    )
+    rate_limit_search_per_minute: int = Field(
+        default=30,
+        description="Search endpoint requests per minute per user/IP.",
+    )
+    rate_limit_search_per_hour: int = Field(
+        default=300,
+        description="Search endpoint requests per hour per user/IP.",
+    )
+    rate_limit_sandbox_per_minute: int = Field(
+        default=5,
+        description="Sandbox execution requests per minute per user/IP.",
+    )
+    rate_limit_sandbox_per_hour: int = Field(
+        default=50,
+        description="Sandbox execution requests per hour per user/IP.",
+    )
+    rate_limit_anonymous_multiplier: float = Field(
+        default=0.1,
+        description="Rate limit multiplier for anonymous requests (e.g., 0.1 = 10% of authenticated limits).",
+    )
+
     # ── Pydantic Settings Configuration ──────────────────────────────────
     model_config = SettingsConfigDict(
         env_file=".env",

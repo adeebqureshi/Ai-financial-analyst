@@ -13,12 +13,14 @@ Design Decisions:
     - **Dependency injection**: ``DocumentService`` is injected via
       ``Depends(get_document_service)``, making it overridable in tests.
     - **Standard response format**: Returns ``APIResponse[T]``.
+    - **Rate limiting**: All endpoints are rate limited per user/IP.
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
+from app.api.dependencies import rate_limit_documents
 from app.api.dependencies.services import get_document_service
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
@@ -42,6 +44,7 @@ def _owner_id(current_user: User | None) -> str | None:
         "Parses, chunks, embeds and indexes an uploaded financial PDF. "
         "Returns the document record with page/chunk counts."
     ),
+    dependencies=[Depends(rate_limit_documents)],
 )
 async def upload_document(
     file: UploadFile = File(...),
@@ -72,6 +75,7 @@ async def upload_document(
     response_model=APIResponse[DocumentListData],
     summary="List indexed documents",
     description="Returns the user's document library with page/chunk counts.",
+    dependencies=[Depends(rate_limit_documents)],
 )
 async def list_documents(
     service: DocumentService = Depends(get_document_service),
@@ -103,6 +107,7 @@ async def list_documents(
     response_model=APIResponse[dict],
     summary="Delete a document",
     description="Removes a document's vectors and metadata from the index.",
+    dependencies=[Depends(rate_limit_documents)],
 )
 async def delete_document(
     document_id: str,

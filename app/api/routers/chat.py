@@ -15,6 +15,7 @@ Design Decisions:
     - **SSE for streaming**: ``/chat/stream`` returns a ``StreamingResponse``
       with ``text/event-stream``; each SSE frame is self-contained so a client
       can render tokens as they arrive.
+    - **Rate limiting**: Both endpoints are rate limited per user/IP.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
+from app.api.dependencies import rate_limit_chat
 from app.api.dependencies.services import get_chat_service
 from app.schemas.analysis import ChatRequest
 from app.schemas.base import APIResponse
@@ -36,6 +38,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
     response_model=APIResponse[ChatResponseData],
     summary="Chat with the AI analyst",
     description="Sends a message to the LLM-powered financial analyst and returns a response.",
+    dependencies=[Depends(rate_limit_chat)],
 )
 async def chat(
     request: ChatRequest,
@@ -67,6 +70,7 @@ async def chat(
         "answer back as Server-Sent Events (SSE). Emits ``plan``, ``token``, "
         "``done`` and ``error`` events so clients can render tokens live."
     ),
+    dependencies=[Depends(rate_limit_chat)],
 )
 async def chat_stream(
     request: ChatRequest,

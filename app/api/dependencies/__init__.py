@@ -1,17 +1,30 @@
 """
 API Dependencies Package
 
-This package contains FastAPI dependency injection callables for settings
-and services. Dependencies are injected into route handlers via
+This package contains FastAPI dependency injection callables for settings,
+services, and rate limiting. Dependencies are injected into route handlers via
 ``Depends()``, making them explicit, testable, and overridable.
 
 Submodules:
     - ``settings``: Settings singleton dependency.
     - ``services``: Service factory dependencies (health, version).
+    - ``rate_limit``: Rate limiting dependencies for expensive endpoints.
 """
 
 from __future__ import annotations
 
+from app.api.dependencies.rate_limit import (
+    RateLimitDependency,
+    rate_limit_chat,
+    rate_limit_analyze,
+    rate_limit_analyze_company,
+    rate_limit_documents,
+    rate_limit_search,
+    rate_limit_sandbox,
+    rate_limit_default,
+    get_rate_limit_dependency,
+    reset_rate_limits_for_testing,
+)
 from app.api.dependencies.services import (
     get_analysis_service,
     get_chat_service,
@@ -42,4 +55,14 @@ __all__ = [
     "get_report_service",
     "get_compare_service",
     "get_screen_service",
+    "RateLimitDependency",
+    "rate_limit_chat",
+    "rate_limit_analyze",
+    "rate_limit_analyze_company",
+    "rate_limit_documents",
+    "rate_limit_search",
+    "rate_limit_sandbox",
+    "rate_limit_default",
+    "get_rate_limit_dependency",
+    "reset_rate_limits_for_testing",
 ]

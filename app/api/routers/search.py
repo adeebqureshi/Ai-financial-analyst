@@ -9,12 +9,14 @@ Design Decisions:
     - **Dependency injection**: ``SearchService`` is injected via
       ``Depends(get_search_service)``, making it overridable in tests.
     - **Standard response format**: Returns ``APIResponse[SearchResultData]``.
+    - **Rate limiting**: Endpoint is rate limited per user/IP.
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
+from app.api.dependencies import rate_limit_search
 from app.api.dependencies.services import get_search_service
 from app.schemas.analysis import SearchRequest
 from app.schemas.base import APIResponse
@@ -32,6 +34,7 @@ router = APIRouter(prefix="/search", tags=["Search"])
         "Performs a semantic search over the retrieval engine and returns "
         "relevant document chunks with scores and metadata."
     ),
+    dependencies=[Depends(rate_limit_search)],
 )
 async def search(
     request: SearchRequest,

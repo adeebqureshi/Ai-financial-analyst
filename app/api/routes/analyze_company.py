@@ -16,6 +16,7 @@ Design Decisions:
       ``Depends(get_analysis_service)``, making it overridable in tests.
     - **Standard response format**: Returns ``APIResponse[AnalyzeResponseData]``
       for consistency with all other endpoints.
+    - **Rate limiting**: Endpoint is rate limited per user/IP.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
+from app.api.dependencies import rate_limit_analyze_company
 from app.api.dependencies.services import get_analysis_service
 from app.schemas.base import APIResponse
 from app.schemas.responses import AnalyzeResponseData
@@ -73,6 +75,7 @@ class AnalyzeCompanyRequest(BaseModel):
         "using real company-specific financial statements, market data, "
         "valuation, financial health, and an investment recommendation."
     ),
+    dependencies=[Depends(rate_limit_analyze_company)],
 )
 async def analyze_company(
     payload: AnalyzeCompanyRequest,
