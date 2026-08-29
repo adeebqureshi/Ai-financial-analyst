@@ -138,6 +138,40 @@ class QdrantStore(BaseVectorStore):
             ]
         )
 
+    @staticmethod
+    def _owner_filter(owner_id: str | None) -> Filter | None:
+        if owner_id is None:
+            return None
+        return Filter(
+            must=[
+                FieldCondition(
+                    key="owner_id",
+                    match=MatchValue(value=owner_id),
+                )
+            ]
+        )
+
+    @staticmethod
+    def _combined_filter(document_id: str | None, owner_id: str | None) -> Filter | None:
+        filters = []
+        if document_id:
+            filters.append(
+                FieldCondition(
+                    key="document_id",
+                    match=MatchValue(value=document_id),
+                )
+            )
+        if owner_id is not None:
+            filters.append(
+                FieldCondition(
+                    key="owner_id",
+                    match=MatchValue(value=owner_id),
+                )
+            )
+        if not filters:
+            return None
+        return Filter(must=filters)
+
     def upsert(
         self,
         ids: list[int | str],
@@ -171,13 +205,10 @@ class QdrantStore(BaseVectorStore):
         vector: list[float],
         limit: int = 5,
         document_id: str | None = None,
+        owner_id: str | None = None,
     ):
 
-        query_filter = (
-            self._document_filter(document_id)
-            if document_id
-            else None
-        )
+        query_filter = self._combined_filter(document_id, owner_id)
 
         return self.client.query_points(
             collection_name=self.collection_name,
@@ -211,13 +242,17 @@ class QdrantStore(BaseVectorStore):
     def get_all(
         self,
         limit: int = 10_000,
+        owner_id: str | None = None,
     ):
         """
         Return every point in the collection (used to rebuild BM25 indexes).
         """
+        query_filter = self._owner_filter(owner_id)
+
         points, _ = self.client.scroll(
             collection_name=self.collection_name,
             limit=limit,
+            scroll_filter=query_filter,
         )
 
         return points

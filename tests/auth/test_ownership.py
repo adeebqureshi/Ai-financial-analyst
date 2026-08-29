@@ -195,3 +195,62 @@ class TestDocumentOwnership:
         assert document_id not in ids_for_b
 
 
+class TestSearchOwnership:
+    """Search results must be scoped to the authenticated user's documents."""
+
+    def test_search_results_scoped_to_owner(self, auth_client):
+        token_a = _register_and_login(auth_client, "search-owner@example.com")
+        token_b = _register_and_login(auth_client, "search-other@example.com")
+
+        # Owner uploads a document
+        _upload(auth_client, token_a, "Apple revenue grew 10% year over year.")
+
+        # Owner can search and find their document
+        search_a = auth_client.post(
+            "/search",
+            headers=_headers(token_a),
+            json={"query": "Apple revenue", "limit": 5},
+        )
+        assert search_a.status_code == 200
+        hits_a = search_a.json()["data"]["hits"]
+        assert len(hits_a) > 0
+
+        # Other user searches - should NOT find the document
+        search_b = auth_client.post(
+            "/search",
+            headers=_headers(token_b),
+            json={"query": "Apple revenue", "limit": 5},
+        )
+        assert search_b.status_code == 200
+        hits_b = search_b.json()["data"]["hits"]
+        assert len(hits_b) == 0
+
+    def test_search_with_document_id_scoped_to_owner(self, auth_client):
+        token_a = _register_and_login(auth_client, "search-doc-owner@example.com")
+        token_b = _register_and_login(auth_client, "search-doc-other@example.com")
+
+        # Owner uploads a document
+        document_id = _upload(auth_client, token_a, "Microsoft Azure revenue increased.")
+
+        # Owner can search within their document
+        search_a = auth_client.post(
+            "/search",
+            headers=_headers(token_a),
+            json={"query": "Azure revenue", "limit": 5, "document_id": document_id},
+        )
+        assert search_a.status_code == 200
+        hits_a = search_a.json()["data"]["hits"]
+        assert len(hits_a) > 0
+
+        # Other user tries to search within the same document - should fail (404 or empty)
+        search_b = auth_client.post(
+            "/search",
+            headers=_headers(token_b),
+            json={"query": "Azure revenue", "limit": 5, "document_id": document_id},
+        )
+        # Should return empty results since user doesn't own the document
+        assert search_b.status_code == 200
+        hits_b = search_b.json()["data"]["hits"]
+        assert len(hits_b) == 0
+
+

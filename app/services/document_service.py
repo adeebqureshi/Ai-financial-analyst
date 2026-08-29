@@ -306,6 +306,7 @@ class DocumentService:
                     "parser_used": result.parser_used,
                     "tables": tables_by_page.get(page, []),
                     "transaction_time": transaction_time.isoformat(),
+                    "owner_id": owner_id or "",
                 }
             )
 
@@ -361,8 +362,7 @@ class DocumentService:
 
         Args:
             owner_id: When provided, only documents owned by this user are
-                returned (anonymous/legacy records with no owner remain
-                visible to everyone).
+                returned.
         """
         records = self._list_records()
 
@@ -370,7 +370,7 @@ class DocumentService:
             records = [
                 record
                 for record in records
-                if record.get("owner_id") in (None, owner_id)
+                if record.get("owner_id") == owner_id
             ]
 
         return {
@@ -471,6 +471,7 @@ class DocumentService:
         limit: int = 5,
         document_id: str | None = None,
         as_of_date: date | None = None,
+        owner_id: str | None = None,
     ) -> RetrievalContext:
         """
         Retrieve relevant chunks, optionally scoped to a single document.
@@ -482,6 +483,7 @@ class DocumentService:
             as_of_date: Optional historical date. When provided, only chunks
                 whose bitemporal metadata proves the information was known
                 and valid by ``as_of_date`` are returned (no look-ahead).
+            owner_id: Optional owner ID to scope retrieval to user's documents.
         """
         self.refresh_engine()
 
@@ -490,4 +492,5 @@ class DocumentService:
             limit=limit,
             document_id=document_id,
             as_of_date=as_of_date,
+            owner_id=owner_id,
         )

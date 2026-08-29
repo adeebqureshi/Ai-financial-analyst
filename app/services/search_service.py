@@ -47,12 +47,13 @@ class SearchService:
 
         self._documents = DocumentService(settings)
 
-    def search(self, request: SearchRequest) -> SearchResultData:
+    def search(self, request: SearchRequest, owner_id: str | None = None) -> SearchResultData:
         """
         Perform a semantic search.
 
         Args:
             request: The validated search request.
+            owner_id: Optional owner ID to scope search to user's documents.
 
         Returns:
             A ``SearchResultData`` with the retrieval hits.
@@ -62,6 +63,7 @@ class SearchService:
             limit=request.limit,
             document_id=request.document_id,
             as_of_date=request.as_of_date,
+            owner_id=owner_id,
         )
 
         hits = [

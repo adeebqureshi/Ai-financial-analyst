@@ -42,6 +42,8 @@ class RetrievedChunk:
 
     parser_used: str | None = None
 
+    owner_id: str | None = None
+
     # ── Bitemporal metadata (Phase 5) ─────────────────────────────────
     # valid_from: Earliest date the information was true/relevant in the
     #     real world (inclusive). ``None`` = not bounded.

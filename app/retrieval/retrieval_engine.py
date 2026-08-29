@@ -76,6 +76,7 @@ class RetrievalEngine:
     def refresh(
         self,
         store,
+        owner_id: str | None = None,
     ) -> None:
         """
         Rebuild the BM25 index and metadata store from the vector store.
@@ -84,7 +85,7 @@ class RetrievalEngine:
         the engine always reflects the current document library even though
         it is recreated per request.
         """
-        points = store.get_all()
+        points = store.get_all(owner_id=owner_id)
 
         ids: list[str] = []
 
@@ -115,6 +116,7 @@ class RetrievalEngine:
                 section=payload.get("section") or "",
                 source=payload.get("source") or "",
                 parser_used=payload.get("parser_used"),
+                owner_id=payload.get("owner_id") or None,
                 valid_from=temporal.valid_from,
                 valid_until=temporal.valid_until,
                 transaction_time=temporal.transaction_time,
@@ -162,6 +164,7 @@ class RetrievalEngine:
         limit: int = 5,
         document_id: str | None = None,
         as_of_date: date | None = None,
+        owner_id: str | None = None,
     ) -> RetrievalContext:
         """
         Retrieve relevant chunks, optionally scoped to a single document.
@@ -175,6 +178,7 @@ class RetrievalEngine:
                 and valid by ``as_of_date`` are returned. This is the
                 look-ahead-bias guard: future information (transaction_time >
                 as_of_date) can never reach the evidence set.
+            owner_id: Optional owner ID to scope retrieval to user's documents.
         """
         start = time.perf_counter()
 
@@ -194,11 +198,19 @@ class RetrievalEngine:
             query=query,
             limit=candidate_limit,
             document_id=document_id,
+            owner_id=owner_id,
         )
 
         chunks = self.metadata.get_many(
             ids,
         )
+
+        # Filter by owner_id if provided
+        if owner_id is not None:
+            chunks = [
+                chunk for chunk in chunks
+                if getattr(chunk, "owner_id", None) in (None, owner_id)
+            ]
 
         # Temporal filtering happens BEFORE reranking so future documents
         # cannot influence the reranker's scoring.

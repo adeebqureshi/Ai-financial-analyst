@@ -117,10 +117,11 @@ def _get_cors_origins(settings: Settings) -> list[str]:
     Return allowed CORS origins based on the environment.
     """
     if settings.is_development or settings.is_test:
+        # In development, allow all origins but without credentials
         return ["*"]
 
+    # Production: explicit origins only, no wildcards with credentials
     return [
-        "https://localhost:3000",
         "https://ai-financial-analyst.example.com",
     ]
 
@@ -294,7 +295,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_get_cors_origins(settings),
-        allow_credentials=True,
+        # Only allow credentials with explicit origins (not wildcard)
+        allow_credentials=not (settings.is_development or settings.is_test),
         allow_methods=["*"],
         allow_headers=["*"],
     )
