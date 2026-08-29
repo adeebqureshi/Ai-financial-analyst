@@ -227,6 +227,7 @@ class ChatService:
             ticker=request.ticker,
             document_id=request.document_id,
             session_id=request.session_id,
+            owner_id=owner_id,
         )
 
         message = result.message or result.report.body
@@ -319,6 +320,7 @@ class ChatService:
                 ticker=request.ticker,
                 document_id=request.document_id,
                 session_id=request.session_id,
+                owner_id=owner_id,
             ):
                 frame = dict(event)
                 event_type = frame.pop("type", "message")

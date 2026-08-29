@@ -172,6 +172,7 @@ class ToolRegistry:
         self,
         tool: str,
         args: dict[str, Any],
+        owner_id: str | None = None,
     ) -> ToolResult:
         """
         Execute a single tool call, always returning a ``ToolResult``.
@@ -187,7 +188,7 @@ class ToolRegistry:
             )
 
         try:
-            return handler(args)
+            return handler(args, owner_id=owner_id)
         except Exception as exc:
             logger.warning("Tool '%s' failed: %s", tool, exc)
             return ToolResult(
@@ -458,7 +459,7 @@ class ToolRegistry:
     # Document retrieval (RAG)
     # ──────────────────────────────────────────────────────────────────
 
-    def _search_documents(self, args: dict[str, Any]) -> ToolResult:
+    def _search_documents(self, args: dict[str, Any], owner_id: str | None = None) -> ToolResult:
         query = str(args["query"])
         ticker = str(args["ticker"]).upper() if args.get("ticker") else None
         document_id = args.get("document_id")
@@ -478,6 +479,7 @@ class ToolRegistry:
             query=query,
             limit=candidate_limit,
             document_id=document_id,
+            owner_id=owner_id,
         )
 
         chunks = [

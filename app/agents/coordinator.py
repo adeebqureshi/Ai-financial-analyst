@@ -126,6 +126,7 @@ class CoordinatorAgent:
         ticker: str | None = None,
         document_id: str | None = None,
         session_id: str | None = None,
+        owner_id: str | None = None,
     ) -> WorkflowResult:
         """
         Execute the full agentic pipeline for a single question.
@@ -135,6 +136,7 @@ class CoordinatorAgent:
             ticker: Optional explicit ticker context.
             document_id: Optional document the question is scoped to.
             session_id: Optional session id for follow-up context.
+            owner_id: Optional owner ID for tenant isolation.
 
         Returns:
             A :class:`WorkflowResult` with the answer, sources and the tools
@@ -147,7 +149,7 @@ class CoordinatorAgent:
             session_id=session_id,
         )
 
-        evidence, steps, tools_used, sources = self._execute(plan)
+        evidence, steps, tools_used, sources = self._execute(plan, owner_id=owner_id)
 
         answer, model = self._synthesize(plan, evidence, sources)
 
@@ -277,6 +279,7 @@ class CoordinatorAgent:
         ticker: str | None = None,
         document_id: str | None = None,
         session_id: str | None = None,
+        owner_id: str | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """
         Execute the agentic pipeline and stream the synthesized answer.
@@ -296,6 +299,7 @@ class CoordinatorAgent:
             ticker: Optional explicit ticker context.
             document_id: Optional document the question is scoped to.
             session_id: Optional session id for follow-up context.
+            owner_id: Optional owner ID for tenant isolation.
 
         Yields:
             A sequence of event dicts:
@@ -319,6 +323,7 @@ class CoordinatorAgent:
             evidence, steps, tools_used, sources = await asyncio.to_thread(
                 self._execute,
                 plan,
+                owner_id=owner_id,
             )
         except Exception as exc:
             logger.warning(
@@ -400,6 +405,7 @@ class CoordinatorAgent:
     def _execute(
         self,
         plan: ResearchPlan,
+        owner_id: str | None = None,
     ) -> tuple[dict[str, Any], list[str], list[dict[str, str]], list[dict[str, Any]]]:
         """
         Run the planned tool calls, collecting evidence and sources.
@@ -413,7 +419,7 @@ class CoordinatorAgent:
         sources: list[dict[str, Any]] = []
 
         for call in plan.tools:
-            result = self.tools.execute(call.tool, call.args)
+            result = self.tools.execute(call.tool, call.args, owner_id=owner_id)
 
             evidence.setdefault(call.tool, []).append(result)
 

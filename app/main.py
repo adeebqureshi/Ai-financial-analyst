@@ -35,6 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.models import Contact, License
 
 from app.api import RequestLoggingMiddleware, api_router, register_exception_handlers
+from app.api.middleware.security_headers import add_security_headers_middleware
 from app.core.config import Settings, get_settings
 from app.core.constants import APP_NAME, APP_VERSION
 from app.core.logging import get_logger, setup_logging, shutdown_logging
@@ -300,6 +301,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Security headers (applied after CORS so they can override if needed)
+    add_security_headers_middleware(app, settings)
 
     app.add_middleware(RequestLoggingMiddleware)
     app.include_router(api_router)

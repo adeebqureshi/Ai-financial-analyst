@@ -205,11 +205,11 @@ class RetrievalEngine:
             ids,
         )
 
-        # Filter by owner_id if provided
+        # Filter by owner_id if provided - strict tenant isolation
         if owner_id is not None:
             chunks = [
                 chunk for chunk in chunks
-                if getattr(chunk, "owner_id", None) in (None, owner_id)
+                if getattr(chunk, "owner_id", None) == owner_id
             ]
 
         # Temporal filtering happens BEFORE reranking so future documents
