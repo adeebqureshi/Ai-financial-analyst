@@ -237,6 +237,56 @@ python -m pytest tests/ -v
 python -m pytest tests/ --cov=app --cov-report=term-missing
 ```
 
+## Database Migrations
+
+This project uses **Alembic** for database schema migrations. Two separate migration histories are maintained:
+
+- **Authentication database** (`auth_alembic_version`): `users` table
+- **Chat database** (`chat_alembic_version`): `chat_sessions`, `chat_messages` tables
+
+### Running Migrations
+
+```bash
+# Apply all auth migrations (PostgreSQL production)
+export AUTH_DATABASE_URL="postgresql+psycopg://user:pass@host:5432/db"
+alembic -c alembic.ini -x database=auth upgrade head
+
+# Apply all chat migrations (PostgreSQL production)
+export CHAT_DATABASE_URL="postgresql+psycopg://user:pass@host:5432/db"
+alembic -c alembic.ini -x database=chat upgrade head
+```
+
+### Creating New Migrations
+
+```bash
+# Generate a new auth migration (auto-detect model changes)
+alembic -c alembic.ini -x database=auth revision --autogenerate -m "add column to users"
+
+# Generate a new chat migration (auto-detect model changes)
+alembic -c alembic.ini -x database=chat revision --autogenerate -m "add index to chat_messages"
+```
+
+### Migration Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `upgrade head` | Apply all pending migrations |
+| `upgrade +1` | Apply next migration |
+| `downgrade -1` | Rollback last migration |
+| `downgrade base` | Rollback all migrations |
+| `current` | Show current revision |
+| `history` | Show migration history |
+| `show <rev>` | Show migration details |
+| `revision -m "msg"` | Create empty migration |
+| `revision --autogenerate -m "msg"` | Create migration from model changes |
+
+### Development vs Production
+
+- **Development/Tests (SQLite)**: Uses `Base.metadata.create_all()` automatically — no migration commands needed
+- **Production (PostgreSQL)**: Uses Alembic migrations — run `upgrade head` on deploy or let the application run them on startup
+
+The application automatically runs migrations on startup when PostgreSQL is configured. For zero-downtime deployments, run migrations manually before deploying new code.
+
 ## Architectural Decisions
 
 ### Why Pydantic Settings over `os.environ`?

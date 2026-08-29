@@ -9,9 +9,9 @@ Design Decisions:
       (``postgresql+psycopg://...``) in production.
     - **Engines cached per URL**: Avoids re-creating connection pools and
       keeps SQLite file handles stable across requests/tests.
-    - **Schema created lazily**: ``init_db()`` is invoked on first use; the
-      schema is created with ``Base.metadata.create_all`` (no migration
-      framework is introduced for this scope).
+    - **Schema managed by Alembic migrations in production**: ``init_db()`` runs
+      migrations on PostgreSQL; on SQLite it falls back to ``create_all`` for
+      zero-config development and tests.
 """
 
 from __future__ import annotations
@@ -68,18 +68,54 @@ def dispose_all_engines() -> None:
             pass
 
 
+def _is_postgresql(database_url: str) -> bool:
+    """Check if the database URL is for PostgreSQL."""
+    return database_url.startswith("postgresql")
+
+
+def run_migrations(database_url: str) -> None:
+    """
+    Run Alembic migrations for the authentication database.
+
+    Only executes on PostgreSQL; on SQLite this is a no-op since
+    ``create_all`` handles schema creation for development/tests.
+    """
+    if not _is_postgresql(database_url):
+        return
+
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        # Override the auth section URL
+        alembic_cfg.set_section_option("alembic_auth", "sqlalchemy.url", database_url)
+
+        command.upgrade(alembic_cfg, "head")
+    except Exception as exc:  # pragma: no cover - migration failures should be visible
+        raise RuntimeError(f"Failed to run authentication database migrations: {exc}") from exc
+
+
 def init_db(settings: Settings) -> None:
     """
-    Create the authentication schema if it does not already exist.
+    Initialize the authentication database schema.
 
-    Safe to call repeatedly; table creation is idempotent.
+    On PostgreSQL: runs Alembic migrations to bring schema to head.
+    On SQLite: uses ``create_all`` for zero-config development and tests.
+
+    Safe to call repeatedly; both operations are idempotent.
     """
     # Import for model registration side effects.
     from app.auth import models  # noqa: F401
 
     engine = get_engine(settings)
+    database_url = settings.auth_database_url
 
-    Base.metadata.create_all(bind=engine)
+    if _is_postgresql(database_url):
+        run_migrations(database_url)
+    else:
+        Base.metadata.create_all(bind=engine)
 
 
 def get_db_session(settings: Settings) -> Iterator[Session]:

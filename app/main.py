@@ -202,6 +202,43 @@ def _run_chat_retention_cleanup(settings: Settings, logger: Any) -> None:
         logger.warning("Chat retention cleanup skipped: %s", exc)
 
 
+def _run_database_migrations(settings: Settings, logger: Any) -> None:
+    """
+    Run database migrations on startup for PostgreSQL databases.
+
+    This ensures the schema is up to date before the application starts
+    accepting requests. On SQLite (development/tests), this is a no-op
+    since init_db() uses create_all for zero-config setup.
+
+    Any failure is logged and re-raised to prevent the application from
+    starting with an outdated schema in production.
+    """
+    if settings.is_test:
+        return
+
+    # Run auth migrations
+    if settings.auth_database_url.startswith("postgresql"):
+        try:
+            from app.auth.database import init_db
+
+            init_db(settings)
+            logger.info("Authentication database migrations applied")
+        except Exception as exc:
+            logger.error("Failed to apply authentication database migrations: %s", exc)
+            raise
+
+    # Run chat migrations
+    if settings.chat_database_url.startswith("postgresql"):
+        try:
+            from app.chat.database import init_db as init_chat_db
+
+            init_chat_db(settings.chat_database_url)
+            logger.info("Chat database migrations applied")
+        except Exception as exc:
+            logger.error("Failed to apply chat database migrations: %s", exc)
+            raise
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """
     Create and configure a FastAPI application instance.
@@ -223,6 +260,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
         _run_startup_infrastructure_checks(settings, app_logger)
+        _run_database_migrations(settings, app_logger)
         _run_chat_retention_cleanup(settings, app_logger)
 
         yield

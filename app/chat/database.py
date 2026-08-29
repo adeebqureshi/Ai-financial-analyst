@@ -13,8 +13,9 @@ Design Decisions:
       restarts and are shared across multiple workers/containers.
     - **Engines cached per URL**: Pooling is reused across instances and the
       SQLite file handle stays stable across requests/tests.
-    - **Schema created lazily**: ``init_db()`` is invoked on first use so the
-      API works immediately after startup without a separate migration step.
+    - **Schema managed by Alembic migrations in production**: ``init_db()`` runs
+      migrations on PostgreSQL; on SQLite it falls back to ``create_all`` for
+      zero-config development and tests.
     - **Adapter-aware creation**: ``create_all`` is wrapped so a full
       ``CREATE TABLE`` idempotence check is safe on both PostgreSQL and SQLite.
 """
@@ -118,14 +119,53 @@ def dispose_all_engines() -> None:
             pass
 
 
+def _is_postgresql(database_url: str) -> bool:
+    """Check if the database URL is for PostgreSQL."""
+    return database_url.startswith("postgresql")
+
+
+def run_migrations(database_url: str) -> None:
+    """
+    Run Alembic migrations for the chat database.
+
+    Only executes on PostgreSQL; on SQLite this is a no-op since
+    ``create_all`` handles schema creation for development/tests.
+    """
+    if not _is_postgresql(database_url):
+        return
+
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        # Override the chat section URL
+        alembic_cfg.set_section_option("alembic_chat", "sqlalchemy.url", database_url)
+
+        command.upgrade(alembic_cfg, "head")
+    except Exception as exc:  # pragma: no cover - migration failures should be visible
+        raise RuntimeError(f"Failed to run chat database migrations: {exc}") from exc
+
+
 def init_db(database_url: str) -> None:
-    """Create the chat schema if it does not already exist (idempotent)."""
+    """
+    Initialize the chat database schema.
+
+    On PostgreSQL: runs Alembic migrations to bring schema to head.
+    On SQLite: uses ``create_all`` for zero-config development and tests.
+
+    Safe to call repeatedly; both operations are idempotent.
+    """
     # Import for model registration side effects.
     from app.chat import models  # noqa: F401
 
     engine = get_engine(database_url)
 
-    Base.metadata.create_all(bind=engine)
+    if _is_postgresql(database_url):
+        run_migrations(database_url)
+    else:
+        Base.metadata.create_all(bind=engine)
 
 
 def get_db_session(database_url: str) -> Iterator[Session]:
