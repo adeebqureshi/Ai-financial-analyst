@@ -304,6 +304,90 @@ class ChatResponseData(BaseModel):
     )
 
 
+class ChatSessionData(BaseModel):
+    """
+    A persisted chat session (ownership-isolated).
+
+    Attributes:
+        session_id: Client-supplied session identifier.
+        title: Optional human-friendly title.
+        metadata: Arbitrary session metadata (JSON).
+        created_at: UTC timestamp when the session was created.
+        updated_at: UTC timestamp of the last activity.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    session_id: str = Field(..., description="Client-supplied session identifier.")
+    title: str | None = Field(default=None, description="Optional session title.")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Arbitrary session metadata (JSON).",
+    )
+    created_at: datetime = Field(..., description="UTC creation timestamp.")
+    updated_at: datetime = Field(..., description="UTC last-activity timestamp.")
+
+
+class ChatMessageData(BaseModel):
+    """
+    A persisted chat message within a session.
+
+    Attributes:
+        id: Database row identifier.
+        role: Message role (``user`` / ``assistant`` / ``system``).
+        content: Message text.
+        metadata: Arbitrary per-message metadata (ticker, model, sources...).
+        created_at: UTC timestamp when the message was stored.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: int = Field(..., description="Database row identifier.")
+    role: str = Field(..., description="Message role (user/assistant/system).")
+    content: str = Field(..., description="Message text.")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Arbitrary per-message metadata (JSON).",
+    )
+    created_at: datetime = Field(..., description="UTC storage timestamp.")
+
+
+class ChatSessionListData(BaseModel):
+    """
+    Paginated chat session list payload.
+
+    Attributes:
+        sessions: The current page of sessions.
+        total: Total number of sessions owned by the caller.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sessions: list[ChatSessionData] = Field(
+        default_factory=list,
+        description="The current page of sessions.",
+    )
+    total: int = Field(default=0, ge=0, description="Total owned sessions.")
+
+
+class ChatMessageListData(BaseModel):
+    """
+    Paginated chat message list payload.
+
+    Attributes:
+        messages: The current page of messages.
+        total: Total number of messages in the session.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    messages: list[ChatMessageData] = Field(
+        default_factory=list,
+        description="The current page of messages.",
+    )
+    total: int = Field(default=0, ge=0, description="Total messages in the session.")
+
+
 class DocumentCitation(BaseModel):
     """
     A single source citation attached to a RAG answer.

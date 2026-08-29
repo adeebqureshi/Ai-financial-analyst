@@ -19,11 +19,14 @@ added backward-compatibly for tool transparency.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.agents.financial_analyst import INSUFFICIENT_EVIDENCE_MESSAGE
+from app.chat.cache import ChatSessionCache
+from app.chat.store import ChatStore
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.schemas.analysis import ChatRequest
@@ -69,12 +72,19 @@ def _get_coordinator(settings: Settings) -> CoordinatorAgent:
 class ChatService:
     """
     Service for conversational AI chat grounded in the agentic pipeline.
+
+    Every turn is also persisted to the chat store (PostgreSQL in production,
+    SQLite in development) so conversations survive restarts and are shared
+    across workers/containers. Persistence is ownership-scoped and is a
+    best-effort side effect — it never alters or interrupts the response
+    contract.
     """
 
     def __init__(
         self,
         settings: Settings,
         coordinator: CoordinatorAgent | None = None,
+        store: ChatStore | None = None,
     ) -> None:
         self._settings = settings
 
@@ -83,17 +93,135 @@ class ChatService:
 
         self._coordinator = coordinator
 
-    def chat(self, request: ChatRequest) -> ChatResponseData:
+        if store is None:
+            cache = ChatSessionCache(settings.chat_redis_url)
+            store = ChatStore(
+                settings.chat_database_url,
+                cache=cache,
+                retention_days=settings.chat_retention_days,
+            )
+
+        self._store = store
+
+    def cleanup_expired_sessions(self) -> int:
+        """
+        Purge sessions idle longer than the configured retention window.
+
+        Returns:
+            The number of sessions removed.
+        """
+        return self._store.purge_expired(self._settings.chat_retention_days)
+
+    def list_sessions(
+        self,
+        owner_id: str | None,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return the caller's sessions (newest-first) and the total count."""
+        return self._store.list_sessions(owner_id, page=page, page_size=page_size)
+
+    def list_messages(
+        self,
+        owner_id: str | None,
+        session_id: str,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return an owned session's messages (oldest-first) and the total."""
+        return self._store.list_messages(owner_id, session_id, page=page, page_size=page_size)
+
+    def delete_session(self, owner_id: str | None, session_id: str) -> bool:
+        """Delete an owned session (and its messages). Returns False if absent."""
+        return self._store.delete_session(owner_id, session_id)
+
+    def _restore_context(self, owner_id: str | None, session_id: str | None) -> None:
+        """Replay persisted session state into the coordinator's memory."""
+        if not session_id:
+            return
+
+        state = self._store.get_session_state(owner_id, session_id)
+
+        if state:
+            self._coordinator.hydrate_context(
+                session_id,
+                state.get("tickers") or [],
+                state.get("query") or "",
+                state.get("answer") or "",
+            )
+
+    @staticmethod
+    def _owner_id(user: Any | None) -> str | None:
+        """Return the owner id for the caller (None when auth is disabled)."""
+        return user.id if user is not None else None
+
+    def _persist_turn(
+        self,
+        owner_id: str | None,
+        request: ChatRequest,
+        *,
+        message: str,
+        assistant_meta: dict[str, Any],
+    ) -> None:
+        """
+        Best-effort, non-fatal persistence of a completed turn.
+
+        Persistence failures are logged and swallowed so chat availability and
+        the response contract are never affected by storage outages.
+        """
+        if not request.session_id:
+            return
+
+        try:
+            self._store.save_turn(
+                owner_id,
+                request.session_id,
+                user_message=request.message,
+                assistant_message=message,
+                user_meta=_as_jsonable(
+                    {
+                        "role": "user",
+                        "ticker": request.ticker,
+                        "document_id": request.document_id,
+                        "context": request.context,
+                        "as_of_date": str(request.as_of_date) if request.as_of_date else None,
+                    }
+                ),
+                assistant_meta=_as_jsonable(assistant_meta),
+            )
+        except Exception as exc:  # pragma: no cover - defensive best-effort
+            logger.warning(
+                "Failed to persist chat turn for session %s: %s",
+                request.session_id,
+                exc,
+            )
+
+    def chat(
+        self,
+        request: ChatRequest,
+        *,
+        user: Any | None = None,
+    ) -> ChatResponseData:
         """
         Send a chat message and get an evidence-grounded AI response.
 
+        The authenticated ``user`` (when auth is enabled) scopes persistence so
+        the conversation is recorded under that user's ownership.
+
         Args:
             request: The validated chat request.
+            user: The authenticated user (or ``None`` when auth is disabled).
 
         Returns:
             A ``ChatResponseData`` with the assistant reply, sources and the
             tools that actually ran.
         """
+        owner_id = self._owner_id(user)
+
+        self._restore_context(owner_id, request.session_id)
+
         result = self._coordinator.run(
             query=request.message,
             ticker=request.ticker,
@@ -101,8 +229,37 @@ class ChatService:
             session_id=request.session_id,
         )
 
+        message = result.message or result.report.body
+
+        self._persist_turn(
+            owner_id,
+            request,
+            message=message,
+            assistant_meta={
+                "role": "assistant",
+                "query": request.message,
+                "tickers": list(result.tickers or []),
+                "model": result.model,
+                "intents": list(result.intents or []),
+                "success": bool(result.success),
+                "ticker": request.ticker,
+                "document_id": request.document_id,
+                "plan": list(result.plan or []),
+                "tools_used": [
+                    {
+                        "tool": item.get("tool", ""),
+                        "status": item.get("status", "done"),
+                        "detail": item.get("detail"),
+                    }
+                    for item in result.tools_used
+                ],
+                "sources": list(result.sources or []),
+                "answer": message,
+            },
+        )
+
         return ChatResponseData(
-            message=result.message or result.report.body,
+            message=message,
             ticker=result.tickers[0] if result.tickers else request.ticker,
             model=result.model,
             sources=_build_citations(result.sources),
@@ -117,7 +274,12 @@ class ChatService:
             ],
         )
 
-    async def stream_chat(self, request: ChatRequest) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        request: ChatRequest,
+        *,
+        user: Any | None = None,
+    ) -> AsyncIterator[str]:
         """
         Stream an evidence-grounded AI response as Server-Sent Events.
 
@@ -134,10 +296,23 @@ class ChatService:
 
         Args:
             request: The validated chat request.
+            user: The authenticated user (or ``None`` when auth is disabled).
 
         Yields:
             SSE-formatted frames for the streaming ``POST /chat/stream`` route.
         """
+        owner_id = self._owner_id(user)
+
+        # Session-state replay hits the chat database synchronously; offload it
+        # so the SSE stream never blocks the event loop while restoring.
+        await asyncio.to_thread(
+            self._restore_context,
+            owner_id,
+            request.session_id,
+        )
+
+        done_payload: dict[str, Any] | None = None
+
         try:
             async for event in self._coordinator.stream_run(
                 query=request.message,
@@ -147,6 +322,10 @@ class ChatService:
             ):
                 frame = dict(event)
                 event_type = frame.pop("type", "message")
+
+                if event_type == "done":
+                    done_payload = frame
+
                 yield _format_sse(event_type, frame)
         except Exception as exc:
             logger.warning(
@@ -155,6 +334,31 @@ class ChatService:
                 exc,
             )
             yield _format_sse("error", {"message": "The chat stream failed unexpectedly."})
+            return
+
+        if done_payload is not None:
+            # Turn persistence performs synchronous database I/O; offload it so
+            # finishing the stream never blocks the event loop.
+            await asyncio.to_thread(
+                self._persist_turn,
+                owner_id,
+                request,
+                message=done_payload.get("message", ""),
+                assistant_meta={
+                    "role": "assistant",
+                    "query": request.message,
+                    "tickers": list(done_payload.get("tickers") or []),
+                    "model": done_payload.get("model"),
+                    "intents": list(done_payload.get("intents") or []),
+                    "success": bool(done_payload.get("success", True)),
+                    "ticker": request.ticker,
+                    "document_id": request.document_id,
+                    "plan": list(done_payload.get("steps") or []),
+                    "tools_used": list(done_payload.get("tools_used") or []),
+                    "sources": list(done_payload.get("sources") or []),
+                    "answer": done_payload.get("message", ""),
+                },
+            )
 
 
 def _build_citations(chunks: list[dict]) -> list[DocumentCitation]:
@@ -208,3 +412,29 @@ def _format_sse(event: str, data: dict) -> str:
         A single SSE frame terminated by a blank line.
     """
     return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
+
+
+def _as_jsonable(value: Any) -> Any:
+    """
+    Recursively coerce ``value`` into a purely JSON-serializable structure.
+
+    Pydantic models are dumped to dicts; anything else unrecognized (datetimes,
+    numpy scalars, custom objects, ...) is stringified so persistence metadata
+    can always be stored in a JSON column without raising.
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+
+    if isinstance(value, dict):
+        return {_as_jsonable(k): _as_jsonable(v) for k, v in value.items()}
+
+    if isinstance(value, (list, tuple)):
+        return [_as_jsonable(item) for item in value]
+
+    if isinstance(value, set):
+        return [_as_jsonable(item) for item in value]
+
+    if hasattr(value, "model_dump"):
+        return _as_jsonable(value.model_dump())
+
+    return str(value)

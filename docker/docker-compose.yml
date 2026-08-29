@@ -1,4 +1,4 @@
-version: "3.9"
+name: ai-financial-analyst
 
 services:
 
@@ -11,10 +11,49 @@ services:
       - "8000:8000"
 
     environment:
-      DATABASE_URL: sqlite+pysqlite:///:memory:
+      # Production database: PostgreSQL (replaces the SQLite dev default).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/financial
+      # Auth + chat stores share PostgreSQL so state survives restarts and is
+      # shared across workers/replicas.
+      AUTH_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/financial
+      CHAT_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/financial
+      # Redis: rate limiting (db 0) and chat session cache (db 1).
+      REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_REDIS_URL: redis://redis:6379/0
+      CHAT_REDIS_URL: redis://redis:6379/1
+      ENVIRONMENT: production
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   redis:
     image: redis:7
+
+    command: ["redis-server", "--appendonly", "yes"]
+
+    volumes:
+      - redis-data:/data
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   postgres:
     image: postgres:17
@@ -23,3 +62,19 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: financial
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d financial"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -17,40 +17,55 @@ Design Decisions:
 from __future__ import annotations
 
 from collections.abc import Iterator
-from functools import lru_cache
 from pathlib import Path
 
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import Settings
+from app.infrastructure.postgres import create_db_engine
 
 
 class Base(DeclarativeBase):
     """Declarative base for authentication ORM models."""
 
 
-@lru_cache(maxsize=8)
+_engines: dict[str, Engine] = {}
+
+
 def _engine_for(database_url: str) -> Engine:
     """Build (and cache) an engine for the given database URL."""
+    engine = _engines.get(database_url)
+    if engine is not None:
+        return engine
+
     if database_url.startswith("sqlite:///"):
         db_path = database_url.removeprefix("sqlite:///")
 
         if db_path and db_path != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        return create_engine(
-            database_url,
-            connect_args={"check_same_thread": False},
-        )
-
-    return create_engine(database_url)
+    # create_db_engine handles SQLite (StaticPool for :memory:, cross-thread
+    # file access) and PostgreSQL (pooled, pre-ping, recycled) alike.
+    engine = create_db_engine(database_url)
+    _engines[database_url] = engine
+    return engine
 
 
 def get_engine(settings: Settings) -> Engine:
     """Return the engine for the configured authentication database."""
     return _engine_for(settings.auth_database_url)
+
+
+def dispose_all_engines() -> None:
+    """Dispose every cached auth engine (called on application shutdown)."""
+    engines = list(_engines.values())
+    _engines.clear()
+    for engine in engines:
+        try:
+            engine.dispose()
+        except Exception:  # pragma: no cover - shutdown must never raise
+            pass
 
 
 def init_db(settings: Settings) -> None:

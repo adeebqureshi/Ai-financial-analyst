@@ -14,6 +14,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies import rate_limit_search
@@ -50,7 +52,7 @@ async def search(
     Returns:
         An ``APIResponse`` containing the search results.
     """
-    result = service.search(request)
+    result = await asyncio.to_thread(service.search, request)
 
     return APIResponse.success_response(
         message=f"Search completed with {result.total} results",

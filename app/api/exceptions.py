@@ -269,6 +269,9 @@ async def http_exception_handler(
     return JSONResponse(
         status_code=exc.status_code,
         content=response.model_dump(mode="json"),
+        # Forward headers attached by raiseers (e.g. ``Retry-After`` and
+        # ``X-RateLimit-*`` from the rate limiter) so they reach the client.
+        headers=exc.headers,
     )
 
 

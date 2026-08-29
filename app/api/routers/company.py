@@ -13,6 +13,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, Path
 
 from app.api.dependencies.services import get_company_service
@@ -43,7 +45,7 @@ async def get_company(
     Returns:
         An ``APIResponse`` containing the company profile.
     """
-    result = service.get_company(ticker.upper())
+    result = await asyncio.to_thread(service.get_company, ticker.upper())
 
     return APIResponse.success_response(
         message=f"Company profile retrieved for {ticker.upper()}",

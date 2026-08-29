@@ -10,6 +10,8 @@ used by ``POST /analyze`` (``AnalyzeTickerRequest``).
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
@@ -78,7 +80,7 @@ class CompareTickersRequest(BaseModel):
         Returns:
             An ``APIResponse`` containing the comparison results.
         """
-        result = service.compare_tickers(payload.tickers)
+        result = await asyncio.to_thread(service.compare_tickers, payload.tickers)
 
         return APIResponse.success_response(
             message=f"Comparison completed for {len(result.results)} tickers",

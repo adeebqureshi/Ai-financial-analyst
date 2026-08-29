@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -124,6 +125,83 @@ def _get_cors_origins(settings: Settings) -> list[str]:
     ]
 
 
+def _run_startup_infrastructure_checks(settings: Settings, logger: Any) -> None:
+    """
+    Verify infrastructure reachability on startup (best-effort, never raises).
+
+    PostgreSQL and Redis are optional at boot: the application degrades to
+    SQLite / local-memory fallbacks, but the operator gets an explicit log
+    signal when the production services are not reachable. Skipped in the
+    test environment so unit tests never probe (or wait on) real services.
+    """
+    if settings.is_test:
+        return
+
+    try:
+        from app.infrastructure.container import Container
+
+        container = Container()
+        checks = container.health()
+        container.close()
+
+        for component, ok in checks.items():
+            if ok:
+                logger.info("Infrastructure check passed: %s", component)
+            else:
+                logger.warning(
+                    "Infrastructure check FAILED: %s (falling back to local resources)",
+                    component,
+                )
+    except Exception as exc:  # pragma: no cover - defensive best-effort
+        logger.warning("Infrastructure startup checks skipped: %s", exc)
+
+
+def _run_shutdown_disposal(settings: Settings, logger: Any) -> None:
+    """
+    Dispose pooled database connections on shutdown (best-effort).
+
+    Ensures gunicorn/uvicorn worker recycling never leaks PostgreSQL or Redis
+    connections. Each disposal step is independent and failures are swallowed.
+    """
+    try:
+        from app.auth import database as auth_database
+        from app.chat import database as chat_database
+
+        chat_database.dispose_all_engines()
+        auth_database.dispose_all_engines()
+        logger.info("Database connection pools disposed")
+    except Exception as exc:  # pragma: no cover - defensive best-effort
+        logger.warning("Shutdown disposal skipped: %s", exc)
+
+    try:
+        from app.api.rate_limiter import reset_rate_limiter
+
+        reset_rate_limiter()
+    except Exception:  # pragma: no cover - defensive best-effort
+        pass
+
+
+def _run_chat_retention_cleanup(settings: Settings, logger: Any) -> None:
+    """
+    Best-effort purge of expired chat sessions on startup.
+
+    Retention cleanup is non-critical: any failure (unreachable database,
+    missing schema, ...) is logged and swallowed so the application still boots.
+    """
+    try:
+        from app.chat.store import ChatStore
+
+        store = ChatStore(
+            settings.chat_database_url,
+            retention_days=settings.chat_retention_days,
+        )
+        removed = store.purge_expired()
+        if removed:
+            logger.info("Chat retention cleanup removed %s expired session(s)", removed)
+    except Exception as exc:  # pragma: no cover - defensive best-effort
+        logger.warning("Chat retention cleanup skipped: %s", exc)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """
     Create and configure a FastAPI application instance.
@@ -143,8 +221,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings.environment.value,
             settings.debug,
         )
+
+        _run_startup_infrastructure_checks(settings, app_logger)
+        _run_chat_retention_cleanup(settings, app_logger)
+
         yield
+
         app_logger.info("Shutting down %s", APP_NAME)
+        _run_shutdown_disposal(settings, app_logger)
         shutdown_logging()
 
     app = FastAPI(

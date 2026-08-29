@@ -8,12 +8,30 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import MagicMock, patch
+from collections.abc import Callable
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import reset_rate_limits_for_testing
+from app.schemas.analysis import FinancialStatementInput
+from app.schemas.responses import (
+    AnalyzeResponseData,
+    ChatResponseData,
+    CompanyData,
+    HealthScoreData,
+    MarketDataResponse,
+    SearchResultData,
+    ValuationResultData,
+)
+from app.api.dependencies.services import (
+    get_analysis_service,
+    get_chat_service,
+    get_document_service,
+    get_search_service,
+)
+from app.auth.dependencies import get_current_user
 from app.api.rate_limiter import (
     HybridRateLimiter,
     LocalMemoryBackend,
@@ -29,6 +47,85 @@ from app.main import app
 
 
 client = TestClient(app)
+
+
+def make_settings(**overrides: object) -> Settings:
+    """Build an isolated immutable Settings copy for a test.
+
+    The application ``Settings`` model is frozen (``model_config =
+    SettingsConfigDict(frozen=True)``) so production configuration cannot be
+    mutated at runtime. Tests must therefore never mutate the cached singleton
+    returned by ``get_settings()``; instead they build their own frozen
+    instance via ``model_copy(update=...)`` and inject it where needed
+    (directly for unit tests, or through FastAPI dependency overrides for
+    integration tests).
+    """
+    return get_settings().model_copy(update=overrides)  # type: ignore[arg-type]
+
+
+def _chat_result() -> ChatResponseData:
+    """Build a valid chat response payload for mocked services."""
+    return ChatResponseData(message="Test response", ticker="AAPL")
+
+
+def _analyze_result() -> AnalyzeResponseData:
+    """Build a valid analyze response payload for mocked services."""
+    return AnalyzeResponseData(
+        ticker="AAPL",
+        query="test",
+        company=CompanyData(ticker="AAPL", name="Apple Inc."),
+        market=MarketDataResponse(ticker="AAPL", current_price=150.0),
+        statement=FinancialStatementInput(
+            revenue=394328.0,
+            operating_income=114301.0,
+            net_income=96995.0,
+            total_assets=352583.0,
+            total_liabilities=279486.0,
+            cash=30545.0,
+            debt=111088.0,
+            shares_outstanding=15431.0,
+            free_cash_flow=99584.0,
+        ),
+        valuation=ValuationResultData(
+            intrinsic_value=180.0,
+            upside=0.2,
+            recommendation="BUY",
+            current_price=150.0,
+            discount_rate=0.09,
+        ),
+        health=HealthScoreData(
+            score=80,
+            rating="GOOD",
+            piotroski_score=7,
+            altman_score=3.0,
+            beneish_score=-2.0,
+        ),
+        recommendation="BUY",
+    )
+
+
+def _search_result() -> SearchResultData:
+    """Build a valid search result payload for mocked services."""
+    return SearchResultData(query="test", hits=[], total=0, retrieval_time_ms=1.0)
+
+
+def install_dependency_overrides(
+    settings: Settings,
+    user: User | None,
+    service: object,
+    service_dependency: Callable[[], object],
+) -> None:
+    """Inject isolated test settings/user/service via FastAPI overrides.
+
+    ``unittest.mock.patch`` cannot affect dependencies that FastAPI resolved
+    at route-definition time, and mutating the frozen ``Settings`` singleton
+    is forbidden. ``app.dependency_overrides`` is FastAPI's supported way to
+    replace dependency callables per-test and keeps ``Settings(frozen=True)``
+    intact.
+    """
+    app.dependency_overrides[get_settings] = lambda: settings
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[service_dependency] = lambda: service
 
 
 class TestLocalMemoryBackend:
@@ -136,8 +233,7 @@ class TestHybridRateLimiter:
         reset_rate_limiter()
 
     def test_check_rate_limit_allowed(self) -> None:
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=10, requests_per_hour=100)
 
@@ -150,8 +246,7 @@ class TestHybridRateLimiter:
         assert result.limit_hour == 100
 
     def test_check_rate_limit_exceeded_minute(self) -> None:
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=2, requests_per_hour=100)
 
@@ -165,8 +260,7 @@ class TestHybridRateLimiter:
         assert 0 < result.retry_after_seconds <= 60
 
     def test_check_rate_limit_exceeded_hour(self) -> None:
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=100, requests_per_hour=2)
 
@@ -180,8 +274,7 @@ class TestHybridRateLimiter:
         assert 60 < result.retry_after_seconds <= 3600
 
     def test_check_rate_limit_disabled(self) -> None:
-        settings = get_settings()
-        settings.rate_limit_enabled = False
+        settings = make_settings(rate_limit_enabled=False)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=1, requests_per_hour=1)
 
@@ -192,8 +285,7 @@ class TestHybridRateLimiter:
         assert result.current_hour == 0
 
     def test_different_identifiers_independent(self) -> None:
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=2, requests_per_hour=100)
 
@@ -208,8 +300,7 @@ class TestHybridRateLimiter:
         assert result2.current_minute == 1
 
     def test_reset_limits(self) -> None:
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=2, requests_per_hour=100)
 
@@ -228,218 +319,168 @@ class TestRateLimitingIntegration:
 
     def setup_method(self) -> None:
         reset_rate_limits_for_testing()
+        app.dependency_overrides.clear()
 
     def teardown_method(self) -> None:
+        app.dependency_overrides.clear()
         reset_rate_limits_for_testing()
 
     def test_chat_endpoint_rate_limit_authenticated(self) -> None:
         """Test rate limiting on /chat endpoint for authenticated user."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
-        settings.auth_enabled = True
-
-        # Mock authentication
+        settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
+        mock_chat = MagicMock()
+        mock_chat.chat.return_value = _chat_result()
+        install_dependency_overrides(settings, user, mock_chat, get_chat_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=user):
-            with patch("app.api.dependencies.services.get_chat_service") as mock_service:
-                mock_chat = MagicMock()
-                mock_chat.chat.return_value = MagicMock(
-                    message="Test response",
-                    ticker="AAPL",
-                    sources=[],
-                    tools_used=[],
-                    plan=[]
-                )
-                mock_service.return_value = mock_chat
+        # Make requests up to limit
+        for i in range(settings.rate_limit_chat_per_minute):
+            response = client.post(
+                "/chat",
+                json={"message": f"Test {i}", "ticker": "AAPL"},
+            )
+            assert response.status_code == 200, f"Request {i} failed: {response.text}"
 
-                # Make requests up to limit
-                for i in range(settings.rate_limit_chat_per_minute):
-                    response = client.post(
-                        "/chat",
-                        json={"message": f"Test {i}", "ticker": "AAPL"},
-                    )
-                    assert response.status_code == 200, f"Request {i} failed: {response.text}"
-
-                # Next request should be rate limited
-                response = client.post(
-                    "/chat",
-                    json={"message": "Over limit", "ticker": "AAPL"},
-                )
-                assert response.status_code == 429
-                assert "Retry-After" in response.headers
+        # Next request should be rate limited
+        response = client.post(
+            "/chat",
+            json={"message": "Over limit", "ticker": "AAPL"},
+        )
+        assert response.status_code == 429
+        assert "Retry-After" in response.headers
 
     def test_chat_endpoint_rate_limit_anonymous(self) -> None:
         """Test rate limiting on /chat endpoint for anonymous user (stricter)."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
-        settings.auth_enabled = True
+        settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
+        mock_chat = MagicMock()
+        mock_chat.chat.return_value = _chat_result()
+        install_dependency_overrides(settings, None, mock_chat, get_chat_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=None):
-            with patch("app.api.dependencies.services.get_chat_service") as mock_service:
-                mock_chat = MagicMock()
-                mock_chat.chat.return_value = MagicMock(
-                    message="Test response",
-                    ticker="AAPL",
-                    sources=[],
-                    tools_used=[],
-                    plan=[]
-                )
-                mock_service.return_value = mock_chat
+        # Anonymous users get stricter limits (multiplier)
+        anon_limit = max(1, int(settings.rate_limit_chat_per_minute * settings.rate_limit_anonymous_multiplier))
 
-                # Anonymous users get stricter limits (multiplier)
-                anon_limit = max(1, int(settings.rate_limit_chat_per_minute * settings.rate_limit_anonymous_multiplier))
+        for i in range(anon_limit):
+            response = client.post(
+                "/chat",
+                json={"message": f"Test {i}", "ticker": "AAPL"},
+            )
+            assert response.status_code == 200, f"Request {i} failed: {response.text}"
 
-                for i in range(anon_limit):
-                    response = client.post(
-                        "/chat",
-                        json={"message": f"Test {i}", "ticker": "AAPL"},
-                    )
-                    assert response.status_code == 200, f"Request {i} failed: {response.text}"
-
-                # Next request should be rate limited
-                response = client.post(
-                    "/chat",
-                    json={"message": "Over limit", "ticker": "AAPL"},
-                )
-                assert response.status_code == 429
+        # Next request should be rate limited
+        response = client.post(
+            "/chat",
+            json={"message": "Over limit", "ticker": "AAPL"},
+        )
+        assert response.status_code == 429
 
     def test_analyze_endpoint_rate_limit(self) -> None:
         """Test rate limiting on /analyze endpoint."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
-        settings.auth_enabled = True
-
+        settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
+        mock_analysis = MagicMock()
+        mock_analysis.analyze_ticker.return_value = _analyze_result()
+        install_dependency_overrides(settings, user, mock_analysis, get_analysis_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=user):
-            with patch("app.api.dependencies.services.get_analysis_service") as mock_service:
-                mock_analysis = MagicMock()
-                mock_analysis.analyze_ticker.return_value = MagicMock(
-                    ticker="AAPL",
-                    report="Test report",
-                    valuation=MagicMock(intrinsic_value=100, upside=0.2, recommendation="BUY"),
-                    health_score=80,
-                    risk_level="LOW",
-                )
-                mock_service.return_value = mock_analysis
+        for i in range(settings.rate_limit_analyze_per_minute):
+            response = client.post(
+                "/analyze",
+                json={"ticker": "AAPL"},
+            )
+            assert response.status_code == 200, f"Request {i} failed: {response.text}"
 
-                for i in range(settings.rate_limit_analyze_per_minute):
-                    response = client.post(
-                        "/analyze",
-                        json={"ticker": "AAPL"},
-                    )
-                    assert response.status_code == 200, f"Request {i} failed: {response.text}"
+        response = client.post(
+            "/analyze",
+            json={"ticker": "AAPL"},
+        )
+        assert response.status_code == 429
 
-                response = client.post(
-                    "/analyze",
-                    json={"ticker": "AAPL"},
-                )
-                assert response.status_code == 429
 
     def test_documents_endpoint_rate_limit(self) -> None:
         """Test rate limiting on /documents endpoints."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
-        settings.auth_enabled = True
-
+        settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
+        mock_doc = MagicMock()
+        mock_doc.list_documents.return_value = {"documents": [], "total": 0}
+        install_dependency_overrides(settings, user, mock_doc, get_document_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=user):
-            with patch("app.api.dependencies.services.get_document_service") as mock_service:
-                mock_doc = MagicMock()
-                mock_doc.list_documents.return_value = {"documents": [], "total": 0}
-                mock_service.return_value = mock_doc
+        for i in range(settings.rate_limit_documents_per_minute):
+            response = client.get("/documents")
+            assert response.status_code == 200, f"Request {i} failed: {response.text}"
 
-                for i in range(settings.rate_limit_documents_per_minute):
-                    response = client.get("/documents")
-                    assert response.status_code == 200, f"Request {i} failed: {response.text}"
-
-                response = client.get("/documents")
-                assert response.status_code == 429
+        response = client.get("/documents")
+        assert response.status_code == 429
 
     def test_search_endpoint_rate_limit(self) -> None:
         """Test rate limiting on /search endpoint."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
-        settings.auth_enabled = True
-
+        settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
+        mock_search = MagicMock()
+        mock_search.search.return_value = _search_result()
+        install_dependency_overrides(settings, user, mock_search, get_search_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=user):
-            with patch("app.api.dependencies.services.get_search_service") as mock_service:
-                mock_search = MagicMock()
-                mock_search.search.return_value = MagicMock(
-                    query="test",
-                    total=0,
-                    results=[]
-                )
-                mock_service.return_value = mock_search
+        for i in range(settings.rate_limit_search_per_minute):
+            response = client.post(
+                "/search",
+                json={"query": f"test {i}"},
+            )
+            assert response.status_code == 200, f"Request {i} failed: {response.text}"
 
-                for i in range(settings.rate_limit_search_per_minute):
-                    response = client.post(
-                        "/search",
-                        json={"query": f"test {i}"},
-                    )
-                    assert response.status_code == 200, f"Request {i} failed: {response.text}"
-
-                response = client.post(
-                    "/search",
-                    json={"query": "over limit"},
-                )
-                assert response.status_code == 429
+        response = client.post(
+            "/search",
+            json={"query": "over limit"},
+        )
+        assert response.status_code == 429
 
     def test_rate_limit_headers_present(self) -> None:
-        """Test that rate limit headers are present in responses."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
-        settings.auth_enabled = True
-
+        """Test that rate limit headers are present on 429 responses."""
+        settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
+        mock_chat = MagicMock()
+        mock_chat.chat.return_value = _chat_result()
+        install_dependency_overrides(settings, user, mock_chat, get_chat_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=user):
-            with patch("app.api.dependencies.services.get_chat_service") as mock_service:
-                mock_chat = MagicMock()
-                mock_chat.chat.return_value = MagicMock(
-                    message="Test response",
-                    ticker="AAPL",
-                    sources=[],
-                    tools_used=[],
-                    plan=[]
-                )
-                mock_service.return_value = mock_chat
+        # Exhaust the per-minute limit
+        for i in range(settings.rate_limit_chat_per_minute):
+            response = client.post(
+                "/chat",
+                json={"message": f"Test {i}", "ticker": "AAPL"},
+            )
+            assert response.status_code == 200
 
-                response = client.post(
-                    "/chat",
-                    json={"message": "Test", "ticker": "AAPL"},
-                )
+        response = client.post(
+            "/chat",
+            json={"message": "Over limit", "ticker": "AAPL"},
+        )
 
-                assert response.status_code == 200
-                assert "X-RateLimit-Limit-Minute" in response.headers
-                assert "X-RateLimit-Remaining-Minute" in response.headers
-                assert "X-RateLimit-Limit-Hour" in response.headers
-                assert "X-RateLimit-Remaining-Hour" in response.headers
+        assert response.status_code == 429
+        assert "Retry-After" in response.headers
+        assert "X-RateLimit-Limit-Minute" in response.headers
+        assert "X-RateLimit-Remaining-Minute" in response.headers
+        assert "X-RateLimit-Limit-Hour" in response.headers
+        assert "X-RateLimit-Remaining-Hour" in response.headers
 
     def test_rate_limit_reset_between_windows(self) -> None:
-        """Test that rate limits reset after time window expires."""
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        """Test that the limiter tracks time-windowed counters correctly."""
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=2, requests_per_hour=100)
 
-        # Use a very short window for testing
-        config_minute = RateLimitConfig(requests_per_minute=2, requests_per_hour=100)
-
-        # Manually test with time manipulation
-        limiter.check_rate_limit("user:123", config_minute)
-        limiter.check_rate_limit("user:123", config_minute)
-        result = limiter.check_rate_limit("user:123", config_minute)
+        limiter.check_rate_limit("user:123", config)
+        limiter.check_rate_limit("user:123", config)
+        result = limiter.check_rate_limit("user:123", config)
         assert result.allowed is False
+        assert result.retry_after_seconds is not None
 
-        # Wait for window to reset (in real scenario, would wait 60s)
-        # For testing, we can't easily wait, so we verify the logic works
-        # by checking that the limiter tracks time-based windows correctly
-        assert limiter._local_backend.get("ratelimit:user:123:minute:0") >= 2
+        # Counters are keyed by the concrete minute/hour window
+        minute_key = f"ratelimit:user:123:minute:{int(time.time() // 60)}"
+        hour_key = f"ratelimit:user:123:hour:{int(time.time() // 3600)}"
+        assert limiter._local_backend.get(minute_key) == 3
+        assert limiter._local_backend.get(hour_key) == 3
+
+        # Resetting the identifier clears both counters
+        limiter.reset_limits("user:123")
+        assert limiter._local_backend.get(minute_key) == 0
+        assert limiter._local_backend.get(hour_key) == 0
 
 
 class TestRateLimitConcurrency:
@@ -455,8 +496,7 @@ class TestRateLimitConcurrency:
         """Test that concurrent requests are handled correctly with local backend."""
         import threading
 
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=100, requests_per_hour=1000)
 
@@ -486,8 +526,7 @@ class TestRateLimitConcurrency:
         """Test that concurrent requests correctly hit the limit."""
         import threading
 
-        settings = get_settings()
-        settings.rate_limit_enabled = True
+        settings = make_settings(rate_limit_enabled=True)
         limiter = HybridRateLimiter(settings)
         config = RateLimitConfig(requests_per_minute=10, requests_per_hour=100)
 
@@ -521,37 +560,27 @@ class TestRateLimitingDisabled:
 
     def setup_method(self) -> None:
         reset_rate_limits_for_testing()
+        app.dependency_overrides.clear()
 
     def teardown_method(self) -> None:
+        app.dependency_overrides.clear()
         reset_rate_limits_for_testing()
 
     def test_rate_limiting_disabled_allows_all(self) -> None:
         """Test that disabling rate limiting allows unlimited requests."""
-        settings = get_settings()
-        settings.rate_limit_enabled = False
-        settings.auth_enabled = True
-
+        settings = make_settings(rate_limit_enabled=False, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
+        mock_chat = MagicMock()
+        mock_chat.chat.return_value = _chat_result()
+        install_dependency_overrides(settings, user, mock_chat, get_chat_service)
 
-        with patch("app.auth.dependencies.get_current_user", return_value=user):
-            with patch("app.api.dependencies.services.get_chat_service") as mock_service:
-                mock_chat = MagicMock()
-                mock_chat.chat.return_value = MagicMock(
-                    message="Test response",
-                    ticker="AAPL",
-                    sources=[],
-                    tools_used=[],
-                    plan=[]
-                )
-                mock_service.return_value = mock_chat
-
-                # Make many requests - all should succeed
-                for i in range(100):
-                    response = client.post(
-                        "/chat",
-                        json={"message": f"Test {i}", "ticker": "AAPL"},
-                    )
-                    assert response.status_code == 200, f"Request {i} failed: {response.text}"
+        # Make many requests - all should succeed
+        for i in range(100):
+            response = client.post(
+                "/chat",
+                json={"message": f"Test {i}", "ticker": "AAPL"},
+            )
+            assert response.status_code == 200, f"Request {i} failed: {response.text}"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

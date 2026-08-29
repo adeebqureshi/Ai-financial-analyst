@@ -21,6 +21,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
@@ -91,7 +93,8 @@ async def analyze_company(
     Returns:
         An ``APIResponse`` containing the analysis results.
     """
-    result = service.analyze_ticker(
+    result = await asyncio.to_thread(
+        service.analyze_ticker,
         ticker=payload.ticker,
         query=payload.query,
     )

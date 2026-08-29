@@ -20,3 +20,12 @@ _default_auth_db = os.path.join(
     "ai-financial-analyst-test-auth.db",
 ).replace("\\", "/")
 os.environ.setdefault("AUTH_DATABASE_URL", f"sqlite:///{_default_auth_db}")
+
+# Keep the chat conversation store out of the repository working tree. The
+# chat service now persists each turn by default, so tests must not write to
+# ``./data/chat.db`` inside the repository.
+_default_chat_db = os.path.join(
+    tempfile.gettempdir(),
+    "ai-financial-analyst-test-chat.db",
+).replace("\\\\", "/")
+os.environ.setdefault("CHAT_DATABASE_URL", f"sqlite:///{_default_chat_db}")

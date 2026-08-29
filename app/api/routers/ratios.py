@@ -6,6 +6,8 @@ This module defines the financial ratios endpoint (``POST /financial-ratios``).
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.services import get_ratios_service
@@ -37,7 +39,7 @@ async def financial_ratios(
     Returns:
         An ``APIResponse`` containing the computed ratios.
     """
-    result = service.compute(request)
+    result = await asyncio.to_thread(service.compute, request)
 
     return APIResponse.success_response(
         message="Financial ratios computed",

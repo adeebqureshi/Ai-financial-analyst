@@ -20,9 +20,11 @@ class HealthStatus:
 
     @property
     def ok(self) -> bool:
+        """
+        Critical-component readiness.
 
-        return (
-            self.database
-            and self.cache
-            and self.vector_store
-        )
+        The Redis cache is deliberately excluded: it is an optional
+        accelerator and every consumer (rate limiter, chat store) already
+        falls back to the database when Redis is unavailable.
+        """
+        return self.database and self.vector_store

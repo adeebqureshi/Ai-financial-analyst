@@ -110,14 +110,25 @@ class LocalMemoryBackend(RateLimiterBackend):
 
 
 class RedisBackend(RateLimiterBackend):
-    """Redis-backed rate limiter for distributed deployments."""
+    """
+    Redis-backed rate limiter for distributed deployments.
+
+    The client is created lazily and re-created after failures, so a Redis
+    restart or network blip is healed on the next request instead of pinning
+    the limiter to a dead connection.
+    """
+
+    # Minimum seconds between reconnect attempts (avoid hammering a down Redis).
+    _reconnect_cooldown_seconds = 5.0
 
     def __init__(self, redis_url: str) -> None:
         self._redis_url = redis_url
         self._client: Any = None
+        self._last_connect_attempt = 0.0
         self._connect()
 
     def _connect(self) -> None:
+        self._last_connect_attempt = time.monotonic()
         try:
             import redis
             self._client = redis.from_url(
@@ -125,6 +136,7 @@ class RedisBackend(RateLimiterBackend):
                 decode_responses=True,
                 socket_connect_timeout=2,
                 socket_timeout=2,
+                health_check_interval=30,
             )
             self._client.ping()
             logger.info("Rate limiter connected to Redis at %s", self._redis_url)
@@ -133,9 +145,16 @@ class RedisBackend(RateLimiterBackend):
             self._client = None
 
     def _ensure_client(self) -> Any:
-        if self._client is None:
+        if self._client is None and self._cooldown_elapsed():
             self._connect()
         return self._client
+
+    def _cooldown_elapsed(self) -> bool:
+        return (time.monotonic() - self._last_connect_attempt) >= self._reconnect_cooldown_seconds
+
+    def _drop_client(self) -> None:
+        """Forget the current client so the next call reconnects (heals restarts)."""
+        self._client = None
 
     def increment(self, key: str, window_seconds: int) -> int:
         client = self._ensure_client()
@@ -150,6 +169,7 @@ class RedisBackend(RateLimiterBackend):
             return results[0]
         except Exception as exc:
             logger.warning("Redis increment failed, falling back to local: %s", exc)
+            self._drop_client()
             raise
 
     def get(self, key: str) -> int:
@@ -162,6 +182,7 @@ class RedisBackend(RateLimiterBackend):
             return int(value) if value else 0
         except Exception as exc:
             logger.warning("Redis get failed: %s", exc)
+            self._drop_client()
             raise
 
     def reset(self, key: str) -> None:
@@ -173,6 +194,7 @@ class RedisBackend(RateLimiterBackend):
             client.delete(key)
         except Exception as exc:
             logger.warning("Redis reset failed: %s", exc)
+            self._drop_client()
             raise
 
     def health_check(self) -> bool:
@@ -202,17 +224,37 @@ class HybridRateLimiter:
         self._backend: RateLimiterBackend = (
             self._redis_backend if self._use_redis else self._local_backend
         )
+        self._last_redis_probe = time.monotonic()
 
         logger.info(
             "Rate limiter initialized with %s backend",
             "Redis" if self._use_redis else "local memory",
         )
 
+    # How often (seconds) a locally-fallen-back limiter re-probes Redis so a
+    # recovered Redis instance takes over again without a process restart.
+    _redis_reprobe_interval_seconds = 30.0
+
     def _get_backend(self) -> RateLimiterBackend:
-        if self._use_redis and not self._redis_backend.health_check():
-            logger.warning("Redis health check failed, switching to local backend")
-            self._use_redis = False
-            self._backend = self._local_backend
+        if self._use_redis:
+            if not self._redis_backend.health_check():
+                logger.warning("Redis health check failed, switching to local backend")
+                self._use_redis = False
+                self._backend = self._local_backend
+                self._last_redis_probe = time.monotonic()
+            return self._backend
+
+        # Currently on the local backend: periodically probe Redis so a
+        # recovered instance is adopted again (multi-instance consistency).
+        now = time.monotonic()
+        if (
+            now - self._last_redis_probe >= self._redis_reprobe_interval_seconds
+            and self._redis_backend.health_check()
+        ):
+            logger.info("Redis recovered, switching rate limiter back to Redis backend")
+            self._use_redis = True
+            self._backend = self._redis_backend
+        self._last_redis_probe = now
         return self._backend
 
     def check_rate_limit(

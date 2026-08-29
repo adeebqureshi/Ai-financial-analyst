@@ -6,6 +6,8 @@ This module defines the risk analysis endpoint (``POST /risk-analysis``).
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.services import get_risk_service
@@ -37,7 +39,7 @@ async def risk_analysis(
     Returns:
         An ``APIResponse`` containing the risk assessment.
     """
-    result = service.assess(request)
+    result = await asyncio.to_thread(service.assess, request)
 
     return APIResponse.success_response(
         message="Risk assessment completed",

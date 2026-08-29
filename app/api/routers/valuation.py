@@ -14,6 +14,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.services import get_valuation_service
@@ -45,7 +47,7 @@ async def valuate(
     Returns:
         An ``APIResponse`` containing the valuation result.
     """
-    result = service.valuate(request)
+    result = await asyncio.to_thread(service.valuate, request)
 
     return APIResponse.success_response(
         message="Valuation completed",
@@ -73,7 +75,7 @@ async def intrinsic_value(
     Returns:
         An ``APIResponse`` containing the intrinsic value.
     """
-    result = service.intrinsic_value(request)
+    result = await asyncio.to_thread(service.intrinsic_value, request)
 
     return APIResponse.success_response(
         message="Intrinsic value calculated",

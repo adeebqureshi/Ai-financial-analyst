@@ -10,6 +10,8 @@ mirroring the contract used by ``POST /analyze``.
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
@@ -72,7 +74,8 @@ async def report(
     Returns:
         An ``APIResponse`` containing the generated report.
     """
-    result = service.generate_ticker_report(
+    result = await asyncio.to_thread(
+        service.generate_ticker_report,
         ticker=payload.ticker,
         query=payload.query,
     )

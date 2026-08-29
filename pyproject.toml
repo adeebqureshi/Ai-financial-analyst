@@ -15,6 +15,7 @@ dependencies = [
     "uvicorn>=0.30.0",
     "sqlalchemy>=2.0.0",
     "redis>=5.0.0",
+    "psycopg[binary]>=3.1.0",
     "chromadb>=0.5.0",
     "openai>=1.0.0",
     "yfinance>=0.2.0",
@@ -52,6 +53,9 @@ include = ["app*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
+markers = [
+    "integration: tests that require real external services (opt-in via TEST_POSTGRES_URL / TEST_REDIS_URL)",
+]
 
 
 [tool.ruff]

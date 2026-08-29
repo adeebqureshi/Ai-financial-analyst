@@ -19,6 +19,7 @@ calls the planner selected, and never fabricates a result when a tool fails.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -92,6 +93,32 @@ class CoordinatorAgent:
         self.auditor = auditor or AuditorAgent()
 
         self.report_writer = report_writer or ReportWriterAgent()
+
+    def hydrate_context(
+        self,
+        session_id: str,
+        tickers: list[str],
+        query: str,
+        answer: str,
+    ) -> None:
+        """
+        Restore a session's previous-turn context into conversational memory.
+
+        This is what allows multi-turn follow-ups (``it``, ``this company``)
+        to resolve after a process restart or when an earlier turn was handled
+        by a different worker. Persisted session state is replayed into the
+        in-memory pronoun resolver before a new turn is planned.
+
+        Args:
+            session_id: The session whose context is being restored.
+            tickers: Tickers referenced by the previous turn.
+            query: The previous turn's user question.
+            answer: The previous turn's assistant answer.
+        """
+        if not session_id:
+            return
+
+        self._memory.remember(session_id, tickers, query, answer)
 
     def run(
         self,
@@ -259,6 +286,11 @@ class CoordinatorAgent:
         streamed progressively. This keeps the response evidence-grounded while
         giving the client progressive output.
 
+        Blocking work (network I/O via yfinance/requests, database access,
+        embedding inference and the sandboxed subprocess) is offloaded to a
+        worker thread with ``asyncio.to_thread`` so the event loop is never
+        blocked while tools execute.
+
         Args:
             query: The user question.
             ticker: Optional explicit ticker context.
@@ -273,6 +305,10 @@ class CoordinatorAgent:
             - ``{"type": "error", "message": ...}`` — a pipeline failure.
         """
         try:
+            # The planner is deterministic, CPU-only classification — safe to
+            # run on the loop. Tool execution performs blocking I/O (yfinance /
+            # requests HTTP calls, SQLAlchemy access, embedding inference and
+            # the sandbox subprocess), so it is offloaded to a worker thread.
             plan = self.planner.plan(
                 query=query,
                 ticker=ticker,
@@ -280,7 +316,10 @@ class CoordinatorAgent:
                 session_id=session_id,
             )
 
-            evidence, steps, tools_used, sources = self._execute(plan)
+            evidence, steps, tools_used, sources = await asyncio.to_thread(
+                self._execute,
+                plan,
+            )
         except Exception as exc:
             logger.warning(
                 "Streaming pipeline failed before synthesis: %s",

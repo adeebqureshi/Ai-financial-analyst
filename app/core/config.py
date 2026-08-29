@@ -208,6 +208,31 @@ class Settings(BaseSettings):
         description="SQLAlchemy URL for the user account store.",
     )
 
+    # ── Chat Persistence ─────────────────────────────────────────────────
+    chat_database_url: str = Field(
+        default="sqlite:///./data/chat.db",
+        description=(
+            "SQLAlchemy URL for the chat conversation store. SQLite by "
+            "default for local development; use PostgreSQL in production, "
+            "e.g. postgresql+psycopg://user:pass@host/db."
+        ),
+    )
+    chat_redis_url: str = Field(
+        default="redis://localhost:6379/1",
+        description=(
+            "Optional Redis URL used to cache recent chat session context. "
+            "When Redis is unavailable the store transparently falls back to "
+            "the database."
+        ),
+    )
+    chat_retention_days: int = Field(
+        default=30,
+        description=(
+            "Retention window (days) after which idle chat sessions and their "
+            "messages are purged by the retention/cleanup routine."
+        ),
+    )
+
     # ── Rate Limiting ────────────────────────────────────────────────────
     rate_limit_enabled: bool = Field(
         default=True,

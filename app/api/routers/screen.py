@@ -6,6 +6,8 @@ This module defines the stock screening endpoint (``POST /screen``).
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.services import get_screen_service
@@ -37,7 +39,7 @@ async def screen(
     Returns:
         An ``APIResponse`` containing the screening results.
     """
-    result = service.screen(request)
+    result = await asyncio.to_thread(service.screen, request)
 
     return APIResponse.success_response(
         message=f"Screening completed with {result.total} results",

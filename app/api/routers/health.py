@@ -18,6 +18,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.services import get_health_service
@@ -50,7 +52,7 @@ async def health_check(
         An ``APIResponse`` containing the health status, version,
         environment, and per-component details.
     """
-    health_data = service.check_health()
+    health_data = await asyncio.to_thread(service.check_health)
 
     return APIResponse.success_response(
         message="Health check completed",

@@ -18,6 +18,8 @@ Design Decisions:
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.api.dependencies import rate_limit_documents
@@ -62,7 +64,7 @@ async def upload_document(
     Returns:
         An ``APIResponse`` containing the indexed document record.
     """
-    result = service.upload(file, owner_id=_owner_id(current_user))
+    result = await asyncio.to_thread(service.upload, file, owner_id=_owner_id(current_user))
 
     return APIResponse.success_response(
         message="Document indexed successfully",
@@ -91,7 +93,7 @@ async def list_documents(
     Returns:
         An ``APIResponse`` containing the document library.
     """
-    result = service.list_documents(owner_id=_owner_id(current_user))
+    result = await asyncio.to_thread(service.list_documents, owner_id=_owner_id(current_user))
 
     return APIResponse.success_response(
         message=f"{result['total']} documents found",
@@ -125,7 +127,8 @@ async def delete_document(
     Returns:
         An ``APIResponse`` confirming deletion.
     """
-    result = service.delete_document(
+    result = await asyncio.to_thread(
+        service.delete_document,
         document_id,
         owner_id=_owner_id(current_user),
     )
