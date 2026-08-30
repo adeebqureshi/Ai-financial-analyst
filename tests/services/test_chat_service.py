@@ -63,6 +63,7 @@ def test_chat_delegates_to_coordinator_and_preserves_contract():
         ticker="AAPL",
         document_id="doc1",
         session_id="s1",
+        owner_id=None,
     )
 
     assert result.message == "AAPL is trading at $220.10."

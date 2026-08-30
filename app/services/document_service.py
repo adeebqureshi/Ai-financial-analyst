@@ -61,6 +61,8 @@ _TICKER_PATTERN = re.compile(
     r"(?:^|[\s_\-.()])([A-Z]{1,5})(?:[\s_\-.()]|$)",
 )
 
+_DOCUMENT_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+
 
 def _detect_filing_type(filename: str) -> str | None:
     """Best-effort extraction of an SEC form type from a filename."""
@@ -139,6 +141,17 @@ class DocumentService:
     def _record_path(self, document_id: str) -> Path:
         return self._library_dir() / f"{document_id}.json"
 
+    @staticmethod
+    def _is_valid_document_id(document_id: str) -> bool:
+        return bool(_DOCUMENT_ID_PATTERN.fullmatch(document_id))
+
+    @staticmethod
+    def _not_found(document_id: str | None = None) -> HTTPException:
+        return HTTPException(
+            status_code=404,
+            detail="Document was not found.",
+        )
+
     def _save_record(self, record: dict) -> None:
         FileManager.save_json(
             self._record_path(record["document_id"]),
@@ -146,12 +159,50 @@ class DocumentService:
         )
 
     def _load_record(self, document_id: str) -> dict | None:
+        if not self._is_valid_document_id(document_id):
+            return None
+
         path = self._record_path(document_id)
 
         if not path.exists():
             return None
 
         return FileManager.load_json(path)
+
+    @staticmethod
+    def _is_owned(record: dict, owner_id: str | None) -> bool:
+        """
+        Return whether ``record`` may be accessed in the caller's owner scope.
+
+        ``owner_id=None`` is the anonymous/auth-disabled development bucket.
+        When a real authenticated owner is supplied, unowned legacy records are
+        fail-closed unless a future schema explicitly marks them public.
+        """
+        record_owner = record.get("owner_id")
+
+        if owner_id is None:
+            return record_owner is None
+
+        return record_owner == owner_id
+
+    def _load_owned_record(
+        self,
+        document_id: str,
+        owner_id: str | None,
+        *,
+        conceal: bool = True,
+    ) -> dict:
+        record = self._load_record(document_id)
+
+        if record is None:
+            raise self._not_found(document_id)
+
+        if not self._is_owned(record, owner_id):
+            if conceal:
+                raise self._not_found(document_id)
+            raise AuthorizationError("You do not have access to this document.")
+
+        return record
 
     # ──────────────────────────────────────────────────────────────────
     # Validation
@@ -399,16 +450,12 @@ class DocumentService:
 
         return records
 
-    def get_document(self, document_id: str) -> dict:
-        record = self._load_record(document_id)
-
-        if record is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Document '{document_id}' was not found.",
-            )
-
-        return record
+    def get_document(
+        self,
+        document_id: str,
+        owner_id: str | None = None,
+    ) -> dict:
+        return self._load_owned_record(document_id, owner_id)
 
     def delete_document(
         self,
@@ -426,21 +473,7 @@ class DocumentService:
         Raises:
             AuthorizationError: When the document belongs to another user.
         """
-        record = self._load_record(document_id)
-
-        if record is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Document '{document_id}' was not found.",
-            )
-
-        if (
-            owner_id is not None
-            and record.get("owner_id") not in (None, owner_id)
-        ):
-            raise AuthorizationError(
-                "You do not have access to this document."
-            )
+        self._load_owned_record(document_id, owner_id)
 
         self._store.delete_by_document_id(document_id)
 
@@ -486,6 +519,16 @@ class DocumentService:
             owner_id: Optional owner ID to scope retrieval to user's documents.
         """
         self.refresh_engine()
+
+        if document_id is not None:
+            try:
+                self._load_owned_record(document_id, owner_id)
+            except HTTPException:
+                return RetrievalContext(
+                    query=query,
+                    chunks=[],
+                    retrieval_time_ms=0.0,
+                )
 
         return self._engine.retrieve(
             query=query,

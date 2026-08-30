@@ -123,15 +123,16 @@ def require_ownership(owner_id: str | None, current_user: User | None) -> None:
     Assert that ``current_user`` owns a resource.
 
     Args:
-        owner_id: The owner recorded on the target resource (``None`` for
-            legacy/anonymous resources, which remain accessible).
+        owner_id: The owner recorded on the target resource. ``None`` means
+            the resource is legacy/unowned and is denied to authenticated
+            callers unless a resource-specific public-access policy exists.
         current_user: The authenticated user.
 
     Raises:
         AuthorizationError: When the resource belongs to another user.
     """
-    if owner_id is None or current_user is None:
+    if current_user is None:
         return
 
-    if owner_id != current_user.id:
+    if owner_id is None or owner_id != current_user.id:
         raise AuthorizationError("You do not have access to this resource.")

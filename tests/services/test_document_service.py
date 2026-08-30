@@ -3,6 +3,7 @@ import uuid
 
 import fitz
 import pytest
+from fastapi import HTTPException, UploadFile
 
 from app.core.config import get_settings
 from app.core.exceptions import ValidationError
@@ -74,6 +75,22 @@ def _upload(service: DocumentService, filename: str, content: bytes):
             filename=filename,
             file=io.BytesIO(content),
         )
+    )
+
+
+def _save_legacy_record(service: DocumentService, document_id: str) -> None:
+    service._save_record(
+        {
+            "document_id": document_id,
+            "filename": "Legacy.pdf",
+            "pages": 1,
+            "chunks": 0,
+            "tables": 0,
+            "parser_used": "pymupdf",
+            "status": "indexed",
+            "created_at": "2026-08-30T00:00:00+00:00",
+            "owner_id": None,
+        }
     )
 
 
@@ -197,6 +214,62 @@ def test_delete_removes_vectors(monkeypatch, tmp_path):
     context = service.retrieve("Apple", limit=5)
 
     assert len(context.chunks) == 0
+
+
+def test_delete_requires_exact_owner_at_service_boundary(monkeypatch, tmp_path):
+    service = _make_service(monkeypatch, tmp_path)
+
+    record = service.upload(
+        UploadFile(
+            filename="Apple 10-K.pdf",
+            file=io.BytesIO(_make_pdf(["Apple revenue."])),
+        ),
+        owner_id="user-a",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.delete_document(record["document_id"], owner_id="user-b")
+
+    assert exc_info.value.status_code == 404
+    assert service.list_documents(owner_id="user-a")["total"] == 1
+
+
+def test_authenticated_owner_cannot_access_legacy_unowned_document(monkeypatch, tmp_path):
+    service = _make_service(monkeypatch, tmp_path)
+    document_id = uuid.uuid4().hex
+    _save_legacy_record(service, document_id)
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_document(document_id, owner_id="user-a")
+
+    assert exc_info.value.status_code == 404
+    assert service.list_documents(owner_id="user-a")["total"] == 0
+
+
+def test_retrieve_with_foreign_or_malformed_document_id_returns_empty(monkeypatch, tmp_path):
+    service = _make_service(monkeypatch, tmp_path)
+
+    record = service.upload(
+        UploadFile(
+            filename="Apple 10-K.pdf",
+            file=io.BytesIO(_make_pdf(["Apple revenue."])),
+        ),
+        owner_id="user-a",
+    )
+
+    foreign = service.retrieve(
+        "Apple revenue",
+        document_id=record["document_id"],
+        owner_id="user-b",
+    )
+    malformed = service.retrieve(
+        "Apple revenue",
+        document_id="../not-a-document",
+        owner_id="user-a",
+    )
+
+    assert foreign.chunks == []
+    assert malformed.chunks == []
 
 
 def test_global_retrieval_across_documents(monkeypatch, tmp_path):

@@ -159,7 +159,7 @@ class TestDocumentOwnership:
             headers=_headers(token_b),
         )
 
-        assert forbidden.status_code == 403
+        assert forbidden.status_code == 404
 
         # The document must still exist for its owner.
         still_there = auth_client.get(
@@ -173,6 +173,34 @@ class TestDocumentOwnership:
         ]
 
         assert document_id in ids
+
+    def test_authenticated_user_cannot_delete_legacy_unowned_document(self, auth_client):
+        token_a = _register_and_login(auth_client, "legacy-owner@example.com")
+
+        service = DocumentService(Settings())
+        legacy_record = {
+            "document_id": uuid.uuid4().hex,
+            "filename": "legacy.pdf",
+            "pages": 1,
+            "chunks": 0,
+            "tables": 0,
+            "parser_used": "pymupdf",
+            "status": "indexed",
+            "created_at": "2026-08-30T00:00:00+00:00",
+            "owner_id": None,
+        }
+        service._save_record(legacy_record)
+
+        denied = auth_client.delete(
+            f"/documents/{legacy_record['document_id']}",
+            headers=_headers(token_a),
+        )
+
+        assert denied.status_code == 404
+
+        listed = auth_client.get("/documents", headers=_headers(token_a))
+        ids = [doc["document_id"] for doc in listed.json()["data"]["documents"]]
+        assert legacy_record["document_id"] not in ids
 
     def test_document_library_is_scoped_per_user(self, auth_client):
         token_a = _register_and_login(auth_client, "scoped-a@example.com")
@@ -224,6 +252,23 @@ class TestSearchOwnership:
         assert search_b.status_code == 200
         hits_b = search_b.json()["data"]["hits"]
         assert len(hits_b) == 0
+
+    def test_search_rejects_malformed_document_id_without_leaking(self, auth_client):
+        token_a = _register_and_login(auth_client, "malformed-search@example.com")
+        _upload(auth_client, token_a, "Apple revenue grew.")
+
+        response = auth_client.post(
+            "/search",
+            headers=_headers(token_a),
+            json={
+                "query": "Apple revenue",
+                "limit": 5,
+                "document_id": "../not-a-real-document-id",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["hits"] == []
 
     def test_search_with_document_id_scoped_to_owner(self, auth_client):
         token_a = _register_and_login(auth_client, "search-doc-owner@example.com")

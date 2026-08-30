@@ -117,6 +117,7 @@ def test_chat_preserves_document_scoping():
         ticker=None,
         document_id="doc9",
         session_id=None,
+        owner_id=None,
     )
 
 

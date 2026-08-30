@@ -147,7 +147,7 @@ class TestCrossUserIsolation:
         assert doc_id not in [d["document_id"] for d in auth_client.get("/documents", headers=_headers(token_b)).json()["data"]["documents"]]
 
         # B cannot delete it
-        assert auth_client.delete(f"/documents/{doc_id}", headers=_headers(token_b)).status_code == 403
+        assert auth_client.delete(f"/documents/{doc_id}", headers=_headers(token_b)).status_code == 404
 
         # A can delete it
         assert auth_client.delete(f"/documents/{doc_id}", headers=_headers(token_a)).status_code == 200
@@ -451,27 +451,36 @@ class TestAuthorizationBoundaries:
 
         # B cannot delete A's document
         response = auth_client.delete(f"/documents/{doc_id}", headers=_headers(token_b))
-        assert response.status_code == 403
+        assert response.status_code == 404
 
         # A can delete
         assert auth_client.delete(f"/documents/{doc_id}", headers=_headers(token_a)).status_code == 200
 
     def test_legacy_unowned_documents_not_visible_to_authenticated(self, auth_client):
         """Legacy documents with no owner_id are not visible to authenticated users."""
-        # This test verifies strict tenant isolation - unowned docs should not leak
         token_a = _register_and_login(auth_client, "legacy-a@example.com")
-        token_b = _register_and_login(auth_client, "legacy-b@example.com")
 
-        # Upload as authenticated user (has owner_id)
-        doc_id = _upload(auth_client, token_a, "User A's document.")
+        service = DocumentService(Settings())
+        legacy_id = uuid.uuid4().hex
+        service._save_record(
+            {
+                "document_id": legacy_id,
+                "filename": "legacy.pdf",
+                "pages": 1,
+                "chunks": 0,
+                "tables": 0,
+                "parser_used": "pymupdf",
+                "status": "indexed",
+                "created_at": "2026-08-30T00:00:00+00:00",
+                "owner_id": None,
+            }
+        )
 
-        # User B should not see it
-        hits = auth_client.post("/search", headers=_headers(token_b), json={"query": "document"}).json()["data"]["hits"]
-        assert len(hits) == 0
+        listed = auth_client.get("/documents", headers=_headers(token_a)).json()["data"]["documents"]
+        assert legacy_id not in [document["document_id"] for document in listed]
 
-        # User A should see it
-        hits = auth_client.post("/search", headers=_headers(token_a), json={"query": "document"}).json()["data"]["hits"]
-        assert len(hits) > 0
+        delete = auth_client.delete(f"/documents/{legacy_id}", headers=_headers(token_a))
+        assert delete.status_code == 404
 
 
 class TestErrorHandlingNoLeakage:
@@ -483,8 +492,8 @@ class TestErrorHandlingNoLeakage:
 
         # Try to delete non-existent document
         response = auth_client.delete("/documents/non-existent-id", headers=_headers(token))
-        # Should be 404, not 403 (which would indicate existence but no access)
-        assert response.status_code in (404, 403)  # 403 if auth check runs first
+        assert response.status_code == 404
+        assert "non-existent-id" not in response.text
 
     def test_error_messages_generic(self, auth_client):
         """Error messages don't leak internal details."""
