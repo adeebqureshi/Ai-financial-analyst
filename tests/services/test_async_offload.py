@@ -38,7 +38,7 @@ class _BlockingTools:
         self.release = threading.Event()
         self.thread_id: int | None = None
 
-    def execute(self, tool: str, args: dict) -> ToolResult:
+    def execute(self, tool: str, args: dict, owner_id: str | None = None) -> ToolResult:
         self.thread_id = threading.get_ident()
         self._loop.call_soon_threadsafe(self._started.set)
         self.release.wait(timeout=5)

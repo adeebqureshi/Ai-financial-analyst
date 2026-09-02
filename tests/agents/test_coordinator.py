@@ -12,7 +12,7 @@ class FakeTools:
         self.results = results
         self.calls: list[tuple[str, dict]] = []
 
-    def execute(self, tool, args):
+    def execute(self, tool, args, owner_id=None):
         self.calls.append((tool, args))
         return self.results.get(
             tool,

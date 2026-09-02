@@ -153,7 +153,7 @@ async def test_stream_run_emits_error_when_planning_fails():
 
 
 class _FakeCoordinator:
-    async def stream_run(self, query, ticker=None, document_id=None, session_id=None):
+    async def stream_run(self, query, ticker=None, document_id=None, session_id=None, owner_id=None):
         yield {
             "type": "plan",
             "tickers": ["AAPL"],

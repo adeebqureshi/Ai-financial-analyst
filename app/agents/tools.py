@@ -24,6 +24,7 @@ Design Decisions:
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -95,6 +96,14 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
 Handler = Callable[[dict[str, Any]], ToolResult]
 
 
+def _accepts_owner_id(handler: Callable[..., Any]) -> bool:
+    """Return True when ``handler`` declares an ``owner_id`` parameter."""
+    try:
+        return "owner_id" in inspect.signature(handler).parameters
+    except (ValueError, TypeError):
+        return False
+
+
 def _statement_payload(data: CompanyFinancialData) -> dict[str, float]:
     statement = data.statement
     return {
@@ -159,6 +168,16 @@ class ToolRegistry:
             "run_calculation": self._run_calculation,
         }
 
+        # Pre-compute which handlers accept ``owner_id`` so ownership-scoped
+        # retrieval (``search_documents``) receives the caller's ``owner_id``
+        # while every other handler is invoked with positional args only —
+        # preventing a TypeError from forwarding a keyword the handler ignores.
+        self._owner_scoped: set[str] = {
+            name
+            for name, handler in self._handlers.items()
+            if _accepts_owner_id(handler)
+        }
+
     @property
     def available_tools(self) -> list[str]:
         """Names of every tool this agent can run."""
@@ -188,7 +207,9 @@ class ToolRegistry:
             )
 
         try:
-            return handler(args, owner_id=owner_id)
+            if tool in self._owner_scoped:
+                return handler(args, owner_id=owner_id)
+            return handler(args)
         except Exception as exc:
             logger.warning("Tool '%s' failed: %s", tool, exc)
             return ToolResult(

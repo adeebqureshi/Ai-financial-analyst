@@ -72,7 +72,7 @@ class FakeDocuments:
     def __init__(self) -> None:
         self.queries = []
 
-    def retrieve(self, query, limit=5, document_id=None):
+    def retrieve(self, query, limit=5, document_id=None, owner_id=None):
         self.queries.append((query, limit, document_id))
         return SimpleNamespace(
             chunks=[

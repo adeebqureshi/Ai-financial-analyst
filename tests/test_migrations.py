@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from alembic import command
@@ -21,10 +22,26 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
+from app.auth.database import init_db as init_auth_db
+from app.auth.database import get_engine as get_auth_engine
+from app.chat.database import init_db as init_chat_db
+from app.chat.database import get_engine as get_chat_engine
+
 
 # Specific revision IDs for each database (since they have separate histories)
 AUTH_HEAD_REVISION = "05d52563b705"
 CHAT_HEAD_REVISION = "2a095841dbdc"
+
+
+@pytest.fixture(autouse=True)
+def _isolated_db_urls(monkeypatch):
+    """Force alembic/env.py to read the URL from the per-test Alembic Config
+    instead of the process-level ``AUTH_DATABASE_URL`` / ``CHAT_DATABASE_URL``
+    env vars that conftest.py sets for the running test suite (which point at
+    a shared temp DB and would override the per-test ``tmp_path`` URL)."""
+    monkeypatch.delenv("AUTH_DATABASE_URL", raising=False)
+    monkeypatch.delenv("CHAT_DATABASE_URL", raising=False)
 
 
 def _make_alembic_config(database_url: str, database_type: str) -> Config:
@@ -35,6 +52,12 @@ def _make_alembic_config(database_url: str, database_type: str) -> Config:
         cfg.set_section_option("alembic_auth", "sqlalchemy.url", database_url)
     else:
         cfg.set_section_option("alembic_chat", "sqlalchemy.url", database_url)
+
+    # Tell env.py which migration script directory / metadata / version table
+    # to use.  Without this the -x ``database`` argument defaults to "auth"
+    # inside env.py, so chat migrations would target the auth metadata and the
+    # alembic.ini default ``/tmp/...`` location (which does not exist on Windows).
+    cfg.cmd_opts = SimpleNamespace(x=[f"database={database_type}"])
     return cfg
 
 

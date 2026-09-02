@@ -296,7 +296,7 @@ class TestEnumerationAndExistence:
 
         document_id = _upload(auth_client, token_a, "Private earnings data.")
 
-                foreign = auth_client.delete(
+        foreign = auth_client.delete(
             f"/documents/{document_id}", headers=_headers(token_b)
         )
         missing = auth_client.delete(
