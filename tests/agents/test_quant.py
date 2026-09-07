@@ -20,6 +20,8 @@ def test_quant():
         shares_outstanding=10.0,
         free_cash_flow=150.0,
         gross_profit=500.0,
+        current_assets=400.0,
+        current_liabilities=200.0,
     )
 
     mock_data = CompanyFinancialData(
@@ -44,8 +46,8 @@ def test_quant():
 
     assert result.company == "AAPL"
     assert result.metric_count == 7
-    # current_ratio = current_assets / current_liabilities = (1000*0.3) / (600*0.3) = 300/180 = 1.666...
-    assert abs(result.metrics["current_ratio"] - 1.6666666666666667) < 0.001
+    # current_ratio = real current_assets / current_liabilities = 400/200 = 2.0
+    assert abs(result.metrics["current_ratio"] - 2.0) < 0.001
     # debt_to_equity = total_liabilities / equity = 600 / (1000-600) = 600/400 = 1.5
     assert abs(result.metrics["debt_to_equity"] - 1.5) < 0.001
     # return_on_assets = net_income / total_assets = 200/1000 = 0.2

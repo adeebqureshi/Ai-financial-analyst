@@ -19,6 +19,17 @@ from app.core.logging import get_logger
 logger = get_logger("app.api.rate_limiter")
 
 
+def _clock() -> float:
+    """Wall-clock source used to derive rate-limit window keys.
+
+    Returns Unix time in seconds. This indirection exists so tests can
+    substitute a frozen/controlled clock for deterministic window
+    boundaries. Production semantics are unchanged: the default simply
+    returns ``time.time()`` and the sliding-window logic is untouched.
+    """
+    return time.time()
+
+
 @dataclass(slots=True)
 class RateLimitConfig:
     """Configuration for a specific rate limit rule."""
@@ -139,7 +150,7 @@ class RedisBackend(RateLimiterBackend):
                 health_check_interval=30,
             )
             self._client.ping()
-            logger.info("Rate limiter connected to Redis at %s", self._redis_url)
+            logger.info("Rate limiter connected to Redis (URL withheld from logs)")
         except Exception as exc:
             logger.warning("Failed to connect to Redis for rate limiting: %s. Using local fallback.", exc)
             self._client = None
@@ -283,8 +294,8 @@ class HybridRateLimiter:
 
         backend = self._get_backend()
 
-        minute_key = f"{config.key_prefix}:{identifier}:minute:{int(time.time() // 60)}"
-        hour_key = f"{config.key_prefix}:{identifier}:hour:{int(time.time() // 3600)}"
+        minute_key = f"{config.key_prefix}:{identifier}:minute:{int(_clock() // 60)}"
+        hour_key = f"{config.key_prefix}:{identifier}:hour:{int(_clock() // 3600)}"
 
         try:
             current_minute = backend.increment(minute_key, 60)
@@ -302,9 +313,9 @@ class HybridRateLimiter:
         retry_after = None
         if not allowed:
             if current_minute > config.requests_per_minute:
-                retry_after = 60 - (int(time.time()) % 60)
+                retry_after = 60 - (int(_clock()) % 60)
             else:
-                retry_after = 3600 - (int(time.time()) % 3600)
+                retry_after = 3600 - (int(_clock()) % 3600)
 
         return RateLimitResult(
             allowed=allowed,
@@ -318,8 +329,8 @@ class HybridRateLimiter:
     def reset_limits(self, identifier: str, prefix: str = "ratelimit") -> None:
         """Reset all rate limits for an identifier (admin operation)."""
         backend = self._get_backend()
-        minute_key = f"{prefix}:{identifier}:minute:{int(time.time() // 60)}"
-        hour_key = f"{prefix}:{identifier}:hour:{int(time.time() // 3600)}"
+        minute_key = f"{prefix}:{identifier}:minute:{int(_clock() // 60)}"
+        hour_key = f"{prefix}:{identifier}:hour:{int(_clock() // 3600)}"
         backend.reset(minute_key)
         backend.reset(hour_key)
 

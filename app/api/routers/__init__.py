@@ -37,6 +37,7 @@ from app.api.routers.company import router as company_router
 from app.api.routers.compare import router as compare_router
 from app.api.routers.documents import router as documents_router
 from app.api.routers.health import router as health_router
+from app.infrastructure.health_router import readiness_router
 from app.api.routers.ratios import router as ratios_router
 from app.api.routers.report import router as report_router
 from app.api.routers.risk import router as risk_router
@@ -57,6 +58,7 @@ _AUTH_GUARD = [Depends(get_current_user)]
 api_router.include_router(auth_router)
 api_router.include_router(root_router)
 api_router.include_router(health_router)
+api_router.include_router(readiness_router, tags=["Health"])
 api_router.include_router(version_router)
 
 # Business endpoints require authentication (401 without a valid token).

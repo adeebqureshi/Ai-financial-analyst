@@ -60,6 +60,36 @@ from app.core.constants import (
 _LOGGING_CONFIGURED: bool = False
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Request-ID injection
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class RequestIDFilter(logging.Filter):
+    """
+    Inject the current request ID into every log record.
+
+    The request ID is stored in a ``ContextVar`` by the request middleware
+    (``app.infrastructure.request_id``). Background jobs may bind their own
+    ID via ``bind_request_id()``. Records emitted outside any request/job
+    context carry ``request_id=-``.
+
+    The filter never touches the message text, so no sensitive request data
+    can leak through it — only the opaque correlation ID is added.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Default handles records emitted before the contextvar module is
+        # imported (e.g. very early startup logging).
+        try:
+            from app.infrastructure.request_id import get_request_id
+
+            record.request_id = get_request_id()
+        except Exception:  # pragma: no cover - defensive
+            record.request_id = "-"
+        return True
+
+
 def setup_logging(
     settings: Settings | None = None,
     *,
@@ -103,6 +133,7 @@ def setup_logging(
             show_path=settings.debug,
         )
         console_handler.setLevel(log_level)
+        console_handler.addFilter(RequestIDFilter())
         console_handler.setFormatter(logging.Formatter(LOG_CONSOLE_FORMAT, datefmt=LOG_DATE_FORMAT))
         root_logger.addHandler(console_handler)
 
@@ -119,6 +150,7 @@ def setup_logging(
             encoding="utf-8",
         )
         file_handler.setLevel(log_level)
+        file_handler.addFilter(RequestIDFilter())
         file_handler.setFormatter(
             logging.Formatter(LOG_FILE_FORMAT, datefmt=LOG_DATE_FORMAT)
         )

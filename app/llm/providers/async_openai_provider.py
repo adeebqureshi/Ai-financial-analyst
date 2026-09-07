@@ -23,11 +23,13 @@ Design Decisions:
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import AsyncIterator
 
 import openai
 from openai import AsyncOpenAI
 
+from app.core.logging import get_logger
 from app.llm.async_interfaces import AsyncLLMProvider
 from app.llm.exceptions import (
     AuthenticationError,
@@ -37,7 +39,14 @@ from app.llm.exceptions import (
 )
 from app.llm.models import LLMRequest, LLMResponse
 from app.llm.provider_config import ProviderConfig
+from app.llm.retry import RetryPolicy
 from app.llm.usage import TokenUsage
+
+logger = get_logger("app.llm.openai")
+
+# NOTE (observability): LLM calls are logged with model, duration, token
+# counts and failure *type* only. Prompts, completions and streaming content
+# are never logged — they may contain user queries and document excerpts.
 
 _MISSING_KEY_MESSAGE = (
     "OPENAI_API_KEY is not set. Set it in the environment (or .env) before "
@@ -53,8 +62,13 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
         self,
         config: ProviderConfig | None = None,
         api_key: str | None = None,
+        retry_policy: RetryPolicy | None = None,
     ) -> None:
         self.config = config or ProviderConfig()
+        # Transient failures (timeouts / rate limits) are retried with
+        # exponential backoff for non-streaming calls; streaming is never
+        # retried (a partially emitted stream cannot be replayed safely).
+        self._retry = retry_policy or RetryPolicy()
         self.client: AsyncOpenAI | None = None
 
         if api_key is None:
@@ -105,17 +119,27 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
     ) -> LLMResponse:
         client = self._require_client()
 
+        start = time.perf_counter()
         try:
-            completion = await client.chat.completions.create(
-                model=self.config.model,
-                messages=self._messages(request),
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
+            completion = await self._retry.execute_async(
+                lambda: client.chat.completions.create(
+                    model=self.config.model,
+                    messages=self._messages(request),
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens,
+                )
             )
         except Exception as exc:
+            self._log_failure("generate", exc, start)
             self._map_error(exc)
 
         output = completion.choices[0].message.content or ""
+
+        self._log_success(
+            "generate",
+            start,
+            usage=getattr(completion, "usage", None),
+        )
 
         return LLMResponse(
             text=output,
@@ -132,6 +156,7 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
     ) -> AsyncIterator[str]:
         client = self._require_client()
 
+        start = time.perf_counter()
         try:
             stream = await client.chat.completions.create(
                 model=self.config.model,
@@ -141,9 +166,21 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
                 stream=True,
             )
         except Exception as exc:
+            self._log_failure("stream", exc, start)
             self._map_error(exc)
 
-        async for chunk in stream:
+        while True:
+            try:
+                chunk = await stream.__anext__()
+            except StopAsyncIteration:
+                break
+            except Exception as exc:
+                # A stream that fails or is malformed mid-iteration must
+                # surface as a typed provider error, never a raw SDK
+                # exception — callers rely on the typed contract to degrade
+                # gracefully instead of leaking internals.
+                self._map_error(exc)
+
             choices = getattr(chunk, "choices", None) or []
 
             if not choices:
@@ -158,3 +195,34 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
 
             if content:
                 yield content
+
+        self._log_success("stream", start)
+
+
+    def _log_success(self, operation: str, start: float, usage: object = None) -> None:
+        """Log a successful LLM call (no prompt/completion content)."""
+        duration_ms = (time.perf_counter() - start) * 1000
+        prompt_tokens = getattr(usage, "prompt_tokens", None)
+        completion_tokens = getattr(usage, "completion_tokens", None)
+        logger.info(
+            "LLM call succeeded: operation=%s model=%s duration_ms=%.0f "
+            "prompt_tokens=%s completion_tokens=%s",
+            operation,
+            self.config.model,
+            duration_ms,
+            prompt_tokens,
+            completion_tokens,
+        )
+
+    def _log_failure(self, operation: str, exc: Exception, start: float) -> None:
+        """Log a failed LLM call with the failure type only (never content)."""
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.warning(
+            "LLM call failed: operation=%s model=%s duration_ms=%.0f "
+            "error_type=%s error=%s",
+            operation,
+            self.config.model,
+            duration_ms,
+            exc.__class__.__name__,
+            exc,
+        )

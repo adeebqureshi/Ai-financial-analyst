@@ -55,6 +55,7 @@ from app.core.constants import (
     DEFAULT_LLM_MAX_TOKENS,
     DEFAULT_LLM_MODEL,
     DEFAULT_LLM_TEMPERATURE,
+    DEFAULT_LLM_TOKEN_QUOTA_PER_USER_PER_DAY,
     DEFAULT_VECTOR_TOP_K,
     SANDBOX_MEMORY_LIMIT_MB,
     SANDBOX_TIMEOUT,
@@ -148,6 +149,15 @@ class Settings(BaseSettings):
     llm_max_tokens: int = Field(
         default=DEFAULT_LLM_MAX_TOKENS,
         description="Maximum tokens per LLM response.",
+    )
+    llm_token_quota_per_user_per_day: int = Field(
+        default=DEFAULT_LLM_TOKEN_QUOTA_PER_USER_PER_DAY,
+        description=(
+            "Maximum estimated LLM tokens (input + reserved output) an "
+            "authenticated user may spend per day across chat endpoints. "
+            "0 disables the quota. Unauthenticated requests remain covered "
+            "by per-IP request rate limits."
+        ),
     )
 
     # ── Retrieval / Vector Store ─────────────────────────────────────────

@@ -103,9 +103,14 @@ LOG_DATE_FORMAT: Final[str] = "%Y-%m-%d %H:%M:%S"
 """``strftime`` pattern used for timestamps in log entries."""
 
 LOG_FILE_FORMAT: Final[str] = (
-    "%(asctime)s | %(levelname)-8s | %(name)s | %(funcName)s:%(lineno)d | %(message)s"
+    "%(asctime)s | %(levelname)-8s | %(name)s | %(funcName)s:%(lineno)d "
+    "| request_id=%(request_id)s | %(message)s"
 )
-"""Format string for file-based log records (verbose, machine-parseable)."""
+"""Format string for file-based log records (verbose, machine-parseable).
+
+``request_id`` is injected by ``RequestIDFilter`` from the request-scoped
+``ContextVar`` (``-`` when logging runs outside a request, e.g. startup).
+"""
 
 LOG_CONSOLE_FORMAT: Final[str] = "%(message)s"
 """Format string for console log records (Rich handles styling)."""
@@ -276,6 +281,9 @@ DEFAULT_LLM_TEMPERATURE: Final[float] = 0.0
 
 DEFAULT_LLM_MAX_TOKENS: Final[int] = 4096
 """Default maximum tokens generated per LLM response."""
+
+DEFAULT_LLM_TOKEN_QUOTA_PER_USER_PER_DAY: Final[int] = 200_000
+"""Default per-user daily token budget for LLM usage (0 disables the quota)."""
 
 # ──────────────────────────────────────────────────────────────────────────────
 # File Paths & Storage

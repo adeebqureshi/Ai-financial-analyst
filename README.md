@@ -128,6 +128,17 @@ logger.info("Application started")
 logger.error("Failed to parse filing", exc_info=True)
 ```
 
+**Request/correlation IDs:** every HTTP request gets a correlation ID (minted
+or reused from an incoming `X-Request-ID` header). It is returned to clients
+in the `X-Request-ID` response header and automatically attached to *every*
+log record via a `ContextVar` + logging filter — no parameter threading
+needed. Background jobs bind their job ID the same way via
+`bind_request_id()`.
+
+> Full details — what is logged, what is intentionally never logged
+> (secrets, tokens, prompts, financial payloads), and configuration — are in
+> [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md).
+
 ### `app/core/exceptions.py` — Exception Hierarchy
 
 Defines a domain-specific exception hierarchy rooted at `FinancialAnalystError`:

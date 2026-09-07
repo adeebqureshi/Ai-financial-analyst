@@ -38,8 +38,8 @@ class QuantAgent:
         equity = statement.total_assets - statement.total_liabilities
 
         ratios = self.ratio_engine.calculate(
-            current_assets=statement.total_assets * 0.3,
-            current_liabilities=statement.total_liabilities * 0.3,
+            current_assets=statement.current_assets,
+            current_liabilities=statement.current_liabilities,
             total_liabilities=statement.total_liabilities,
             shareholders_equity=equity,
             total_assets=statement.total_assets,

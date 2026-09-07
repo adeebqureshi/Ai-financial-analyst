@@ -4,13 +4,21 @@ Retry utilities for LLM providers.
 
 from __future__ import annotations
 
+import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
+from app.core.logging import get_logger
 from app.llm.exceptions import ProviderError
 from app.llm.exceptions import RateLimitError
 from app.llm.exceptions import TimeoutError
+
+logger = get_logger("app.llm.retry")
+
+# NOTE (observability): retry logs report the attempt number, delay and
+# failure type. The callable, its arguments and any response payload are
+# never logged.
 
 T = TypeVar("T")
 
@@ -40,11 +48,56 @@ class RetryPolicy:
             try:
                 return func()
 
-            except (TimeoutError, RateLimitError):
+            except (TimeoutError, RateLimitError) as exc:
                 if attempt == self.max_attempts - 1:
                     raise
 
+                logger.warning(
+                    "Transient failure, retrying: attempt=%d/%d delay=%.1fs "
+                    "error_type=%s",
+                    attempt + 1,
+                    self.max_attempts,
+                    delay,
+                    exc.__class__.__name__,
+                )
                 time.sleep(delay)
+                delay *= self.backoff_factor
+
+            except ProviderError:
+                raise
+
+        raise RuntimeError("RetryPolicy reached an unexpected state.")
+
+    async def execute_async(
+        self,
+        func: Callable[[], Awaitable[T]],
+    ) -> T:
+        """
+        Execute an async callable with the same retry/backoff semantics as
+        :meth:`execute`, awaiting between attempts instead of blocking.
+
+        Only transient failures (``TimeoutError`` / ``RateLimitError``) are
+        retried; other provider errors are re-raised immediately.
+        """
+        delay = self.base_delay
+
+        for attempt in range(self.max_attempts):
+            try:
+                return await func()
+
+            except (TimeoutError, RateLimitError) as exc:
+                if attempt == self.max_attempts - 1:
+                    raise
+
+                logger.warning(
+                    "Transient failure, retrying: attempt=%d/%d delay=%.1fs "
+                    "error_type=%s",
+                    attempt + 1,
+                    self.max_attempts,
+                    delay,
+                    exc.__class__.__name__,
+                )
+                await asyncio.sleep(delay)
                 delay *= self.backoff_factor
 
             except ProviderError:

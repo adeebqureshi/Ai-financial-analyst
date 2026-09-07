@@ -33,8 +33,12 @@ import time
 from typing import Any
 
 from app.core.logging import get_logger
+from app.infrastructure.request_id import generate_request_id, set_request_id
 
 logger = get_logger("app.api.middleware")
+
+_REQUEST_ID_HEADER = "x-request-id"
+"""Lowercased header name used for correlation (ASGI headers are lowercase)."""
 
 
 class RequestLoggingMiddleware:
@@ -92,14 +96,32 @@ class RequestLoggingMiddleware:
         path: str = scope.get("path", "/")
         query_string: str = scope.get("query_string", b"").decode("utf-8", errors="replace")
 
+        # Correlation ID: reuse an incoming X-Request-ID (tracing across
+        # services) or mint a fresh one. The ID is bound to the current
+        # async context so every log record emitted while this request is
+        # being processed carries it (see RequestIDFilter).
+        request_id = generate_request_id()
+        for name, value in scope.get("headers", []):
+            if name == _REQUEST_ID_HEADER.encode("latin-1"):
+                incoming = value.decode("latin-1", errors="replace").strip()
+                if incoming:
+                    request_id = incoming[:128]  # cap length; header is untrusted
+                break
+        set_request_id(request_id)
+
         # Capture status code from the response
         status_code: int = 0
 
         async def send_wrapper(message: dict[str, Any]) -> None:
-            """Intercept the send callable to capture the status code."""
+            """Intercept send to capture the status and stamp the request ID."""
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message.get("status", 0)
+                headers = list(message.get("headers", []))
+                headers.append(
+                    (_REQUEST_ID_HEADER.encode("latin-1"), request_id.encode("latin-1"))
+                )
+                message = {**message, "headers": headers}
             await send(message)
 
         # Measure duration
@@ -110,11 +132,12 @@ class RequestLoggingMiddleware:
         except Exception:
             duration_ms = (time.perf_counter() - start_time) * 1000
             logger.exception(
-                "Request failed: %s %s?%s | 500 | %.2fms",
+                "Request failed: %s %s?%s | 500 | %.2fms | request_id=%s",
                 method,
                 path,
                 query_string,
                 duration_ms,
+                request_id,
             )
             raise
 
@@ -122,9 +145,10 @@ class RequestLoggingMiddleware:
 
         # Log the request
         logger.info(
-            "Request: %s %s | %d | %.2fms",
+            "Request: %s %s | %d | %.2fms | request_id=%s",
             method,
             path,
             status_code,
             duration_ms,
+            request_id,
         )

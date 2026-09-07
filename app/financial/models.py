@@ -30,6 +30,14 @@ class FinancialStatement:
 
     gross_profit: float = 0.0
 
+    # Current assets / liabilities from the balance sheet. Used to compute
+    # the real current ratio instead of a fabricated proxy. Defaults to 0.0
+    # so legacy callers that construct a statement without these fields
+    # continue to work unchanged.
+    current_assets: float = 0.0
+
+    current_liabilities: float = 0.0
+
 
 @dataclass(slots=True)
 class ValuationResult:

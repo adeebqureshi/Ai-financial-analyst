@@ -20,6 +20,15 @@ import os
 
 import redis
 
+from app.core.logging import get_logger
+
+logger = get_logger("app.infrastructure.redis")
+
+# NOTE (observability): Redis failures are logged with the failure reason and
+# connection host/port (never the password embedded in the URL, and never the
+# URL itself). Cache misses/degradations fall back silently by design; only
+# connectivity problems are surfaced.
+
 
 def _int_env(name: str, default: int) -> int:
     try:
@@ -76,7 +85,14 @@ class RedisCache:
         """Return True when Redis answers ``PING``."""
         try:
             return bool(self.client.ping())
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Redis health check failed: host=%s port=%s error_type=%s error=%s",
+                self.host,
+                self.port,
+                exc.__class__.__name__,
+                exc,
+            )
             return False
 
     def ping(self) -> bool:

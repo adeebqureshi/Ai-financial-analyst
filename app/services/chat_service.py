@@ -28,7 +28,10 @@ from app.agents.financial_analyst import INSUFFICIENT_EVIDENCE_MESSAGE
 from app.chat.cache import ChatSessionCache
 from app.chat.store import ChatStore
 from app.core.config import Settings
+from app.core.exceptions import QuotaExceededError
 from app.core.logging import get_logger
+from app.llm.quota import get_token_quota
+from app.llm.tokenizer import Tokenizer
 from app.schemas.analysis import ChatRequest
 from app.schemas.responses import (
     AgentToolExecutionData,
@@ -157,6 +160,29 @@ class ChatService:
         """Return the owner id for the caller (None when auth is disabled)."""
         return user.id if user is not None else None
 
+    def _within_token_quota(self, owner_id: str | None, request: ChatRequest) -> bool:
+        """
+        Charge this turn's estimated token cost against the caller's daily
+        LLM budget.
+
+        The estimate is the prompt size plus the configured output reserve
+        (``llm_max_tokens``) — deliberately conservative, since actual
+        provider usage is not known before the call. Returns ``False`` when
+        the budget is exhausted. Unauthenticated calls (no ``owner_id``) and
+        disabled quotas always pass.
+        """
+        if owner_id is None:
+            return True
+
+        quota = get_token_quota(self._settings)
+
+        if not quota.enabled:
+            return True
+
+        estimated = Tokenizer.count(request.message) + self._settings.llm_max_tokens
+
+        return quota.consume(owner_id, estimated)
+
     def _persist_turn(
         self,
         owner_id: str | None,
@@ -219,6 +245,13 @@ class ChatService:
             tools that actually ran.
         """
         owner_id = self._owner_id(user)
+
+        if not self._within_token_quota(owner_id, request):
+            raise QuotaExceededError(
+                "Daily LLM token quota exceeded. Please try again tomorrow "
+                "or contact your administrator.",
+                error_code="QUOTA_EXCEEDED",
+            )
 
         self._restore_context(owner_id, request.session_id)
 
@@ -303,6 +336,22 @@ class ChatService:
             SSE-formatted frames for the streaming ``POST /chat/stream`` route.
         """
         owner_id = self._owner_id(user)
+
+        # Quota enforcement happens before any SSE frame is emitted so an
+        # exhausted budget is a clean, first-frame failure — never a stream
+        # that dies halfway through.
+        if not self._within_token_quota(owner_id, request):
+            yield _format_sse(
+                "error",
+                {
+                    "message": (
+                        "Daily LLM token quota exceeded. Please try again "
+                        "tomorrow or contact your administrator."
+                    ),
+                    "code": "QUOTA_EXCEEDED",
+                },
+            )
+            return
 
         # Session-state replay hits the chat database synchronously; offload it
         # so the SSE stream never blocks the event loop while restoring.

@@ -38,6 +38,7 @@ from app.core.exceptions import (
     ConfigurationError,
     FinancialAnalystError,
     ParserError,
+    QuotaExceededError,
     RetrievalError,
     SandboxError,
     ValidationError,
@@ -63,6 +64,7 @@ _EXCEPTION_STATUS_MAP: dict[type[Exception], int] = {
     RetrievalError: 502,
     ParserError: 422,
     SandboxError: 400,
+    QuotaExceededError: 429,
 }
 """Maps domain exception types to their corresponding HTTP status codes."""
 

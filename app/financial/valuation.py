@@ -54,7 +54,11 @@ class ValuationEngine:
         # terminal value stays finite.
         discount_rate = max(discount_rate, terminal_growth + 0.01)
 
-        intrinsic = DCFValuation.intrinsic_value(
+        # The DCF models free cash flow to the firm (FCFF) discounted at WACC,
+        # so it yields enterprise value (EV). Intrinsic *equity* value per share
+        # requires subtracting net debt (debt − cash). Using EV/share directly
+        # overstates the intrinsic value whenever a company carries debt.
+        enterprise_value_per_share = DCFValuation.intrinsic_value(
             free_cash_flow=statement.free_cash_flow,
             growth_rate=growth_rate,
             discount_rate=discount_rate,
@@ -62,6 +66,14 @@ class ValuationEngine:
             years=years,
             shares_outstanding=statement.shares_outstanding,
         )
+
+        net_debt_per_share = (
+            (statement.debt - statement.cash) / statement.shares_outstanding
+            if statement.shares_outstanding > 0
+            else 0.0
+        )
+
+        intrinsic = enterprise_value_per_share - net_debt_per_share
 
         if current_price > 0:
             upside = (

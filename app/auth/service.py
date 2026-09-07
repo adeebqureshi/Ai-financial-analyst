@@ -15,6 +15,19 @@ from sqlalchemy.orm import Session
 from app.auth.exceptions import EmailAlreadyRegisteredError
 from app.auth.models import User
 from app.auth.security import hash_password, verify_password
+from app.core.logging import get_logger
+
+logger = get_logger("app.auth.service")
+
+# NOTE (observability): authentication events are logged with user IDs and
+# outcomes only — never passwords, password hashes, tokens or email
+# addresses. Failed logins report the *result* ("unknown user"/"bad
+# password"/"inactive account") without echoing the submitted credentials.
+_LOGIN_FAILURE_REASONS = {
+    "unknown_user": "unknown user",
+    "bad_credentials": "invalid credentials",
+    "inactive": "account inactive",
+}
 
 
 class UserService:
@@ -65,6 +78,8 @@ class UserService:
         self._session.commit()
         self._session.refresh(user)
 
+        logger.info("User registered: user_id=%s", user.id)
+
         return user
 
     def authenticate(self, email: str, password: str) -> User | None:
@@ -80,9 +95,21 @@ class UserService:
         user = self.get_by_email(normalized)
 
         if user is None or not verify_password(password, user.hashed_password):
+            reason = "unknown_user" if user is None else "bad_credentials"
+            logger.warning(
+                "Login failed: reason=%s (%s)",
+                reason,
+                _LOGIN_FAILURE_REASONS[reason],
+            )
             return None
 
         if not user.is_active:
+            logger.warning(
+                "Login failed: reason=inactive (account inactive) user_id=%s",
+                user.id,
+            )
             return None
+
+        logger.info("Login successful: user_id=%s", user.id)
 
         return user

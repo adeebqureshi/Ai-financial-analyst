@@ -42,7 +42,11 @@ class RetrieverAgent:
 
         context = self.builder.build(results)
 
+        documents_text = (
+            context.text.split("\n\n") if context.text else []
+        )
+
         return RetrievalResult(
             query=query,
-            documents=context.text.split("\n\n"),
+            documents=documents_text,
         )

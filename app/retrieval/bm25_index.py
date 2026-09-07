@@ -20,12 +20,17 @@ class BM25Index:
 
         self.documents: list[str] = []
 
+        # Parallel owner list so sparse (BM25) results can be tenant-scoped
+        # before rank fusion. ``None`` entries mean "legacy / unowned".
+        self.owner_ids: list[str | None] = []
+
         self.index: BM25Okapi | None = None
 
     def build(
         self,
         ids: list[str],
         documents: list[str],
+        owner_ids: list[str | None] | None = None,
     ) -> None:
         """
         Build BM25 index.
@@ -36,9 +41,18 @@ class BM25Index:
                 "ids and documents must have the same length."
             )
 
+        if owner_ids is not None and len(owner_ids) != len(ids):
+            raise ValueError(
+                "owner_ids must have the same length as ids."
+            )
+
         self.ids = ids
 
         self.documents = documents
+
+        self.owner_ids = list(owner_ids) if owner_ids is not None else [
+            None
+        ] * len(ids)
 
         if not documents:
             self.index = None
@@ -58,6 +72,7 @@ class BM25Index:
         self,
         query: str,
         top_k: int = 5,
+        owner_id: str | None = None,
     ) -> list[str]:
         """
         Return ranked document IDs.
@@ -65,6 +80,11 @@ class BM25Index:
         If the index has not been built yet (no documents ingested), an
         empty list is returned so callers degrade gracefully instead of
         crashing with a runtime error.
+
+        When ``owner_id`` is provided, only chunks owned by that user are
+        returned. Filtering happens BEFORE the top-k truncation so that
+        chunks belonging to other tenants can never displace the caller's
+        own chunks from the sparse candidate list (tenant isolation).
         """
         if self.index is None:
             return []
@@ -77,11 +97,20 @@ class BM25Index:
             zip(
                 scores,
                 self.ids,
+                self.owner_ids,
             ),
             reverse=True,
         )
 
-        return [
-            doc_id
-            for _, doc_id in ranked[:top_k]
-        ]
+        results: list[str] = []
+
+        for _score, doc_id, doc_owner in ranked:
+            if owner_id is not None and doc_owner != owner_id:
+                continue
+
+            results.append(doc_id)
+
+            if len(results) >= top_k:
+                break
+
+        return results

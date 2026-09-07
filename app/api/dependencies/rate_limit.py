@@ -24,6 +24,9 @@ from app.api.rate_limiter import (
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
 from app.core.config import Settings, get_settings
+from app.core.logging import get_logger
+
+logger = get_logger("app.api.rate_limit")
 
 if TYPE_CHECKING:
     from app.core.config import Settings
@@ -105,6 +108,18 @@ class RateLimitDependency:
         result = limiter.check_rate_limit(identifier, config)
 
         if not result.allowed:
+            # Security-relevant signal, logged without any credentials or
+            # request content — identifier is a user ID or client IP only.
+            logger.warning(
+                "Rate limit exceeded: endpoint=%s identifier=%s minute=%s/%s hour=%s/%s retry_after=%ss",
+                self.endpoint,
+                identifier,
+                result.current_minute,
+                result.limit_minute,
+                result.current_hour,
+                result.limit_hour,
+                result.retry_after_seconds,
+            )
             headers = {}
             if result.retry_after_seconds is not None:
                 headers["Retry-After"] = str(result.retry_after_seconds)

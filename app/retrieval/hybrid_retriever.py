@@ -20,10 +20,12 @@ class HybridRetriever:
         self,
         ids: list[str],
         documents: list[str],
+        owner_ids: list[str | None] | None = None,
     ) -> None:
         self.bm25.build(
             ids,
             documents,
+            owner_ids,
         )
 
     def search(
@@ -56,6 +58,7 @@ class HybridRetriever:
         sparse_ids = self.bm25.search(
             query,
             top_k=limit * 3,
+            owner_id=owner_id,
         )
 
         if document_id:
@@ -66,11 +69,6 @@ class HybridRetriever:
                 for doc_id in sparse_ids
                 if doc_id.startswith(prefix)
             ]
-
-        if owner_id is not None:
-            # Filter sparse results by owner_id using the metadata store
-            # This requires the metadata store to have owner_id information
-            pass  # BM25 doesn't have owner_id filtering; we'll filter after fusion
 
         return self.fusion.fuse(
             dense_ids,

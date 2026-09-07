@@ -255,3 +255,28 @@ class SandboxError(FinancialAnalystError):
     ) -> None:
         """Initialize the sandbox error."""
         super().__init__(message, error_code=error_code, details=details)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Quota Errors
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class QuotaExceededError(FinancialAnalystError):
+    """
+    Raised when a caller exceeds a configured usage quota.
+
+    This covers per-user LLM token budgets and similar consumption limits.
+    Mapped to HTTP 429 by the API exception handlers so clients receive a
+    retryable status rather than a generic 500.
+    """
+
+    def __init__(
+        self,
+        message: str = "Usage quota exceeded.",
+        *,
+        error_code: str = "QUOTA_EXCEEDED",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the quota error."""
+        super().__init__(message, error_code=error_code, details=details)

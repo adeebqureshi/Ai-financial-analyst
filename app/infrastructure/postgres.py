@@ -25,6 +25,14 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 
+from app.core.logging import get_logger
+
+logger = get_logger("app.infrastructure.postgres")
+
+# NOTE (observability): database failures are logged with the failure reason
+# only. Connection URLs are never logged — they may embed credentials
+# (``postgresql://user:password@host/db``).
+
 
 def _int_env(name: str, default: int) -> int:
     try:
@@ -118,7 +126,13 @@ class PostgreSQLManager:
             with self.engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
             return True
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Database health check failed: backend=%s error_type=%s error=%s",
+                "postgresql" if self.is_postgres else "sqlite",
+                exc.__class__.__name__,
+                exc,
+            )
             return False
 
     def dispose(self) -> None:

@@ -20,13 +20,13 @@ neutral value (1.0) as is standard practice.
 
 from __future__ import annotations
 
-import logging
 import math
 import threading
 import time
 from dataclasses import dataclass
 
 from app.core.exceptions import RetrievalError
+from app.core.logging import get_logger
 from app.data.financials import FinancialStatements
 from app.financial.altman import AltmanZScore
 from app.financial.beneish import BeneishMScore
@@ -34,7 +34,11 @@ from app.financial.models import FinancialStatement
 from app.financial.piotroski import Piotroski
 from app.ingestion.services.market_service import MarketService
 
-logger = logging.getLogger(__name__)
+logger = get_logger("app.financial.data")
+
+# NOTE (observability): provider calls are logged with the ticker, duration
+# and outcome only. Statement figures, market data payloads and company
+# descriptions are never logged — they are business data, not diagnostics.
 
 _MILLION = 1_000_000.0
 
@@ -224,6 +228,8 @@ class FinancialDataService:
 
     def _fetch(self, ticker: str) -> CompanyFinancialData:
         """Fetch and normalize the full financial dataset for ``ticker``."""
+        start = time.perf_counter()
+
         try:
             income = self._statements.income_statement(ticker)
             balance = self._statements.balance_sheet(ticker)
@@ -231,6 +237,14 @@ class FinancialDataService:
             market = self._market.get_market_data(ticker)
             profile = self._statements.profile(ticker)
         except Exception as exc:
+            logger.warning(
+                "Financial data fetch failed: provider=yahoo ticker=%s "
+                "duration_ms=%.0f error_type=%s error=%s",
+                ticker,
+                (time.perf_counter() - start) * 1000,
+                exc.__class__.__name__,
+                exc,
+            )
             raise RetrievalError(
                 message=(
                     f"Failed to fetch financial data for {ticker}: {exc}"
@@ -250,7 +264,7 @@ class FinancialDataService:
         current_price = self._safe(market.current_price) or 0.0
         beta = self._safe(market.beta)
 
-        return CompanyFinancialData(
+        data = CompanyFinancialData(
             ticker=ticker,
             statement=statement,
             piotroski_score=self._compute_piotroski(income, balance, cashflow),
@@ -271,6 +285,14 @@ class FinancialDataService:
             market_cap=self._safe(profile.get("marketCap")),
             description=profile.get("longBusinessSummary"),
         )
+
+        logger.info(
+            "Financial data fetched: provider=yahoo ticker=%s duration_ms=%.0f",
+            ticker,
+            (time.perf_counter() - start) * 1000,
+        )
+
+        return data
 
     def _build_statement(
         self,
@@ -306,6 +328,8 @@ class FinancialDataService:
             0,
         )
         debt = self._value(balance, "Total Debt", 0)
+        current_assets = self._value(balance, "Current Assets", 0)
+        current_liabilities = self._value(balance, "Current Liabilities", 0)
         shares = self._first(income, ["Diluted Average Shares", "Basic Average Shares"], 0)
         if shares is None:
             shares = self._safe(profile.get("sharesOutstanding"))
@@ -325,6 +349,7 @@ class FinancialDataService:
                 ("total_assets", total_assets),
                 ("total_liabilities", total_liabilities),
                 ("shares_outstanding", shares),
+                ("free_cash_flow", free_cash_flow),
             )
             if value is None
         ]
@@ -349,6 +374,8 @@ class FinancialDataService:
             shares_outstanding=shares / _MILLION,
             free_cash_flow=(free_cash_flow or 0.0) / _MILLION,
             gross_profit=(gross_profit or 0.0) / _MILLION,
+            current_assets=(current_assets or 0.0) / _MILLION,
+            current_liabilities=(current_liabilities or 0.0) / _MILLION,
         )
 
     # ──────────────────────────────────────────────────────────────────────
@@ -511,9 +538,24 @@ class FinancialDataService:
         ni_t = self._value(income, "Net Income", 0)
         cfo_t = self._value(cashflow, "Operating Cash Flow", 0)
 
-        # AQI uses non-current assets as a proxy for (current assets + PP&E).
-        nca_t = (ta_t - ca_t) if ta_t is not None and ca_t is not None else None
-        nca_p = (ta_p - ca_p) if ta_p is not None and ca_p is not None else None
+        # AQI measures the change in the proportion of assets that are neither
+        # current nor PP&E (i.e. intangibles and other long-term assets) — the
+        # authoritative formula is [1 - (CA + PP&E)/TA] which equals
+        # (TA - CA - PP&E)/TA. Subtracting net PP&E keeps the proxy faithful;
+        # when PP&E is not disclosed we fall back to (TA - CA) so the metric
+        # is still computable.
+        ppe_t = self._value(balance, "Net PPE", 0)
+        ppe_p = self._value(balance, "Net PPE", 1)
+        nca_t = (
+            (ta_t - ca_t - (ppe_t or 0.0))
+            if ta_t is not None and ca_t is not None
+            else None
+        )
+        nca_p = (
+            (ta_p - ca_p - (ppe_p or 0.0))
+            if ta_p is not None and ca_p is not None
+            else None
+        )
 
         dsri = self._ratio(
             self._ratio(recv_t, rev_t), self._ratio(recv_p, rev_p), 1.0

@@ -27,7 +27,6 @@ from __future__ import annotations
 import re
 import tempfile
 import uuid
-import zlib
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -44,6 +43,7 @@ from app.ingestion.storage.path_manager import PathManager
 from app.parsers.chunker import Chunker
 from app.retrieval.models import RetrievalContext
 from app.retrieval.retrieval_engine import RetrievalEngine
+from app.services.job_store import JobStore
 from app.vectorstore.qdrant_store import QdrantStore
 
 logger = get_logger(__name__)
@@ -113,6 +113,8 @@ class DocumentService:
         self._settings = settings
 
         self._paths = PathManager()
+
+        self._jobs = JobStore(self._paths.get_metadata_path() / "jobs")
 
         self._parser = UnifiedDocumentParser(
             api_key=settings.llama_parse_api_key_str,
@@ -254,7 +256,7 @@ class DocumentService:
         owner_id: str | None = None,
     ) -> dict:
         """
-        Parse, chunk, embed and index an uploaded PDF.
+        Parse, chunk, embed and index an uploaded PDF synchronously.
 
         Args:
             file: The uploaded PDF file.
@@ -276,8 +278,26 @@ class DocumentService:
         tmp_path = self._write_temp(content)
 
         try:
+            return self._process_pdf(tmp_path, filename, document_id, owner_id)
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    def _process_pdf(
+        self,
+        pdf_path: str,
+        filename: str,
+        document_id: str,
+        owner_id: str | None,
+    ) -> dict:
+        """
+        Parse, chunk, embed and index the PDF at ``pdf_path``.
+
+        Shared by the synchronous upload path and the background job so both
+        behave identically. Returns the final ``indexed`` record.
+        """
+        try:
             result = self._parser.parse(
-                tmp_path,
+                pdf_path,
                 filename=filename,
             )
         except Exception as exc:
@@ -286,8 +306,6 @@ class DocumentService:
                 error_code="DOC_PARSE_001",
                 details={"filename": filename},
             ) from exc
-        finally:
-            Path(tmp_path).unlink(missing_ok=True)
 
         if result.is_empty:
             raise ParserError(
@@ -339,8 +357,14 @@ class DocumentService:
 
             page = chunk.page
 
+            # Deterministic 128-bit point ID. The previous 32-bit CRC32 of
+            # the chunk_id had a realistic collision probability across
+            # documents/chunks; a collision would silently OVERWRITE another
+            # chunk's vector+payload (potential cross-tenant data loss).
+            # uuid5 keeps determinism so re-uploading the same document
+            # replaces its own chunks (dedup) without touching others.
             ids.append(
-                zlib.crc32(chunk_id.encode("utf-8"))
+                uuid.uuid5(uuid.NAMESPACE_URL, chunk_id)
             )
 
             payloads.append(
@@ -402,6 +426,128 @@ class DocumentService:
         ) as tmp:
             tmp.write(content)
             return tmp.name
+
+    # ──────────────────────────────────────────────────────────────────
+    # Background upload (large PDFs)
+    # ──────────────────────────────────────────────────────────────────
+
+    def _staging_path(self, job_id: str) -> Path:
+        """Return the persistent staging path for a background upload."""
+        staging_dir = self._paths.get_metadata_path() / "uploads"
+
+        staging_dir.mkdir(parents=True, exist_ok=True)
+
+        return staging_dir / f"{job_id}.pdf"
+
+    def upload_background(
+        self,
+        file: UploadFile,
+        owner_id: str | None = None,
+    ) -> dict:
+        """
+        Queue an uploaded PDF for background indexing and return immediately.
+
+        Validation and the pending record/job are created synchronously (fast);
+        parsing, chunking, embedding and indexing run on the single-worker
+        background executor. The uploaded bytes are staged on disk until the
+        job runs, so nothing is lost if the worker is momentarily busy.
+
+        Returns:
+            ``{"document_id", "filename", "job_id", "status": "pending"}``.
+        """
+        filename = Path(file.filename or "").name
+
+        content = file.file.read()
+
+        self._validate_pdf(filename, content)
+
+        document_id = uuid.uuid4().hex
+
+        job = self._jobs.create_job(
+            "document_ingestion",
+            owner_id,
+            payload={"document_id": document_id, "filename": filename},
+        )
+
+        job_id = job["job_id"]
+
+        staging_path = self._staging_path(job_id)
+
+        staging_path.parent.mkdir(parents=True, exist_ok=True)
+
+        staging_path.write_bytes(content)
+
+        # Visible in the library immediately with a pending status so the
+        # user sees the upload was accepted; the background run replaces
+        # this record with the indexed one (or marks it failed).
+        self._save_record(
+            {
+                "document_id": document_id,
+                "filename": filename,
+                "pages": 0,
+                "chunks": 0,
+                "tables": 0,
+                "parser_used": None,
+                "status": "pending",
+                "job_id": job_id,
+                "created_at": datetime.now(UTC).isoformat(),
+                "owner_id": owner_id,
+            }
+        )
+
+        self._jobs.submit(
+            job_id,
+            lambda: self._run_background_job(
+                job_id,
+                staging_path,
+                filename,
+                document_id,
+                owner_id,
+            ),
+        )
+
+        logger.info(
+            "Queued background ingestion job %s for %s (%d bytes)",
+            job_id,
+            filename,
+            len(content),
+        )
+
+        return {
+            "document_id": document_id,
+            "filename": filename,
+            "job_id": job_id,
+            "status": "pending",
+        }
+
+    def _run_background_job(
+        self,
+        job_id: str,
+        staging_path: Path,
+        filename: str,
+        document_id: str,
+        owner_id: str | None,
+    ) -> None:
+        """Execute the heavy ingestion work; record/job updated on outcome."""
+        try:
+            self._process_pdf(str(staging_path), filename, document_id, owner_id)
+        except Exception:
+            # Mark the document record failed so the library reflects reality.
+            record = self._load_record(document_id)
+
+            if record is not None:
+                record["status"] = "failed"
+
+                self._save_record(record)
+
+            raise
+        finally:
+            # No orphaned staging files, success or failure.
+            staging_path.unlink(missing_ok=True)
+
+    def get_job(self, job_id: str, owner_id: str | None = None) -> dict | None:
+        """Return the caller's job record, or ``None`` if absent/foreign."""
+        return self._jobs.get_job(job_id, owner_id)
 
     # ──────────────────────────────────────────────────────────────────
     # Library

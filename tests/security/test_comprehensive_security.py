@@ -53,6 +53,30 @@ def _isolated_library(tmp_path, monkeypatch):
     monkeypatch.setattr(DocumentService, "_library_dir", lambda self: tmp_path / "library")
 
 
+# Fixed instant 20s into a minute: together with a frozen clock this yields a
+# stable, non-rolling minute window and a non-zero retry-after (60 - 20 = 40).
+RATE_LIMIT_FAKE_TIME = 1_780_000_020.0
+
+
+@pytest.fixture()
+def frozen_rate_limit_clock(monkeypatch):
+    """Freeze the rate limiter's clock inside one minute window.
+
+    The rate-limit security tests exhaust a 20 req/min chat quota through the
+    real agent pipeline, which can take >1s per request. Under a real wall clock
+    those 20 slow requests can straddle a minute boundary, silently resetting the
+    per-minute counter and making the 429 assertion flaky. Pinning the limiter's
+    clock to a fixed instant keeps the sliding window stable and fully
+    deterministic without changing production rate-limit semantics.
+    """
+    from app.api.rate_limiter import reset_rate_limiter
+
+    reset_rate_limiter()
+    monkeypatch.setattr("app.api.rate_limiter._clock", lambda: RATE_LIMIT_FAKE_TIME)
+    yield
+    reset_rate_limiter()
+
+
 @pytest.fixture()
 def auth_app(tmp_path):
     settings = Settings(
@@ -186,7 +210,7 @@ class TestCrossUserIsolation:
 class TestRateLimitSecurity:
     """Rate limit bypass prevention tests."""
 
-    def test_rate_limit_per_user_not_global(self, auth_client):
+    def test_rate_limit_per_user_not_global(self, auth_client, frozen_rate_limit_clock):
         """Rate limits tracked per user, not globally."""
         token_a = _register_and_login(auth_client, "rl-a@example.com")
         token_b = _register_and_login(auth_client, "rl-b@example.com")
@@ -208,7 +232,7 @@ class TestRateLimitSecurity:
         # Anonymous rate limiting is tested in tests/api/test_rate_limiting.py
         pytest.skip("Anonymous rate limiting tested separately with auth_disabled fixture")
 
-    def test_rate_limit_headers_present(self, auth_client):
+    def test_rate_limit_headers_present(self, auth_client, frozen_rate_limit_clock):
         """Rate limit responses include standard headers."""
         token = _register_and_login(auth_client, "rl-headers@example.com")
 
@@ -223,7 +247,7 @@ class TestRateLimitSecurity:
         assert "X-RateLimit-Limit-Hour" in response.headers
         assert "X-RateLimit-Remaining-Hour" in response.headers
 
-    def test_rate_limit_respected_across_endpoints(self, auth_client):
+    def test_rate_limit_respected_across_endpoints(self, auth_client, frozen_rate_limit_clock):
         """Each endpoint has independent rate limits."""
         token = _register_and_login(auth_client, "rl-endpoints@example.com")
 

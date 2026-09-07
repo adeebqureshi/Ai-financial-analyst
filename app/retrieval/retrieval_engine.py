@@ -91,6 +91,8 @@ class RetrievalEngine:
 
         documents: list[str] = []
 
+        owner_ids: list[str | None] = []
+
         chunks: list[RetrievedChunk] = []
 
         for point in points:
@@ -126,9 +128,11 @@ class RetrievalEngine:
 
             documents.append(text)
 
+            owner_ids.append(chunk.owner_id)
+
             chunks.append(chunk)
 
-        self.retriever.build(ids, documents)
+        self.retriever.build(ids, documents, owner_ids)
 
         self.metadata.add_many(chunks)
 
@@ -205,6 +209,14 @@ class RetrievalEngine:
             ids,
         )
 
+        # When the cross-encoder reranker is disabled the chunk scores would
+        # otherwise all remain 0.0 (the placeholder assigned during refresh),
+        # which is misleading for API consumers. Assign rank-based RRF-style
+        # scores that preserve the fused ordering (RankFusion uses k=60).
+        # The reranker overwrites these with real relevance scores when enabled.
+        for rank, chunk in enumerate(chunks):
+            chunk.score = 1.0 / (60 + rank + 1)
+
         # Filter by owner_id if provided - strict tenant isolation
         if owner_id is not None:
             chunks = [
@@ -229,6 +241,17 @@ class RetrievalEngine:
         elapsed = (
             time.perf_counter() - start
         ) * 1000
+
+        # Operational debug log: latency and hit count only. The raw query
+        # text (user content) and chunk payloads are deliberately excluded.
+        logger.debug(
+            "Retrieval completed: duration_ms=%.1f chunks=%d scoped_to_document=%s owner_scoped=%s temporal=%s",
+            elapsed,
+            len(chunks),
+            document_id is not None,
+            owner_id is not None,
+            as_of_date is not None,
+        )
 
         return RetrievalContext(
             query=query,
@@ -257,18 +280,23 @@ class RetrievalEngine:
 
             ranked = reranker.rerank(query, texts)
 
-            by_text = {chunk.text: chunk for chunk in chunks}
+            # Score per unique text so duplicate chunks (identical text,
+            # e.g. overlapping page chunks) all receive the reranker's
+            # relevance score instead of being silently dropped.
+            score_by_text = {
+                text: float(score)
+                for text, score in ranked
+            }
 
-            ordered = [
-                by_text[text]
-                for text, _score in ranked
-                if text in by_text
-            ]
+            for chunk in chunks:
+                if chunk.text in score_by_text:
+                    chunk.score = score_by_text[chunk.text]
 
-            for chunk, (_text, score) in zip(ordered, ranked, strict=False):
-                chunk.score = float(score)
-
-            return ordered
+            return sorted(
+                chunks,
+                key=lambda chunk: chunk.score,
+                reverse=True,
+            )
         except Exception as exc:
             logger.debug(
                 "Reranking failed (%s); keeping fused order.",

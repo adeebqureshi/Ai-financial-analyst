@@ -52,7 +52,7 @@ class ChatSessionCache:
             client.ping()
             self._client = client
             self._healthy = True
-            logger.info("Chat session cache connected to Redis at %s", self._redis_url)
+            logger.info("Chat session cache connected to Redis (URL withheld from logs)")
         except Exception:
             self._client = None
             self._healthy = False
