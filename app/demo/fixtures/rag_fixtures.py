@@ -321,7 +321,7 @@ def create_demo_vector_store() -> MemoryVectorStore:
 # Demo Retrieval Context Builder
 # ──────────────────────────────────────────────────────────────────────────────
 
-from app.retrieval.models import RetrievalChunk, RetrievalContext
+from app.retrieval.models import RetrievedChunk as RetrievalChunk, RetrievalContext
 
 
 def build_demo_retrieval_context(

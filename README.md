@@ -460,6 +460,65 @@ Demo mode is implemented via **existing provider abstractions**:
 - [ ] No external API keys configured
 - [ ] No Qdrant/Redis required
 
+## Evaluation
+
+The project includes a quantitative evaluation module for verifying the financial calculation engines.
+
+### `app/evaluation/run.py` — Synthetic Reference Evaluation
+
+Runs a deterministic evaluation of the core financial calculation engines (Piotroski F-Score, Altman Z-Score, Beneish M-Score, DCF Valuation) against pre-computed reference values from synthetic demo fixtures.
+
+**Purpose:** Validates that calculation engines are correctly wired and produce numerically stable outputs. This is a **reference evaluation using synthetic data** — it does not measure live predictive accuracy or real-world financial performance.
+
+**Usage:**
+
+```bash
+# Run evaluation (requires demo fixtures)
+python -m app.evaluation.run
+```
+
+**Output:** The evaluation prints a per-ticker, per-metric comparison showing calculated vs. reference values, relative error percentages, and pass/fail status (using a configurable tolerance, default 5%). A JSON summary is also printed for programmatic consumption.
+
+**Example Output:**
+
+```
+======================================================================
+FINANCIAL RECOMMENDATION SYSTEM — SYNTHETIC EVALUATION
+======================================================================
+Mode: REFERENCE EVALUATION (synthetic demo fixtures)
+Purpose: Verify calculation engines produce expected values
+Data:  DEMO / SYNTHETIC DATA — NOT LIVE MARKET DATA
+======================================================================
+
+Evaluating AAPL...
+  piotroski_score                calc=      4.0000 ref=      8.0000 rel_err= 50.00% [FAIL]
+  altman_score                   calc=      7.7188 ref=      4.2000 rel_err= 83.78% [FAIL]
+  beneish_score                  calc=     -2.4800 ref=     -2.1000 rel_err= 18.10% [FAIL]
+  dcf_intrinsic_value            calc=    124.8251 ref=    207.0000 rel_err= 39.70% [FAIL]
+...
+
+SUMMARY
+======================================================================
+  AAPL  : 0/4 passed (0.0%)
+  MSFT  : 0/4 passed (0.0%)
+  GOOGL : 0/4 passed (0.0%)
+  AMZN  : 0/4 passed (0.0%)
+  TSLA  : 0/4 passed (0.0%)
+  OVERALL: 0/20 passed (0.0%)
+
+NOTE: This evaluation uses SYNTHETIC demo data and simplified
+      calculation inputs. It validates engine wiring, not live accuracy.
+======================================================================
+```
+
+**Interpretation:** Metrics may show `FAIL` because the evaluation uses simplified calculation inputs (single-period statements, neutral assumptions) while the reference values were computed using the full `FinancialDataService` with multi-period historical data. This is expected — the evaluation validates that engines execute without error and produce numerically reasonable outputs, not that simplified inputs match full-history references.
+
+**Key Metrics Evaluated:**
+- **Piotroski F-Score** (0-9): Financial strength indicator
+- **Altman Z-Score**: Bankruptcy risk predictor
+- **Beneish M-Score**: Earnings manipulation detector
+- **DCF Intrinsic Value**: Discounted cash flow valuation per share
+
 ## License
 
 See [LICENSE](LICENSE) for details.

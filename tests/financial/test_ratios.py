@@ -1,5 +1,6 @@
 from app.financial.models import FinancialStatement
 from app.financial.ratios import FinancialRatios
+import pytest
 
 
 def statement():
@@ -60,3 +61,115 @@ def test_net_margin():
     )
 
     assert ratio == 0.15
+
+
+# ─── FinancialRatios edge cases / division-by-zero guards ───
+
+def test_debt_to_equity_zero_equity_raises():
+    """Zero or negative equity must raise ValueError."""
+    with pytest.raises(ValueError, match="Equity must be positive"):
+        FinancialRatios.debt_to_equity(
+            FinancialStatement(
+                revenue=1000, operating_income=100, net_income=50,
+                total_assets=1000, total_liabilities=1000,  # equity = 0
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_debt_to_equity_negative_equity_raises():
+    with pytest.raises(ValueError, match="Equity must be positive"):
+        FinancialRatios.debt_to_equity(
+            FinancialStatement(
+                revenue=1000, operating_income=100, net_income=50,
+                total_assets=500, total_liabilities=1000,  # equity = -500
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_return_on_assets_zero_assets_raises():
+    with pytest.raises(ValueError, match="Assets must be positive"):
+        FinancialRatios.return_on_assets(
+            FinancialStatement(
+                revenue=1000, operating_income=100, net_income=50,
+                total_assets=0, total_liabilities=200,
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_return_on_assets_negative_assets_raises():
+    with pytest.raises(ValueError, match="Assets must be positive"):
+        FinancialRatios.return_on_assets(
+            FinancialStatement(
+                revenue=1000, operating_income=100, net_income=50,
+                total_assets=-100, total_liabilities=200,
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_return_on_equity_zero_equity_raises():
+    with pytest.raises(ValueError, match="Equity must be positive"):
+        FinancialRatios.return_on_equity(
+            FinancialStatement(
+                revenue=1000, operating_income=100, net_income=50,
+                total_assets=1000, total_liabilities=1000,  # equity = 0
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_operating_margin_zero_revenue_raises():
+    with pytest.raises(ValueError, match="Revenue must be positive"):
+        FinancialRatios.operating_margin(
+            FinancialStatement(
+                revenue=0, operating_income=100, net_income=50,
+                total_assets=1000, total_liabilities=200,
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_operating_margin_negative_revenue_raises():
+    with pytest.raises(ValueError, match="Revenue must be positive"):
+        FinancialRatios.operating_margin(
+            FinancialStatement(
+                revenue=-100, operating_income=100, net_income=50,
+                total_assets=1000, total_liabilities=200,
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_net_margin_zero_revenue_raises():
+    with pytest.raises(ValueError, match="Revenue must be positive"):
+        FinancialRatios.net_margin(
+            FinancialStatement(
+                revenue=0, operating_income=100, net_income=50,
+                total_assets=1000, total_liabilities=200,
+                cash=100, debt=500, shares_outstanding=100, free_cash_flow=50,
+            )
+        )
+
+
+def test_negative_margins_allowed():
+    """Negative net income with positive revenue yields negative margin (valid)."""
+    stmt = FinancialStatement(
+        revenue=1000, operating_income=-50, net_income=-100,
+        total_assets=5000, total_liabilities=2000,
+        cash=400, debt=800, shares_outstanding=100, free_cash_flow=180,
+    )
+    assert FinancialRatios.operating_margin(stmt) == -0.05
+    assert FinancialRatios.net_margin(stmt) == -0.10
+
+
+def test_negative_roa_allowed():
+    """Negative ROA with positive assets is valid."""
+    stmt = FinancialStatement(
+        revenue=1000, operating_income=100, net_income=-200,
+        total_assets=5000, total_liabilities=2000,
+        cash=400, debt=800, shares_outstanding=100, free_cash_flow=180,
+    )
+    assert FinancialRatios.return_on_assets(stmt) == -0.04
