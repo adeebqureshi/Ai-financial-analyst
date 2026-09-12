@@ -11,7 +11,7 @@ type Props = {
   children: ReactNode;
 };
 
-function shouldRetry(
+export function shouldRetry(
   failureCount: number,
   error: unknown
 ): boolean {

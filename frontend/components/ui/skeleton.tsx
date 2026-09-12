@@ -17,12 +17,25 @@ export function Skeleton({
   );
 }
 
+export function SkeletonWrapper({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("animate-pulse rounded-md bg-white/10", className)}
+      {...props}
+    />
+  );
+}
+
 export function SkeletonCard({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      data-testid="skeleton-card"
       className={cn(
         "rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl space-y-6",
         className
@@ -117,6 +130,7 @@ export function SkeletonChart({
 }) {
   return (
     <div
+      data-testid="skeleton-chart"
       className={cn(
         "rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl",
         className
@@ -175,6 +189,7 @@ export function SkeletonList({
       {Array.from({ length: items }).map((_, i) => (
         <div
           key={i}
+          data-testid="skeleton-list-item"
           className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4"
         >
           <div className="flex items-center gap-4">
@@ -196,7 +211,7 @@ export function SkeletonAnalysisView({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("space-y-10", className)} {...props}>
+    <div data-testid="skeleton-analysis-view" className={cn("space-y-10", className)} {...props}>
       <SkeletonCard className="max-w-4xl" />
       <SkeletonCard className="max-w-4xl" />
       <SkeletonChart />
