@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.llm.openai_client import OpenAIClient
 from app.schemas.responses import ReportData
+from app.utils.tickers import normalize_ticker
 
 logger = get_logger(__name__)
 
@@ -54,7 +55,7 @@ class ReportService:
         Returns:
             A ``ReportData`` with the generated report.
         """
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
         report_query = query or f"Create a complete investment research report on {ticker} analyzing its valuation, financial health and risk profile."
 
         coordinator = self._get_coordinator_instance()

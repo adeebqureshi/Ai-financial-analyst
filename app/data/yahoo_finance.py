@@ -1,13 +1,32 @@
 """
-Yahoo Finance provider.
+Yahoo Finance provider (legacy data-layer wrapper).
+
+NOTE: this module is part of the older ``app.data`` layer. Market-data
+features should prefer the ingestion-layer ``MarketService`` (provider chain +
+cache). This wrapper is retained for backward compatibility and sanitizes
+its outputs so missing values are ``None`` rather than fabricated ``0``.
 """
 
 from __future__ import annotations
+
+import math
 
 import yfinance as yf
 
 from app.data.company import Company
 from app.data.market_data import MarketData
+from app.utils.tickers import normalize_ticker
+
+
+def _finite(value):
+    """Return a finite float, or ``None`` when missing/invalid."""
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 class YahooFinanceProvider:
@@ -17,10 +36,12 @@ class YahooFinanceProvider:
         ticker: str,
     ) -> Company:
 
+        ticker = normalize_ticker(ticker)
+
         info = yf.Ticker(ticker).info
 
         return Company(
-            ticker=ticker.upper(),
+            ticker=ticker,
             name=info.get("longName", ticker),
             sector=info.get("sector", ""),
             industry=info.get("industry", ""),
@@ -32,12 +53,14 @@ class YahooFinanceProvider:
         ticker: str,
     ) -> MarketData:
 
+        ticker = normalize_ticker(ticker)
+
         info = yf.Ticker(ticker).info
 
         return MarketData(
-            price=float(info.get("currentPrice", 0)),
-            market_cap=float(info.get("marketCap", 0)),
-            pe_ratio=float(info.get("trailingPE", 0)),
-            eps=float(info.get("trailingEps", 0)),
-            volume=int(info.get("volume", 0)),
+            price=_finite(info.get("currentPrice")),
+            market_cap=_finite(info.get("marketCap")),
+            pe_ratio=_finite(info.get("trailingPE")),
+            eps=_finite(info.get("trailingEps")),
+            volume=_finite(info.get("volume")),
         )

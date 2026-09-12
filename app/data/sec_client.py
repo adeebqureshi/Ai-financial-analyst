@@ -7,6 +7,7 @@ from __future__ import annotations
 import requests
 
 from app.data.sec_company import SECCompany
+from app.utils.tickers import normalize_ticker
 
 
 class SECClient:
@@ -39,7 +40,7 @@ class SECClient:
 
         companies = response.json()
 
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
 
         for company in companies.values():
 

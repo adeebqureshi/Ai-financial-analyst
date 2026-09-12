@@ -1,8 +1,8 @@
 "use client";
 
-import { Loader2, AlertTriangle } from "lucide-react";
-
 import { useAnalysis } from "@/hooks/use-analysis";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { SkeletonAnalysisView } from "@/components/ui/skeleton";
 
 import { CompanyHeader } from "./company-header";
 import { ExecutiveSummary } from "./executive-summary";
@@ -43,50 +43,16 @@ export function AnalysisView({
   const { query } = useAnalysis(ticker);
 
   if (query.isPending) {
-    return (
-      <section className="flex h-[70vh] items-center justify-center">
-        <div className="text-center">
-
-          <Loader2
-            size={56}
-            className="mx-auto animate-spin text-blue-400"
-          />
-
-          <h2 className="mt-8 text-3xl font-bold text-white">
-            AI is analyzing {ticker}
-          </h2>
-
-          <p className="mt-4 text-zinc-400">
-            Fetching financial statements,
-            running valuation models,
-            calculating financial ratios...
-          </p>
-
-        </div>
-      </section>
-    );
+    return <SkeletonAnalysisView />;
   }
 
   if (query.isError) {
     return (
-      <section className="rounded-3xl border border-red-500/20 bg-red-500/10 p-10">
-
-        <AlertTriangle
-          size={40}
-          className="text-red-400"
-        />
-
-        <h2 className="mt-6 text-3xl font-bold text-white">
-          Analysis Failed
-        </h2>
-
-        <p className="mt-4 text-zinc-300">
-          {query.error instanceof Error
-            ? query.error.message
-            : "Unknown error"}
-        </p>
-
-      </section>
+      <ErrorDisplay
+        error={query.error}
+        onRetry={() => query.refetch()}
+        title="Analysis Failed"
+      />
     );
   }
 
@@ -95,22 +61,10 @@ export function AnalysisView({
 
   if (!api) {
     return (
-      <section className="rounded-3xl border border-red-500/20 bg-red-500/10 p-10">
-
-        <AlertTriangle
-          size={40}
-          className="text-red-400"
-        />
-
-        <h2 className="mt-6 text-3xl font-bold text-white">
-          Analysis Failed
-        </h2>
-
-        <p className="mt-4 text-zinc-300">
-          No analysis data was returned for this ticker.
-        </p>
-
-      </section>
+      <ErrorDisplay
+        error={new Error("No analysis data was returned for this ticker.")}
+        title="Analysis Failed"
+      />
     );
   }
 

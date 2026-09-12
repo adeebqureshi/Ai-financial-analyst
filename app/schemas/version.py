@@ -33,6 +33,7 @@ class VersionResponse(BaseModel):
         app_version: Application semantic version.
         python_version: Python interpreter version string.
         fastapi_version: Installed FastAPI version string.
+        demo_mode: Whether the application is running in demo mode with synthetic data.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -46,4 +47,8 @@ class VersionResponse(BaseModel):
     fastapi_version: str = Field(
         default_factory=lambda: fastapi.__version__,
         description="Installed FastAPI version.",
+    )
+    demo_mode: bool = Field(
+        default=False,
+        description="Whether the application is running in demo mode with synthetic data.",
     )

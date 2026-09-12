@@ -50,6 +50,10 @@ class FakeMarket:
             dividend_yield=0.005,
             week_52_high=250.0,
             week_52_low=150.0,
+            provider="yahoo",
+            provider_time=None,
+            cached=False,
+            stale=False,
         )
 
 

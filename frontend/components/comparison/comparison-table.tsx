@@ -1,6 +1,8 @@
 "use client";
 
 import { useCompare } from "@/hooks/use-compare";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 type Props = {
   tickers: string[];
@@ -47,7 +49,7 @@ function getValue(
 export function ComparisonTable({
   tickers,
 }: Props) {
-  const { data, isLoading, error } =
+  const { data, isLoading, error, refetch } =
     useCompare(tickers);
 
   if (tickers.length < 2) {
@@ -59,18 +61,17 @@ export function ComparisonTable({
   }
 
   if (isLoading) {
-    return (
-      <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-12 text-center text-zinc-400">
-        Loading comparison...
-      </div>
-    );
+    return <SkeletonTable rows={5} cols={tickers.length + 1} />;
   }
 
   if (error) {
     return (
-      <div className="rounded-[32px] border border-red-500/20 bg-red-500/5 p-12 text-center text-red-400">
-        Failed to load comparison. Please try again.
-      </div>
+      <ErrorDisplay
+        error={error}
+        onRetry={() => refetch()}
+        title="Comparison Failed"
+        compact
+      />
     );
   }
 

@@ -19,6 +19,40 @@ const API =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://127.0.0.1:8000";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly endpoint: string,
+    public readonly originalError?: Error
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+
+  isClientError(): boolean {
+    return this.status >= 400 && this.status < 500;
+  }
+
+  isServerError(): boolean {
+    return this.status >= 500;
+  }
+
+  isAuthError(): boolean {
+    return this.status === 401 || this.status === 403;
+  }
+
+  isNotFound(): boolean {
+    return this.status === 404;
+  }
+
+  isRetryable(): boolean {
+    if (this.isAuthError()) return false;
+    if (this.isClientError()) return false;
+    return true;
+  }
+}
+
 async function request<T>(
   endpoint: string,
   init?: RequestInit
@@ -49,7 +83,7 @@ async function request<T>(
     console.error("Status:", response.status);
     console.error("Response:", text);
 
-    throw new Error(message);
+    throw new ApiError(message, response.status, endpoint);
   }
 
   return response.json() as Promise<T>;
@@ -329,7 +363,7 @@ export const api = {
           parsed?.message ??
           parsed?.detail ??
           `Upload failed with status ${response.status}`;
-        throw new Error(message);
+        throw new ApiError(message, response.status, "/documents/upload");
       }
 
       return response.json() as Promise<

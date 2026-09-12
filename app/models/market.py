@@ -28,10 +28,13 @@ class MarketData(DomainModel):
 
     exchange: Exchange
 
-    current_price: float = Field(
-        ...,
+    current_price: float | None = Field(
+        default=None,
         ge=0,
-        description="Current market price (0.0 means price unavailable)",
+        description=(
+            "Current market price, or None when genuinely unavailable "
+            "(never 0.0 as a placeholder)."
+        ),
     )
 
     currency: str = Field(
@@ -75,4 +78,29 @@ class MarketData(DomainModel):
     snapshot_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Time when market data was captured.",
+    )
+
+    # ── Data provenance ──────────────────────────────────────────────────
+
+    provider: str | None = Field(
+        default=None,
+        description="Market-data provider that supplied this snapshot.",
+    )
+
+    provider_time: datetime | None = Field(
+        default=None,
+        description="Provider's own quote timestamp, when supplied.",
+    )
+
+    cached: bool = Field(
+        default=False,
+        description="True when served from the quote cache.",
+    )
+
+    stale: bool = Field(
+        default=False,
+        description=(
+            "True when the snapshot exceeds the normal freshness TTL and is "
+            "only being served because all providers failed."
+        ),
     )

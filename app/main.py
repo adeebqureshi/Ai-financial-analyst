@@ -116,15 +116,35 @@ _LICENSE = License(
 def _get_cors_origins(settings: Settings) -> list[str]:
     """
     Return allowed CORS origins based on the environment.
+
+    Development/Test: allows all origins without credentials for convenience.
+    Production: requires explicit CORS_ORIGINS configuration; fails if not set.
+    Staging: uses CORS_ORIGINS if set, otherwise allows localhost for testing.
     """
     if settings.is_development or settings.is_test:
-        # In development, allow all origins but without credentials
+        # In development/test, allow all origins but without credentials
         return ["*"]
 
-    # Production: explicit origins only, no wildcards with credentials
-    return [
-        "https://ai-financial-analyst.example.com",
-    ]
+    # Production and Staging: explicit origins required
+    if settings.cors_origins:
+        origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+        if not origins:
+            raise ValueError(
+                "CORS_ORIGINS is set but contains no valid origins. "
+                "Provide a comma-separated list, e.g. "
+                "https://app.example.com,https://www.example.com"
+            )
+        return origins
+
+    if settings.is_production:
+        raise ValueError(
+            "CORS_ORIGINS must be set in production. "
+            "Configure a comma-separated list of allowed frontend origins, "
+            "e.g. CORS_ORIGINS=https://app.example.com,https://www.example.com"
+        )
+
+    # Staging without explicit config: allow localhost for testing
+    return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 
 def _run_startup_infrastructure_checks(settings: Settings, logger: Any) -> None:

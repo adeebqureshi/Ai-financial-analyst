@@ -55,12 +55,13 @@ class ScreenService:
         # Run the valuation for the candidate
         result = self._engine.evaluate(
             statement=fs,
-            current_price=request.valuation.current_price,
+            current_price=request.valuation.current_price or 0.0,
             growth_rate=request.valuation.growth_rate,
             risk_free_rate=request.valuation.risk_free_rate,
             beta=request.valuation.beta,
             market_return=request.valuation.market_return,
             tax_rate=request.valuation.tax_rate,
+            cost_of_debt=request.valuation.cost_of_debt,
             terminal_growth=request.valuation.terminal_growth,
             years=request.valuation.years,
         )

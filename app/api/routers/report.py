@@ -19,6 +19,7 @@ from app.api.dependencies.services import get_report_service
 from app.schemas.base import APIResponse
 from app.schemas.responses import ReportData
 from app.services.report_service import ReportService
+from app.utils.tickers import normalize_ticker
 
 router = APIRouter(prefix="/report", tags=["Report"])
 
@@ -47,11 +48,8 @@ class ReportTickerRequest(BaseModel):
     @field_validator("ticker")
     @classmethod
     def validate_ticker_symbol(cls, v: str) -> str:
-        """Normalize and validate the ticker symbol."""
-        ticker = v.strip().upper()
-        if not (1 <= len(ticker) <= 5) or not ticker.isalpha():
-            raise ValueError("Ticker must be 1-5 uppercase letters (e.g., 'AAPL').")
-        return ticker
+        """Normalize and validate the ticker symbol via the canonical validator."""
+        return normalize_ticker(v)
 
 
 @router.post(

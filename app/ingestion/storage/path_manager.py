@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.utils.tickers import normalize_ticker
+
 
 class PathManager:
     """
@@ -93,8 +95,9 @@ class PathManager:
 
         storage/raw/sec/AAPL/2024/
         """
+        ticker = normalize_ticker(ticker)
 
-        path = self.sec_root / ticker.upper() / str(year)
+        path = self.sec_root / ticker / str(year)
 
         return self.ensure_directory(path)
 
@@ -111,8 +114,9 @@ class PathManager:
 
         storage/raw/market/AAPL/
         """
+        ticker = normalize_ticker(ticker)
 
-        path = self.market_root / ticker.upper()
+        path = self.market_root / ticker
 
         return self.ensure_directory(path)
 
@@ -127,8 +131,9 @@ class PathManager:
         """
         storage/parsed/AAPL/
         """
+        ticker = normalize_ticker(ticker)
 
-        path = self.parsed_root / ticker.upper()
+        path = self.parsed_root / ticker
 
         return self.ensure_directory(path)
 

@@ -4,11 +4,22 @@ memory.py
 Lightweight conversational context for the agent.
 
 The REST chat contract is stateless, so follow-up context ("it", "them",
-"this company") is resolved from an in-process store keyed by an optional
+"this company") is resolved from a small store keyed by an optional
 ``session_id``. This is intentionally minimal — it is *not* a second memory
 system; it only carries the tickers/entities from the previous turn.
 
 Design Decisions:
+    - **A cache, not the source of truth**: Persistent conversation state
+      lives in the chat store (``app.chat.store`` — PostgreSQL/SQLite, with
+      an optional Redis cache). ``ChatService`` hydrates this resolver from
+      the store before every turn and persists every completed turn back, so
+      this in-process store is only a bounded, per-worker cache. A cache miss
+      or eviction is self-healing: the next turn is re-hydrated from the
+      database, so restarts and multi-worker deployments never lose context.
+    - **Owner-scoped keys**: Entries are keyed by ``(owner_id, session_id)``
+      — the same pair the chat store uses — so two users reusing the same
+      client-generated ``session_id`` can never read or overwrite each
+      other's follow-up context.
     - **In-process, bounded**: Entries expire after ``_TTL_SECONDS`` and the
       store is capped so it cannot grow unboundedly.
     - **Pronoun resolution only**: We only resolve entity references; the
@@ -101,8 +112,10 @@ class ConversationMemory:
         tickers: list[str],
         query: str,
         answer: str,
+        *,
+        owner_id: str | None = None,
     ) -> None:
-        """Store the entities mentioned in the latest turn."""
+        """Store the entities mentioned in the latest turn (owner-scoped)."""
         if not session_id:
             return
 
@@ -111,6 +124,8 @@ class ConversationMemory:
             "query": query,
             "answer": answer,
         }
+
+        key = _session_key(owner_id, session_id)
 
         with self._lock:
             if len(self._store) >= _MAX_SESSIONS:
@@ -121,18 +136,22 @@ class ConversationMemory:
                 )
                 self._store.pop(oldest, None)
 
-            self._store[session_id] = (time.monotonic(), entry)
+            self._store[key] = (time.monotonic(), entry)
 
     def recall(
         self,
         session_id: str | None,
+        *,
+        owner_id: str | None = None,
     ) -> dict[str, Any] | None:
         """Return the previous turn's context, or ``None``."""
         if not session_id:
             return None
 
+        key = _session_key(owner_id, session_id)
+
         with self._lock:
-            entry = self._store.get(session_id)
+            entry = self._store.get(key)
 
             if entry is None:
                 return None
@@ -140,7 +159,7 @@ class ConversationMemory:
             timestamp, data = entry
 
             if time.monotonic() - timestamp > _TTL_SECONDS:
-                self._store.pop(session_id, None)
+                self._store.pop(key, None)
                 return None
 
             return data
@@ -150,12 +169,14 @@ class ConversationMemory:
         query: str,
         detected: list[str],
         session_id: str | None,
+        *,
+        owner_id: str | None = None,
     ) -> list[str]:
         """
         Merge tickers detected in the current query with entities from the
         previous turn when the query refers back to them ("compare it with...").
         """
-        previous = self.recall(session_id)
+        previous = self.recall(session_id, owner_id=owner_id)
 
         if previous is None:
             return detected
@@ -187,6 +208,16 @@ class ConversationMemory:
             return list(previous_tickers)
 
         return detected
+
+
+def _session_key(owner_id: str | None, session_id: str) -> tuple[str | None, str]:
+    """
+    Build the owner-scoped cache key.
+
+    Mirrors the chat store's ``(owner_id, session_id)`` uniqueness so follow-up
+    context can never leak across users even when they reuse a session id.
+    """
+    return (owner_id, session_id)
 
 
 def _references_previous_subject(text: str) -> bool:

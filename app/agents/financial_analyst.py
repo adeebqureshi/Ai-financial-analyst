@@ -91,6 +91,9 @@ class FinancialAnalystAgent:
         piotroski_score: int,
         altman_score: float,
         beneish_score: float,
+        cost_of_debt: float = 0.05,
+        terminal_growth: float = 0.03,
+        years: int = 5,
     ):
 
         return self.engine.analyze(
@@ -104,6 +107,9 @@ class FinancialAnalystAgent:
             piotroski_score=piotroski_score,
             altman_score=altman_score,
             beneish_score=beneish_score,
+            cost_of_debt=cost_of_debt,
+            terminal_growth=terminal_growth,
+            years=years,
         )
 
     # ──────────────────────────────────────────────────────────────────

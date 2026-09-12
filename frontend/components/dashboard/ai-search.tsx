@@ -9,6 +9,7 @@ import {
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAnalysis } from "@/hooks/use-analysis";
+import { ErrorInline } from "@/components/ui/error-display";
 
 const suggestions = [
   "AAPL",
@@ -23,11 +24,13 @@ export function AISearch() {
   const router = useRouter();
 
   const [ticker, setTicker] = useState("");
+  const [error, setError] = useState<unknown>(null);
 
   const analysis = useAnalysis();
 
   async function submit() {
     if (!ticker.trim()) return;
+    setError(null);
 
     try {
       await analysis.mutateAsync(
@@ -39,12 +42,7 @@ export function AISearch() {
       );
     } catch (err) {
       console.error("FULL ERROR:", err);
-
-      if (err instanceof Error) {
-        alert(err.message);
-      } else {
-        alert(JSON.stringify(err));
-      }
+      setError(err);
     }
   }
 
@@ -126,6 +124,15 @@ export function AISearch() {
         ))}
 
       </div>
+
+      {error !== null && (
+        <div className="mt-6" role="alert" aria-live="polite">
+          <ErrorInline
+            error={error}
+            onRetry={submit}
+          />
+        </div>
+      )}
 
     </motion.section>
   );

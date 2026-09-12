@@ -5,6 +5,7 @@ import {
   Building2,
   Globe,
   Landmark,
+  AlertTriangle,
 } from "lucide-react";
 
 type Props = {
@@ -33,11 +34,20 @@ function badgeColor(recommendation: string) {
   return "bg-yellow-500/15 border-yellow-500/30 text-yellow-300";
 }
 
+function isDemoData(name: string): boolean {
+  return name.includes("[DEMO / SYNTHETIC DATA]");
+}
+
 export function CompanyHeader({
   company,
   recommendation,
   confidence = 91,
 }: Props) {
+  const isDemo = isDemoData(company.name);
+  const displayName = isDemo
+    ? company.name.replace(" [DEMO / SYNTHETIC DATA]", "")
+    : company.name;
+
   return (
     <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-[#0B1220] via-[#090B11] to-[#05060A] p-10">
 
@@ -50,10 +60,16 @@ export function CompanyHeader({
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-300">
             <Activity size={16} />
             AI Financial Analysis
+            {isDemo && (
+              <span className="ml-2 flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-400">
+                <AlertTriangle size={10} />
+                DEMO DATA
+              </span>
+            )}
           </div>
 
           <h1 className="mt-8 text-6xl font-bold tracking-tight text-white">
-            {company.name}
+            {displayName}
           </h1>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -76,11 +92,22 @@ export function CompanyHeader({
               </span>
             )}
 
+            {isDemo && (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-400">
+                Synthetic Data
+              </span>
+            )}
+
           </div>
 
           <p className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
             {company.description ??
               "Enterprise AI generated equity research covering valuation, financial quality, risk assessment, intrinsic value and investment recommendation."}
+            {isDemo && (
+              <span className="ml-2 text-amber-400">
+                (All values are synthetic/demo data)
+              </span>
+            )}
           </p>
 
         </div>
@@ -142,7 +169,7 @@ export function CompanyHeader({
               />
 
               <span className="text-zinc-400">
-                Live backend connected
+                {isDemo ? "Demo mode — synthetic data" : "Live backend connected"}
               </span>
 
             </div>

@@ -48,11 +48,13 @@ logger = get_logger(__name__)
 _NOT_FOUND_MESSAGE = INSUFFICIENT_EVIDENCE_MESSAGE
 
 # Process-wide coordinator shared by every ``ChatService``. The coordinator
-# owns ``ConversationMemory`` which is keyed by ``session_id`` and therefore
-# must outlive individual HTTP requests — a per-request coordinator would
-# forget every session and multi-turn follow-ups ("what about its valuation?")
-# would never resolve. The coordinator and its underlying services are
-# otherwise stateless per run, so a single shared instance is safe.
+# owns ``ConversationMemory`` — a bounded, owner-scoped *cache* of recent
+# follow-up context. The chat store (``self._store``) is the source of truth:
+# context is hydrated from it before every turn and every completed turn is
+# persisted back, so a per-request coordinator is unnecessary and multi-worker
+# deployments share conversation state through the database. The coordinator
+# and its underlying services are otherwise stateless per run, so a single
+# shared instance is safe.
 _coordinator: CoordinatorAgent | None = None
 
 
@@ -153,6 +155,7 @@ class ChatService:
                 state.get("tickers") or [],
                 state.get("query") or "",
                 state.get("answer") or "",
+                owner_id=owner_id,
             )
 
     @staticmethod

@@ -16,6 +16,19 @@ from app.core.logging import get_logger
 from app.enums.filing_type import FilingType
 from app.ingestion.services.sec_service import SECService
 from app.models.filing import Filing
+from app.utils.tickers import normalize_ticker
+
+# Lazy import for demo SEC service
+_demo_sec_service = None
+
+
+def _get_demo_sec_service():
+    global _demo_sec_service
+    if _demo_sec_service is None:
+        from app.demo.services.demo_sec_service import DemoSECService
+
+        _demo_sec_service = DemoSECService()
+    return _demo_sec_service
 
 logger = get_logger(__name__)
 
@@ -37,7 +50,10 @@ class FilingService:
             settings: The application settings instance.
         """
         self._settings = settings
-        self._sec = SECService()
+        if settings.is_demo_mode:
+            self._sec = _get_demo_sec_service()
+        else:
+            self._sec = SECService()
 
     def get_latest_filings(
         self,
@@ -56,7 +72,7 @@ class FilingService:
         Returns:
             A list of filing records.
         """
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
         form = filing_type.value if isinstance(filing_type, FilingType) else filing_type
 
         try:
@@ -89,7 +105,7 @@ class FilingService:
         Returns:
             The filing record if found, None otherwise.
         """
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
         filings = self.get_latest_filings(ticker, limit=100)
         for filing in filings:
             if filing.get("accession_number") == accession_number:

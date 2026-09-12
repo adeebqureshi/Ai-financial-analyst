@@ -29,10 +29,12 @@ from app.core.exceptions import RetrievalError
 from app.core.logging import get_logger
 from app.data.financials import FinancialStatements
 from app.financial.altman import AltmanZScore
+from app.financial.assumptions import DEFAULT_TAX_RATE
 from app.financial.beneish import BeneishMScore
 from app.financial.models import FinancialStatement
 from app.financial.piotroski import Piotroski
 from app.ingestion.services.market_service import MarketService
+from app.utils.tickers import normalize_ticker
 
 logger = get_logger("app.financial.data")
 
@@ -45,13 +47,14 @@ _MILLION = 1_000_000.0
 # In-memory cache TTL: financial statements move slowly, 30 minutes is safe.
 _CACHE_TTL_SECONDS = 60 * 30
 
-# Model assumptions kept stable across tickers.
-_RISK_FREE_RATE = 0.0425
-_MARKET_RETURN = 0.10
-_DEFAULT_TAX_RATE = 0.21
-_DEFAULT_BETA = 1.0
-_MIN_GROWTH_RATE = 0.005
-_MAX_GROWTH_RATE = 0.30
+# Data-service-specific defaults. These are NOT valuation assumptions — they
+# are fallbacks for when the provider/statements lack a value. The canonical
+# valuation assumptions (risk-free rate, market return, cost of debt, terminal
+# growth, projection years) live in app.financial.assumptions and are injected
+# by the consumers of this service.
+_DEFAULT_BETA = 1.0  # Neutral beta when the provider supplies none.
+_MIN_GROWTH_RATE = 0.005  # Floor for the historical CAGR estimate.
+_MAX_GROWTH_RATE = 0.30  # Ceiling for the historical CAGR estimate.
 
 
 @dataclass(slots=True)
@@ -84,12 +87,13 @@ class CompanyFinancialData:
     growth_rate: float
     beta: float | None
     tax_rate: float
-    current_price: float
+    current_price: float | None
     name: str
     sector: str | None
     industry: str | None
     market_cap: float | None
     description: str | None
+    price_available: bool = False
 
 
 class FinancialDataService:
@@ -126,7 +130,7 @@ class FinancialDataService:
         Raises:
             RetrievalError: If the provider cannot supply the required data.
         """
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
 
         cached = self._cache_get(ticker)
         if cached is not None:
@@ -261,7 +265,7 @@ class FinancialDataService:
             profile=profile,
         )
 
-        current_price = self._safe(market.current_price) or 0.0
+        current_price = self._safe(market.current_price)
         beta = self._safe(market.beta)
 
         data = CompanyFinancialData(
@@ -279,6 +283,7 @@ class FinancialDataService:
             beta=beta if beta is not None else _DEFAULT_BETA,
             tax_rate=self._effective_tax_rate(income),
             current_price=current_price,
+            price_available=current_price is not None,
             name=profile.get("longName") or profile.get("shortName") or ticker,
             sector=profile.get("sector"),
             industry=profile.get("industry"),
@@ -465,10 +470,17 @@ class FinancialDataService:
         if shares is None:
             shares = self._safe(profile.get("sharesOutstanding"))
 
-        price = self._safe(market.current_price) or 0.0
-        market_value_equity = (
-            price * shares if price > 0 and shares else 0.0
-        )
+        price = self._safe(market.current_price)
+        if price is None:
+            raise RetrievalError(
+                message=(
+                    "Altman Z-Score requires a market price to compute the "
+                    "market value of equity; no price is available."
+                ),
+                error_code="RETR_DATA",
+                details={"ticker": ticker},
+            )
+        market_value_equity = price * shares if shares else 0.0
 
         if ta_t is None or ta_t <= 0 or liabilities_t is None:
             raise RetrievalError(
@@ -625,4 +637,4 @@ class FinancialDataService:
         ):
             rate = tax_provision / pretax_income
             return min(max(rate, 0.0), 0.40)
-        return _DEFAULT_TAX_RATE
+        return DEFAULT_TAX_RATE

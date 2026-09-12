@@ -49,9 +49,12 @@ class FinancialAnalysisEngine:
         beta: float,
         market_return: float,
         tax_rate: float,
-        piotroski_score: int,
-        altman_score: float,
-        beneish_score: float,
+        cost_of_debt: float = 0.05,
+        terminal_growth: float = 0.03,
+        years: int = 5,
+        piotroski_score: int = 0,
+        altman_score: float = 0.0,
+        beneish_score: float = 0.0,
     ) -> AnalysisResult:
 
         valuation = self.valuation.evaluate(
@@ -62,6 +65,9 @@ class FinancialAnalysisEngine:
             beta=beta,
             market_return=market_return,
             tax_rate=tax_rate,
+            cost_of_debt=cost_of_debt,
+            terminal_growth=terminal_growth,
+            years=years,
         )
 
         health = FinancialHealth.score(

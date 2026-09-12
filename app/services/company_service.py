@@ -20,6 +20,29 @@ from app.core.logging import get_logger
 from app.financial.data import FinancialDataService
 from app.ingestion.services.sec_service import SECService
 from app.schemas.responses import CompanyData
+from app.utils.tickers import normalize_ticker
+
+# Lazy import for demo services
+_demo_financial_data_service = None
+_demo_sec_service = None
+
+
+def _get_demo_financial_data_service():
+    global _demo_financial_data_service
+    if _demo_financial_data_service is None:
+        from app.demo.services.demo_financial_data import DemoFinancialDataService
+
+        _demo_financial_data_service = DemoFinancialDataService()
+    return _demo_financial_data_service
+
+
+def _get_demo_sec_service():
+    global _demo_sec_service
+    if _demo_sec_service is None:
+        from app.demo.services.demo_sec_service import DemoSECService
+
+        _demo_sec_service = DemoSECService()
+    return _demo_sec_service
 
 logger = get_logger(__name__)
 
@@ -47,8 +70,12 @@ class CompanyService:
             settings: The application settings instance.
         """
         self._settings = settings
-        self._sec = SECService()
-        self._financial_data = FinancialDataService()
+        if settings.is_demo_mode:
+            self._sec = _get_demo_sec_service()
+            self._financial_data = _get_demo_financial_data_service()
+        else:
+            self._sec = SECService()
+            self._financial_data = FinancialDataService()
 
     def get_company(self, ticker: str) -> CompanyData:
         """
@@ -60,7 +87,7 @@ class CompanyService:
         Returns:
             A ``CompanyData`` with the company profile.
         """
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
 
         try:
             data = self._financial_data.load(ticker)

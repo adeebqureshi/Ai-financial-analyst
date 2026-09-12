@@ -45,9 +45,10 @@ class VersionService:
 
         Returns:
             A ``VersionResponse`` with app name, version, Python version,
-            and FastAPI version.
+            FastAPI version, and demo mode status.
         """
         return VersionResponse(
             app_name=self._settings.app_name,
             app_version=self._settings.app_version,
+            demo_mode=self._settings.is_demo_mode,
         )

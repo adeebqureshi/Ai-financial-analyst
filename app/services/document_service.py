@@ -20,6 +20,9 @@ This service is the single orchestrator for the document lifecycle
 and search endpoints. It deliberately reuses the existing ingestion,
 parsing, embedding and vector-store implementations rather than
 duplicating any RAG architecture.
+
+In demo mode, uses an in-memory vector store with pre-populated
+synthetic filing data for deterministic retrieval without external Qdrant.
 """
 
 from __future__ import annotations
@@ -45,6 +48,24 @@ from app.retrieval.models import RetrievalContext
 from app.retrieval.retrieval_engine import RetrievalEngine
 from app.services.job_store import JobStore
 from app.vectorstore.qdrant_store import QdrantStore
+
+# Lazy import for demo RAG fixtures
+_demo_vector_store = None
+
+
+def _get_demo_vector_store():
+    global _demo_vector_store
+    if _demo_vector_store is None:
+        from app.demo.fixtures.rag_fixtures import create_demo_vector_store
+
+        _demo_vector_store = create_demo_vector_store()
+    return _demo_vector_store
+
+
+def _build_demo_retrieval_context(query: str, ticker: str | None, limit: int):
+    from app.demo.fixtures.rag_fixtures import build_demo_retrieval_context
+
+    return build_demo_retrieval_context(query, ticker, limit)
 
 logger = get_logger(__name__)
 
@@ -127,9 +148,13 @@ class DocumentService:
 
         self._embedder = EmbeddingService()
 
-        self._store = QdrantStore(
-            collection_name=collection_name,
-        )
+        # In demo mode, use in-memory vector store with pre-populated demo data
+        if settings.is_demo_mode:
+            self._store = _get_demo_vector_store()
+        else:
+            self._store = QdrantStore(
+                collection_name=collection_name,
+            )
 
         self._engine = RetrievalEngine()
 
@@ -644,7 +669,7 @@ class DocumentService:
         except Exception as exc:
             logger.warning("Failed to refresh retrieval engine: %s", exc)
 
-    def retrieve(
+def retrieve(
         self,
         query: str,
         limit: int = 5,
@@ -664,6 +689,16 @@ class DocumentService:
                 and valid by ``as_of_date`` are returned (no look-ahead).
             owner_id: Optional owner ID to scope retrieval to user's documents.
         """
+        # In demo mode, use deterministic demo retrieval
+        if self._settings.is_demo_mode:
+            # Extract ticker from query or document_id if possible
+            ticker = None
+            if document_id and document_id.startswith("demo_"):
+                parts = document_id.split("_")
+                if len(parts) >= 2:
+                    ticker = parts[1]
+            return _build_demo_retrieval_context(query, ticker, limit)
+
         self.refresh_engine()
 
         if document_id is not None:

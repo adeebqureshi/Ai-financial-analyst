@@ -228,8 +228,10 @@ class ReportWriterAgent:
             if self._is_done(tr):
                 r = self._get_result_data(tr)
                 if r:
+                    price = r.get("current_price")
+                    price_text = f"${price:.2f}" if price is not None else "N/A"
                     lines.append(
-                        f"**Current Price:** ${r.get('current_price', 0):.2f} | "
+                        f"**Current Price:** {price_text} | "
                         f"**Intrinsic Value:** ${r.get('intrinsic_value', 0):.2f} | "
                         f"**Upside:** {r.get('upside', 0):.1f}% | "
                         f"**Recommendation:** {r.get('recommendation', 'N/A')}"
@@ -318,7 +320,9 @@ class ReportWriterAgent:
             lines.append("")
             lines.append("| Metric | Value |")
             lines.append("|--------|-------|")
-            lines.append(f"| Current Price | ${r.get('current_price', 0):.2f} |")
+            price = r.get("current_price")
+            price_text = f"${price:.2f}" if price is not None else "N/A"
+            lines.append(f"| Current Price | {price_text} |")
             lines.append(f"| Intrinsic Value | ${r.get('intrinsic_value', 0):.2f} |")
             lines.append(f"| Upside/Downside | {r.get('upside', 0):.1f}% |")
             lines.append(f"| Recommendation | {r.get('recommendation', 'N/A')} |")

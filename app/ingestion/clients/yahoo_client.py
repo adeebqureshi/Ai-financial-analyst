@@ -10,6 +10,8 @@ import logging
 
 import yfinance as yf
 
+from app.utils.tickers import normalize_ticker
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class YahooClient:
 
         logger.info("Fetching Yahoo Finance info for %s", ticker)
 
-        stock = yf.Ticker(ticker.upper())
+        stock = yf.Ticker(normalize_ticker(ticker))
 
         return stock.info
 
@@ -48,6 +50,6 @@ class YahooClient:
             ticker,
         )
 
-        stock = yf.Ticker(ticker.upper())
+        stock = yf.Ticker(normalize_ticker(ticker))
 
         return stock.history(period=period)

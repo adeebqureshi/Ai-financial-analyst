@@ -22,9 +22,30 @@ class ValuationEngine:
         beta: float,
         market_return: float,
         tax_rate: float,
+        cost_of_debt: float = 0.05,
         terminal_growth: float = 0.03,
         years: int = 5,
     ) -> ValuationResult:
+        """
+        Run a DCF valuation.
+
+        NOTE: ``cost_of_debt`` (and the rate parameters) should come from the
+        canonical :class:`~app.financial.assumptions.FinancialAssumptions` in
+        production paths. The defaults here exist only for backward
+        compatibility with direct/legacy callers of this engine.
+
+        Args:
+            statement: The company's normalized financial statement.
+            current_price: Current market price per share (None/0 if unavailable).
+            growth_rate: Revenue/FCF growth rate for the projection (decimal).
+            risk_free_rate: Risk-free rate (decimal, from FinancialAssumptions).
+            beta: Stock beta.
+            market_return: Expected market return (decimal, from FinancialAssumptions).
+            tax_rate: Effective tax rate (decimal).
+            cost_of_debt: Pre-tax cost of debt (decimal, from FinancialAssumptions).
+            terminal_growth: Perpetual terminal growth rate (decimal).
+            years: Projection horizon in whole years.
+        """
 
         equity = (
             statement.total_assets
@@ -36,8 +57,6 @@ class ValuationEngine:
             beta=beta,
             market_return=market_return,
         )
-
-        cost_of_debt = 0.05
 
         try:
             discount_rate = WACC.calculate(

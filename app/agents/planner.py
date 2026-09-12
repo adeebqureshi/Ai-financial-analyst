@@ -23,46 +23,7 @@ from app.agents.companies import detect_tickers
 from app.agents.intents import AgentIntent, IntentClassifier
 from app.agents.memory import ConversationMemory
 from app.agents.research_plan import ResearchPlan, ToolCall
-
-_HEALTH_PHRASE_KEYWORDS = (
-    "financially healthy", "financial health", "healthy", "solvency",
-    "liquidity", "strong balance sheet", "financial strength",
-)
-
-_ANALYSIS_ACTION_KEYWORDS = (
-    "analyze", "analysis", "fundamentals", "profitability",
-)
-
-# Keyword groups used to decide whether a client-supplied ticker should be
-# applied to a question.
-_VALUATION_KEYWORDS = (
-    "undervalued", "overvalued", "valuation", "dcf", "intrinsic value",
-    "fair value", "price target", "trading below", "trading above",
-    "cheap", "expensive", "upside",
-)
-
-_HEALTH_KEYWORDS = (
-    "financially healthy", "financial health", "healthy", "solvency",
-    "liquidity", "strong balance sheet", "financial strength",
-)
-
-_RISK_KEYWORDS = (
-    "risk", "risky", "risks", "danger", "threat", "bankruptcy", "distress",
-    "credit risk", "concentration risk",
-)
-
-_ANALYSIS_KEYWORDS = (
-    "analyze", "analysis", "financials", "financial statement",
-    "financial statements", "balance sheet", "income statement", "cash flow",
-    "fundamentals", "margins", "profitability", "growth", "revenue",
-    "earnings", "how is", "how are",
-)
-
-_PRICE_KEYWORDS = (
-    "current price", "stock price", "share price", "price of", "how much is",
-    "what is the price", "quote", "price today", "market cap",
-    "market capitalisation", "market capitalization",
-)
+from app.utils.tickers import normalize_ticker
 
 
 class PlannerAgent:
@@ -80,6 +41,7 @@ class PlannerAgent:
         ticker: str | None = None,
         document_id: str | None = None,
         session_id: str | None = None,
+        owner_id: str | None = None,
     ) -> ResearchPlan:
         """
         Build the research plan for ``query``.
@@ -90,6 +52,8 @@ class PlannerAgent:
                 request) — used when the query itself carries no ticker.
             document_id: Optional document the question is scoped to.
             session_id: Optional session used to resolve follow-up references.
+            owner_id: Optional owner id scoping session context (tenant
+                isolation — follow-up memory is keyed per owner).
 
         Returns:
             A :class:`ResearchPlan` with the minimal tool set.
@@ -98,6 +62,7 @@ class PlannerAgent:
             query=query,
             ticker=ticker,
             session_id=session_id,
+            owner_id=owner_id,
         )
 
         intents = self.classifier.classify(
@@ -108,7 +73,8 @@ class PlannerAgent:
         tickers = self._apply_request_ticker(
             resolved_tickers,
             ticker,
-            query,
+            resolved_query,
+            intents,
         )
 
         plan = ResearchPlan(
@@ -133,6 +99,7 @@ class PlannerAgent:
                 tickers,
                 resolved_query,
                 "",
+                owner_id=owner_id,
             )
 
         return plan
@@ -146,6 +113,8 @@ class PlannerAgent:
         query: str,
         ticker: str | None,
         session_id: str | None,
+        *,
+        owner_id: str | None = None,
     ) -> tuple[str, list[str]]:
         detected = detect_tickers(query)
 
@@ -153,15 +122,17 @@ class PlannerAgent:
             query,
             detected,
             session_id,
+            owner_id=owner_id,
         )
 
         return query, tickers
 
-    @staticmethod
     def _apply_request_ticker(
+        self,
         detected: list[str],
         request_ticker: str | None,
         query: str,
+        intents: list[AgentIntent],
     ) -> list[str]:
         """
         Ensure a ticker explicitly passed by the client is honoured.
@@ -173,17 +144,31 @@ class PlannerAgent:
         if not request_ticker:
             return detected
 
-        normalized = request_ticker.upper()
+        try:
+            normalized = normalize_ticker(request_ticker)
+        except ValueError:
+            # The explicit ticker is untrusted input. In the standard chat flow
+            # it is already validated by the request schema; if a caller passes
+            # an invalid value directly, discard it rather than propagate a
+            # malicious symbol into the tool calls / provider requests.
+            return detected
 
         if normalized in detected:
             return detected
 
-        is_company_question = any(
-            keyword in query.lower()
-            for keyword in (*_VALUATION_KEYWORDS, *_HEALTH_KEYWORDS,
-                            *_RISK_KEYWORDS, *_ANALYSIS_KEYWORDS,
-                            "compare", "versus", "report", "thesis")
-        )
+        # Use classifier intents to determine if this is a company question
+        intent_names = {intent.value for intent in intents}
+        company_intents = {
+            AgentIntent.VALUATION.value,
+            AgentIntent.FINANCIAL_ANALYSIS.value,
+            AgentIntent.RISK_ANALYSIS.value,
+            AgentIntent.COMPARISON.value,
+            AgentIntent.COMPANY_RESEARCH.value,
+            AgentIntent.REPORT_GENERATION.value,
+            AgentIntent.PORTFOLIO_ANALYSIS.value,
+            AgentIntent.CALCULATION.value,
+        }
+        is_company_question = bool(intent_names & company_intents)
 
         if is_company_question or not detected:
             return [normalized]
@@ -201,24 +186,6 @@ class PlannerAgent:
         document_id: str | None,
     ) -> None:
         intent_names = {intent.value for intent in plan.intents}
-
-        text = f" {query.lower()} "
-
-        health_only = (
-            AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
-            and not any(
-                name in intent_names
-                for name in (
-                    AgentIntent.VALUATION.value,
-                    AgentIntent.RISK_ANALYSIS.value,
-                    AgentIntent.COMPARISON.value,
-                    AgentIntent.PORTFOLIO_ANALYSIS.value,
-                    AgentIntent.REPORT_GENERATION.value,
-                    AgentIntent.DOCUMENT_RESEARCH.value,
-                )
-            )
-            and _is_health_only_question(text)
-        )
 
         tools: list[ToolCall] = []
         seen: set[tuple[str, str]] = set()
@@ -255,13 +222,8 @@ class PlannerAgent:
                 )
 
         # ── Pure price question: market data only ─────────────────────
-        if (
-            AgentIntent.MARKET_DATA.value in intent_names
-            or (
-                _is_price_question(text)
-                and not _has_analysis_intent(intent_names)
-            )
-        ):
+        # Classifier returns only MARKET_DATA for pure price questions.
+        if AgentIntent.MARKET_DATA.value in intent_names:
             for ticker in plan.tickers:
                 add(
                     "get_market_data",
@@ -272,7 +234,7 @@ class PlannerAgent:
             return
 
         # ── Company profile ───────────────────────────────────────────
-        if not health_only and any(
+        if any(
             name in intent_names
             for name in (
                 AgentIntent.FINANCIAL_ANALYSIS.value,
@@ -310,7 +272,7 @@ class PlannerAgent:
                 )
 
         # ── Market data (live snapshot for analysis/valuation) ────────
-        if not health_only and any(
+        if any(
             name in intent_names
             for name in (
                 AgentIntent.VALUATION.value,
@@ -341,13 +303,10 @@ class PlannerAgent:
 
         # ── Valuation (DCF) ───────────────────────────────────────────
         if (
-            not health_only
-            and (
-                AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
-                or AgentIntent.VALUATION.value in intent_names
-                or AgentIntent.COMPARISON.value in intent_names
-                or AgentIntent.REPORT_GENERATION.value in intent_names
-            )
+            AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
+            or AgentIntent.VALUATION.value in intent_names
+            or AgentIntent.COMPARISON.value in intent_names
+            or AgentIntent.REPORT_GENERATION.value in intent_names
         ):
             for ticker in plan.tickers:
                 add(
@@ -460,34 +419,4 @@ class PlannerAgent:
         return reasons
 
 
-def _is_price_question(text: str) -> bool:
-    return any(keyword in text for keyword in _PRICE_KEYWORDS)
 
-
-def _is_health_only_question(text: str) -> bool:
-    """
-    True when the question is specifically about financial health and is not a
-    general company analysis request (which would also need company/market
-    data and a valuation).
-    """
-    if not any(keyword in text for keyword in _HEALTH_PHRASE_KEYWORDS):
-        return False
-
-    if any(keyword in text for keyword in _ANALYSIS_ACTION_KEYWORDS):
-        return False
-
-    return True
-
-
-def _has_analysis_intent(intent_names: set[str]) -> bool:
-    return any(
-        name in intent_names
-        for name in (
-            AgentIntent.VALUATION.value,
-            AgentIntent.FINANCIAL_ANALYSIS.value,
-            AgentIntent.RISK_ANALYSIS.value,
-            AgentIntent.COMPARISON.value,
-            AgentIntent.PORTFOLIO_ANALYSIS.value,
-            AgentIntent.REPORT_GENERATION.value,
-        )
-    )

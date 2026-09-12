@@ -26,7 +26,7 @@ export interface HealthScoreData {
 export interface MarketData {
   ticker: string;
   exchange: string | null;
-  current_price: number;
+  current_price: number | null;
   currency: string;
   market_cap: number | null;
   volume: number | null;
@@ -36,6 +36,11 @@ export interface MarketData {
   dividend_yield: number | null;
   week_52_high: number | null;
   week_52_low: number | null;
+  price_available?: boolean;
+  provider?: string | null;
+  as_of?: string | null;
+  cached?: boolean;
+  stale?: boolean;
 }
 
 export interface StatementData {

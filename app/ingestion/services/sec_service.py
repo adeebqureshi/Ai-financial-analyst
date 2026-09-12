@@ -12,6 +12,7 @@ from app.enums.exchange import Exchange
 from app.ingestion.clients.edgar_client import EdgarClient
 from app.ingestion.mappers.company_mapper import CompanyMapper
 from app.models.company import Company
+from app.utils.tickers import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,8 @@ class SECService:
         Retrieve a company and map it to our domain model.
         Returns a stub Company if EDGAR is unavailable.
         """
+        ticker = normalize_ticker(ticker)
+
         try:
             company = self.client.get_company(ticker)
             return CompanyMapper.from_edgar(company)
@@ -40,9 +43,9 @@ class SECService:
                 exc,
             )
             return Company(
-                ticker=ticker.upper(),
+                ticker=ticker,
                 cik="0",
-                name=ticker.upper(),
+                name=ticker,
                 exchange=Exchange.NASDAQ,
                 sector="Unknown",
                 industry="Unknown",
@@ -61,6 +64,7 @@ class SECService:
         """
         Retrieve latest SEC filings.
         """
+        ticker = normalize_ticker(ticker)
 
         return self.client.get_filings(
             ticker=ticker,

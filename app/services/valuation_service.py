@@ -59,12 +59,13 @@ class ValuationService:
         statement = self._build_statement(request)
         result = self._engine.evaluate(
             statement=statement,
-            current_price=request.params.current_price,
+            current_price=request.params.current_price or 0.0,
             growth_rate=request.params.growth_rate,
             risk_free_rate=request.params.risk_free_rate,
             beta=request.params.beta,
             market_return=request.params.market_return,
             tax_rate=request.params.tax_rate,
+            cost_of_debt=request.params.cost_of_debt,
             terminal_growth=request.params.terminal_growth,
             years=request.params.years,
         )
@@ -75,6 +76,10 @@ class ValuationService:
                 recommendation=result.recommendation,
                 current_price=request.params.current_price,
                 discount_rate=self._compute_discount_rate(request),
+                assumptions_source="request",
+                risk_free_rate=request.params.risk_free_rate,
+                market_return=request.params.market_return,
+                cost_of_debt=request.params.cost_of_debt,
             ),
         )
 
@@ -95,7 +100,7 @@ class ValuationService:
                 equity=equity,
                 debt=statement.debt,
                 cost_of_equity=cost_of_equity,
-                cost_of_debt=0.05,
+                cost_of_debt=request.params.cost_of_debt,
                 tax_rate=request.params.tax_rate,
             )
         except ValueError:
@@ -114,12 +119,13 @@ class ValuationService:
         statement = self._build_statement(request)
         result = self._engine.evaluate(
             statement=statement,
-            current_price=request.params.current_price,
+            current_price=request.params.current_price or 0.0,
             growth_rate=request.params.growth_rate,
             risk_free_rate=request.params.risk_free_rate,
             beta=request.params.beta,
             market_return=request.params.market_return,
             tax_rate=request.params.tax_rate,
+            cost_of_debt=request.params.cost_of_debt,
             terminal_growth=request.params.terminal_growth,
             years=request.params.years,
         )

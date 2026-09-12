@@ -100,6 +100,8 @@ class CoordinatorAgent:
         tickers: list[str],
         query: str,
         answer: str,
+        *,
+        owner_id: str | None = None,
     ) -> None:
         """
         Restore a session's previous-turn context into conversational memory.
@@ -114,11 +116,14 @@ class CoordinatorAgent:
             tickers: Tickers referenced by the previous turn.
             query: The previous turn's user question.
             answer: The previous turn's assistant answer.
+            owner_id: Owner id scoping the session (tenant isolation).
         """
         if not session_id:
             return
 
-        self._memory.remember(session_id, tickers, query, answer)
+        self._memory.remember(
+            session_id, tickers, query, answer, owner_id=owner_id
+        )
 
     def run(
         self,
@@ -147,6 +152,7 @@ class CoordinatorAgent:
             ticker=ticker,
             document_id=document_id,
             session_id=session_id,
+            owner_id=owner_id,
         )
 
         evidence, steps, tools_used, sources = self._execute(plan, owner_id=owner_id)
@@ -170,6 +176,7 @@ class CoordinatorAgent:
                 plan.tickers,
                 query,
                 answer,
+                owner_id=owner_id,
             )
 
         company = plan.tickers[0] if plan.tickers else "Research"
@@ -318,6 +325,7 @@ class CoordinatorAgent:
                 ticker=ticker,
                 document_id=document_id,
                 session_id=session_id,
+                owner_id=owner_id,
             )
 
             evidence, steps, tools_used, sources = await asyncio.to_thread(
@@ -384,6 +392,7 @@ class CoordinatorAgent:
                 plan.tickers,
                 query,
                 answer,
+                owner_id=owner_id,
             )
 
         yield {

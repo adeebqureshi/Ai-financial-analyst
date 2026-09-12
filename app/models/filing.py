@@ -14,6 +14,7 @@ from pydantic import Field, HttpUrl, field_validator
 from app.enums.filing_type import FilingType
 from app.enums.processing_status import ProcessingStatus
 from app.models.base import DomainModel
+from app.utils.tickers import normalize_ticker
 
 
 class Filing(DomainModel):
@@ -64,9 +65,9 @@ class Filing(DomainModel):
     @classmethod
     def validate_ticker(cls, value: str) -> str:
         """
-        Normalize ticker symbol.
+        Normalize and validate the ticker via the canonical validator.
         """
-        return value.strip().upper()
+        return normalize_ticker(value)
 
     @field_validator("cik")
     @classmethod

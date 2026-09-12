@@ -13,6 +13,7 @@ from typing import Any
 from edgar import Company
 
 from app.core.config import settings
+from app.utils.tickers import normalize_ticker
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class EdgarClient:
 
         logger.info("Fetching company: %s", ticker)
 
-        return Company(ticker.upper())
+        return Company(normalize_ticker(ticker))
 
     def get_filings(
         self,

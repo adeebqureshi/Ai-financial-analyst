@@ -56,9 +56,18 @@ from app.core.constants import (
     DEFAULT_LLM_MODEL,
     DEFAULT_LLM_TEMPERATURE,
     DEFAULT_LLM_TOKEN_QUOTA_PER_USER_PER_DAY,
+    DEFAULT_PROJECTION_YEARS,
+    DEFAULT_RISK_FREE_RATE,
+    DEFAULT_MARKET_RETURN,
+    DEFAULT_COST_OF_DEBT,
+    DEFAULT_TAX_RATE,
+    DEFAULT_TERMINAL_GROWTH,
     DEFAULT_VECTOR_TOP_K,
     SANDBOX_MEMORY_LIMIT_MB,
     SANDBOX_TIMEOUT,
+    DEFAULT_MARKET_FALLBACK_PROVIDERS,
+    DEFAULT_MARKET_PRIMARY_PROVIDER,
+
     Environment,
     LogLevel,
 )
@@ -121,6 +130,107 @@ class Settings(BaseSettings):
     api_retry_backoff: float = Field(
         default=API_RETRY_BACKOFF,
         description="Base delay for exponential backoff (seconds).",
+    )
+
+    # ── Market Data Providers ────────────────────────────────────────────
+    # NOTE: Yahoo Finance (via yfinance) is an unofficial, non-commercial-use
+    # data source with no SLA. The provider chain is configuration-driven so
+    # it can be replaced without changing business logic.
+    market_primary_provider: str = Field(
+        default=DEFAULT_MARKET_PRIMARY_PROVIDER,
+        description=(
+            "Primary market-data provider name. 'yahoo' (Yahoo Finance via "
+            "yfinance) is the default — an unofficial, non-commercial-use "
+            "source with no SLA; swap via this setting without code changes."
+        ),
+    )
+    market_fallback_providers: str = Field(
+        default=DEFAULT_MARKET_FALLBACK_PROVIDERS,
+        description=(
+            "Comma-separated fallback provider names tried in order when the "
+            "primary fails (e.g. 'fmp'). Empty string disables fallback."
+        ),
+    )
+    market_fallback_enabled: bool = Field(
+        default=True,
+        description="Enable the fallback provider chain.",
+    )
+    market_provider_timeout_seconds: float = Field(
+        default=10.0,
+        gt=0,
+        description="Per-provider fetch timeout in seconds.",
+    )
+    market_provider_max_attempts: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        description="Retry attempts per provider for transient errors.",
+    )
+    market_quote_ttl_seconds: int = Field(
+        default=60,
+        ge=0,
+        description="Quote cache freshness TTL (seconds). 0 disables caching.",
+    )
+    market_cache_stale_seconds: int = Field(
+        default=900,
+        ge=0,
+        description=(
+            "Extra window (seconds) during which a cached quote may be "
+            "served (flagged stale) when all providers fail. 0 disables "
+            "stale serving."
+        ),
+    )
+    market_cache_max_entries: int = Field(
+        default=1024,
+        ge=1,
+        description="Max entries for the in-process quote cache (LRU).",
+    )
+    market_cache_backend: str = Field(
+        default="auto",
+        description="Quote cache backend: 'auto' (Redis else in-process), 'redis', or 'memory'.",
+    )
+
+    # ── Financial Assumptions (valuation inputs) ──────────────────────────
+    # These are the canonical "macro" inputs to DCF/WACC valuation. They are
+    # explicit assumptions, NOT live market data. Each carries a documented
+    # default; override any of them to reflect a different view. See
+    # ``app.financial.assumptions`` for the single source of truth and the
+    # validation bounds applied at runtime.
+    risk_free_rate: float = Field(
+        default=DEFAULT_RISK_FREE_RATE,
+        ge=0.0,
+        le=0.5,
+        description="Annual risk-free rate as a decimal (e.g. 0.0425 = 4.25%). Assumption, not live data.",
+    )
+    market_return: float = Field(
+        default=DEFAULT_MARKET_RETURN,
+        ge=0.0,
+        le=1.0,
+        description="Expected annual market return as a decimal (e.g. 0.10 = 10%). Assumption, not live data.",
+    )
+    cost_of_debt: float = Field(
+        default=DEFAULT_COST_OF_DEBT,
+        ge=0.0,
+        le=1.0,
+        description="Pre-tax cost of debt as a decimal (e.g. 0.05 = 5%). Assumption, not live data.",
+    )
+    tax_rate: float = Field(
+        default=DEFAULT_TAX_RATE,
+        ge=0.0,
+        le=1.0,
+        description="Effective tax rate as a decimal (e.g. 0.21 = 21%). Assumption, not live data.",
+    )
+    terminal_growth: float = Field(
+        default=DEFAULT_TERMINAL_GROWTH,
+        ge=0.0,
+        le=0.2,
+        description="Perpetual terminal growth rate as a decimal (e.g. 0.03 = 3%). Assumption, not live data.",
+    )
+    projection_years: int = Field(
+        default=DEFAULT_PROJECTION_YEARS,
+        ge=1,
+        le=30,
+        description="DCF projection horizon in whole years.",
     )
 
     # ── SEC EDGAR ────────────────────────────────────────────────────────
@@ -240,6 +350,28 @@ class Settings(BaseSettings):
         description=(
             "Retention window (days) after which idle chat sessions and their "
             "messages are purged by the retention/cleanup routine."
+        ),
+    )
+
+    # ── Demo Mode ──────────────────────────────────────────────────────────
+    demo_mode: bool = Field(
+        default=False,
+        description=(
+            "Enable deterministic demo mode with synthetic data. When true, the "
+            "application uses local demo fixtures instead of external APIs. "
+            "NEVER enable in production. All demo values are clearly labeled "
+            "as synthetic."
+        ),
+    )
+
+    # ── CORS ───────────────────────────────────────────────────────────────
+    cors_origins: str = Field(
+        default="",
+        description=(
+            "Comma-separated list of allowed CORS origins for production. "
+            "Required when ENVIRONMENT=production. "
+            "Example: https://app.example.com,https://www.example.com. "
+            "In development/test, localhost origins are added automatically."
         ),
     )
 
@@ -368,6 +500,11 @@ class Settings(BaseSettings):
     def is_test(self) -> bool:
         """Return True if the current environment is test."""
         return self.environment == Environment.TEST
+
+    @property
+    def is_demo_mode(self) -> bool:
+        """Return True if demo mode is enabled."""
+        return self.demo_mode
 
     @property
     def openai_api_key_str(self) -> str:

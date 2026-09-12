@@ -238,6 +238,39 @@ KEY_FINANCIAL_METRICS: Final[tuple[str, ...]] = (
 """Key financial metrics extracted from filings for analysis."""
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Market Data Providers
+# ──────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_MARKET_PRIMARY_PROVIDER: Final[str] = "yahoo"
+"""Primary market-data provider (Yahoo Finance via yfinance — unofficial,
+non-commercial-use source with no SLA; swappable via configuration)."""
+
+DEFAULT_MARKET_FALLBACK_PROVIDERS: Final[str] = "fmp"
+"""Comma-separated fallback market-data providers tried in order."""
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Financial Assumptions (valuation inputs)
+# ──────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_RISK_FREE_RATE: Final[float] = 0.0425
+"""Annual risk-free rate (decimal). Assumption, not live market data."""
+
+DEFAULT_MARKET_RETURN: Final[float] = 0.10
+"""Expected annual market return (decimal). Assumption, not live market data."""
+
+DEFAULT_COST_OF_DEBT: Final[float] = 0.05
+"""Pre-tax cost of debt (decimal). Assumption, not live market data."""
+
+DEFAULT_TAX_RATE: Final[float] = 0.21
+"""Effective tax rate (decimal). Assumption, not live market data."""
+
+DEFAULT_TERMINAL_GROWTH: Final[float] = 0.03
+"""Perpetual terminal growth rate (decimal). Assumption, not live market data."""
+
+DEFAULT_PROJECTION_YEARS: Final[int] = 5
+"""DCF projection horizon in whole years."""
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Sandbox (Code Execution)
 # ──────────────────────────────────────────────────────────────────────────────
 

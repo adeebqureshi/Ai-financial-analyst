@@ -10,6 +10,7 @@ from pydantic import Field, HttpUrl, field_validator
 
 from app.enums.exchange import Exchange
 from app.models.base import DomainModel
+from app.utils.tickers import normalize_ticker
 
 
 class Company(DomainModel):
@@ -76,14 +77,9 @@ class Company(DomainModel):
     @classmethod
     def validate_ticker(cls, value: str) -> str:
         """
-        Normalize ticker symbols.
+        Normalize and validate the ticker via the canonical validator.
         """
-        value = value.strip().upper()
-
-        if len(value) > 10:
-            raise ValueError("Ticker length cannot exceed 10 characters.")
-
-        return value
+        return normalize_ticker(value)
 
     @field_validator("cik")
     @classmethod

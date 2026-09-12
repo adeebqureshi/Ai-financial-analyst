@@ -34,6 +34,10 @@ from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.financial.altman import AltmanZScore
 from app.financial.beneish import BeneishMScore
+from app.financial.assumptions import (
+    FinancialAssumptions,
+    get_financial_assumptions,
+)
 from app.financial.data import CompanyFinancialData, FinancialDataService
 from app.financial.health import FinancialHealth
 from app.financial.ratios import FinancialRatios
@@ -45,12 +49,9 @@ from app.services.company_service import CompanyService
 from app.services.compare_service import CompareService
 from app.services.document_service import DocumentService
 from app.services.report_service import ReportService
+from app.utils.tickers import normalize_ticker
 
 logger = get_logger(__name__)
-
-_RISK_FREE_RATE = 0.0425
-_MARKET_RETURN = 0.10
-_COST_OF_DEBT = 0.05
 
 DEFAULT_RETRIEVAL_LIMIT = 5
 
@@ -125,6 +126,13 @@ def _exchange_value(exchange) -> str | None:
     return getattr(exchange, "value", str(exchange))
 
 
+def _iso(value) -> str | None:
+    """Return an ISO-8601 string for a datetime, or None."""
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
 class ToolRegistry:
     """
     Registry + executor for the agent's available tools.
@@ -153,6 +161,7 @@ class ToolRegistry:
         self._code_agent = code_agent or FinancialCodeAgent(settings)
 
         self._valuation = ValuationEngine()
+        self._assumptions = get_financial_assumptions(settings)
 
         self._handlers: dict[str, Handler] = {
             "get_company": self._get_company,
@@ -224,7 +233,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _get_company(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         data = self._company.get_company(ticker)
 
@@ -247,7 +256,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _get_market_data(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         market = self._market.get_market_data(ticker)
 
@@ -259,6 +268,7 @@ class ToolRegistry:
                 "ticker": market.ticker.upper(),
                 "exchange": _exchange_value(market.exchange),
                 "current_price": market.current_price,
+                "price_available": market.current_price is not None,
                 "currency": market.currency,
                 "market_cap": market.market_cap,
                 "volume": market.volume,
@@ -268,6 +278,10 @@ class ToolRegistry:
                 "dividend_yield": market.dividend_yield,
                 "week_52_high": market.week_52_high,
                 "week_52_low": market.week_52_low,
+                "provider": market.provider,
+                "as_of": _iso(market.provider_time),
+                "cached": market.cached,
+                "stale": market.stale,
             },
         )
 
@@ -276,7 +290,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _get_financials(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         data = self._financials.load(ticker)
 
@@ -292,6 +306,7 @@ class ToolRegistry:
                 "market_cap": data.market_cap,
                 "description": data.description,
                 "current_price": data.current_price,
+                "price_available": data.current_price is not None,
                 "growth_rate": data.growth_rate,
                 "beta": data.beta,
                 "tax_rate": data.tax_rate,
@@ -307,7 +322,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _calculate_ratios(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         data = self._financials.load(ticker)
 
@@ -332,32 +347,36 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _calculate_valuation(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         data = self._financials.load(ticker)
+        assumptions = self._assumptions
 
         result = self._valuation.evaluate(
             statement=data.statement,
-            current_price=data.current_price or 1.0,
+            current_price=data.current_price or 0.0,
             growth_rate=data.growth_rate,
-            risk_free_rate=_RISK_FREE_RATE,
+            risk_free_rate=assumptions.risk_free_rate,
             beta=data.beta or 1.0,
-            market_return=_MARKET_RETURN,
+            market_return=assumptions.market_return,
             tax_rate=data.tax_rate,
+            cost_of_debt=assumptions.cost_of_debt,
+            terminal_growth=assumptions.terminal_growth,
+            years=assumptions.projection_years,
         )
 
         equity = data.statement.total_assets - data.statement.total_liabilities
         cost_of_equity = WACC.cost_of_equity(
-            risk_free_rate=_RISK_FREE_RATE,
+            risk_free_rate=assumptions.risk_free_rate,
             beta=data.beta or 1.0,
-            market_return=_MARKET_RETURN,
+            market_return=assumptions.market_return,
         )
         try:
             discount_rate = WACC.calculate(
                 equity=equity,
                 debt=data.statement.debt,
                 cost_of_equity=cost_of_equity,
-                cost_of_debt=_COST_OF_DEBT,
+                cost_of_debt=assumptions.cost_of_debt,
                 tax_rate=data.tax_rate,
             )
         except ValueError:
@@ -369,11 +388,25 @@ class ToolRegistry:
             detail=f"Ran DCF valuation for {ticker}",
             result={
                 "ticker": ticker,
-                "current_price": data.current_price or 0.0,
+                "current_price": data.current_price,
+                "price_available": data.current_price is not None,
                 "intrinsic_value": result.intrinsic_value,
                 "upside": result.upside,
                 "recommendation": result.recommendation,
                 "discount_rate": discount_rate,
+                "assumptions": {
+                    "risk_free_rate": assumptions.risk_free_rate,
+                    "market_return": assumptions.market_return,
+                    "cost_of_debt": assumptions.cost_of_debt,
+                    "terminal_growth": assumptions.terminal_growth,
+                    "projection_years": assumptions.projection_years,
+                    "equity_risk_premium": assumptions.equity_risk_premium,
+                    "source": assumptions.source,
+                    "as_of": assumptions.as_of.isoformat()
+                    if assumptions.as_of
+                    else None,
+                    "is_assumption": assumptions.is_assumption,
+                },
             },
         )
 
@@ -382,7 +415,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _calculate_financial_health(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         data = self._financials.load(ticker)
 
@@ -411,7 +444,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _calculate_risk(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
 
         data = self._financials.load(ticker)
 
@@ -452,7 +485,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _compare_companies(self, args: dict[str, Any]) -> ToolResult:
-        tickers = [str(t).upper() for t in args["tickers"]]
+        tickers = [normalize_ticker(str(t)) for t in args["tickers"]]
 
         result = self._compare.compare_tickers(tickers)
 
@@ -482,7 +515,7 @@ class ToolRegistry:
 
     def _search_documents(self, args: dict[str, Any], owner_id: str | None = None) -> ToolResult:
         query = str(args["query"])
-        ticker = str(args["ticker"]).upper() if args.get("ticker") else None
+        ticker = normalize_ticker(str(args["ticker"])) if args.get("ticker") else None
         document_id = args.get("document_id")
         limit = int(args.get("limit") or DEFAULT_RETRIEVAL_LIMIT)
 
@@ -551,7 +584,7 @@ class ToolRegistry:
     # ──────────────────────────────────────────────────────────────────
 
     def _generate_report(self, args: dict[str, Any]) -> ToolResult:
-        ticker = str(args["ticker"]).upper()
+        ticker = normalize_ticker(str(args["ticker"]))
         query = str(args.get("query") or "")
 
         report = self._report.generate_ticker_report(ticker, query)
@@ -585,7 +618,7 @@ class ToolRegistry:
         """
         question = str(args["question"])
 
-        ticker = str(args["ticker"]).upper() if args.get("ticker") else None
+        ticker = normalize_ticker(str(args["ticker"])) if args.get("ticker") else None
 
         explicit = args.get("context") or {}
         if not isinstance(explicit, dict):
@@ -604,9 +637,9 @@ class ToolRegistry:
                 "beta": data.beta,
                 "tax_rate": data.tax_rate,
                 "growth_rate": data.growth_rate,
-                "risk_free_rate": _RISK_FREE_RATE,
-                "market_return": _MARKET_RETURN,
-                "cost_of_debt": _COST_OF_DEBT,
+                "risk_free_rate": self._assumptions.risk_free_rate,
+                "market_return": self._assumptions.market_return,
+                "cost_of_debt": self._assumptions.cost_of_debt,
             })
             context.update(_statement_payload(data))
 

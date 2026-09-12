@@ -21,6 +21,10 @@ from __future__ import annotations
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
+from app.financial.assumptions import (
+    FinancialAssumptions,
+    get_financial_assumptions,
+)
 from app.financial.data import FinancialDataService
 from app.financial.health import FinancialHealth
 from app.financial.models import FinancialStatement
@@ -34,11 +38,21 @@ from app.schemas.responses import (
     MarketDataResponse,
     ValuationResultData,
 )
+from app.utils.tickers import normalize_ticker
+
+# Lazy import for demo financial data service
+_demo_financial_data_service = None
+
+
+def _get_demo_financial_data_service():
+    global _demo_financial_data_service
+    if _demo_financial_data_service is None:
+        from app.demo.services.demo_financial_data import DemoFinancialDataService
+
+        _demo_financial_data_service = DemoFinancialDataService()
+    return _demo_financial_data_service
 
 logger = get_logger(__name__)
-
-_RISK_FREE_RATE = 0.0425
-_MARKET_RETURN = 0.10
 
 
 class AnalysisService:
@@ -61,7 +75,12 @@ class AnalysisService:
         self._settings = settings
         self._pipeline: FinancialPipeline | None = None
         self._engine = FinancialAnalysisEngine()
-        self._financial_data = FinancialDataService()
+        # Use demo financial data service in demo mode
+        if settings.is_demo_mode:
+            self._financial_data = _get_demo_financial_data_service()
+        else:
+            self._financial_data = FinancialDataService()
+        self._assumptions = get_financial_assumptions(settings)
 
     def _get_pipeline(self) -> FinancialPipeline:
         """
@@ -100,8 +119,14 @@ class AnalysisService:
 
         Raises:
             RetrievalError: If the data provider cannot supply the data.
+
+        Note:
+            The analysis uses the configured FinancialAssumptions for
+            risk-free rate, market return, tax rate, cost of debt, terminal
+            growth and projection years. These are documented assumptions,
+            not live market data.
         """
-        ticker = ticker.upper()
+        ticker = normalize_ticker(ticker)
 
         data = self._financial_data.load(ticker)
         statement = data.statement
@@ -121,12 +146,15 @@ class AnalysisService:
                 free_cash_flow=statement.free_cash_flow,
             ),
             valuation=ValuationParams(
-                current_price=data.current_price or 1.0,
+                current_price=data.current_price,
                 growth_rate=data.growth_rate,
-                risk_free_rate=_RISK_FREE_RATE,
+                risk_free_rate=self._assumptions.risk_free_rate,
                 beta=data.beta or 1.0,
-                market_return=_MARKET_RETURN,
+                market_return=self._assumptions.market_return,
                 tax_rate=data.tax_rate,
+                cost_of_debt=self._assumptions.cost_of_debt,
+                terminal_growth=self._assumptions.terminal_growth,
+                years=self._assumptions.projection_years,
             ),
             piotroski_score=data.piotroski_score,
             altman_score=data.altman_score,
@@ -205,7 +233,7 @@ class AnalysisService:
                 equity=equity,
                 debt=statement.debt,
                 cost_of_equity=cost_of_equity,
-                cost_of_debt=0.05,
+                cost_of_debt=request.valuation.cost_of_debt,
                 tax_rate=request.valuation.tax_rate,
             )
         except ValueError:
@@ -234,7 +262,8 @@ class AnalysisService:
             market=MarketDataResponse(
                 ticker=getattr(market, "ticker", request.ticker),
                 exchange=self._as_value(getattr(market, "exchange", None)),
-                current_price=getattr(market, "current_price", 0.0) or 0.0,
+                current_price=getattr(market, "current_price", None),
+                price_available=getattr(market, "current_price", None) is not None,
                 currency=getattr(market, "currency", "USD") or "USD",
                 market_cap=getattr(market, "market_cap", None),
                 volume=getattr(market, "volume", None),
@@ -260,8 +289,13 @@ class AnalysisService:
                 intrinsic_value=getattr(analysis, "intrinsic_value", 0.0),
                 upside=getattr(analysis, "upside", 0.0),
                 recommendation=getattr(analysis, "recommendation", "HOLD"),
-                current_price=getattr(market, "current_price", 0.0) or 0.0,
+                current_price=getattr(market, "current_price", None),
                 discount_rate=discount_rate,
+                assumptions_source="request",
+                assumptions_as_of=self._assumptions.as_of,
+                risk_free_rate=request.valuation.risk_free_rate,
+                market_return=request.valuation.market_return,
+                cost_of_debt=request.valuation.cost_of_debt,
             ),
             health=HealthScoreData(
                 score=health_score,

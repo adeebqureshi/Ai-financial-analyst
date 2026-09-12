@@ -207,7 +207,46 @@ source .venv/bin/activate  # Linux/macOS
 pip install -e ".[dev]"
 ```
 
-### Configuration
+### Demo Mode (No API Keys Required)
+
+**For quick evaluation without external credentials**, enable **Demo Mode**:
+
+```bash
+# Enable demo mode
+echo "DEMO_MODE=true" > .env
+
+# Start the application
+uvicorn app.main:app --reload
+```
+
+Demo mode provides deterministic synthetic data for **5 companies** (AAPL, MSFT, GOOGL, AMZN, TSLA) with:
+- Company profiles and market quotes
+- Financial statements (income, balance sheet, cash flow)
+- Key ratios, valuation inputs, and risk scores (Piotroski, Altman, Beneish)
+- SEC filing metadata and synthetic filing text for RAG/search
+- In-memory vector store (no Qdrant required)
+
+All demo values are clearly labeled **[DEMO / SYNTHETIC DATA]** in the UI.
+No external API keys, SEC access, or Qdrant instance needed.
+
+**Examiner Quick Start:**
+```bash
+# 1. Enable demo mode
+echo "DEMO_MODE=true" > .env
+
+# 2. Start backend
+uvicorn app.main:app --reload
+
+# 3. Start frontend (in separate terminal)
+cd frontend && npm run dev
+
+# 4. Open http://localhost:3000
+# 5. Navigate to Analysis → Select AAPL (or MSFT, GOOGL, AMZN, TSLA)
+# 6. View financial analysis, valuation, risk, recommendation
+# 7. Use Search/Chat to query demo filing content
+```
+
+### Configuration (Production Mode)
 
 1. Copy the example environment file:
    ```bash
@@ -223,7 +262,7 @@ pip install -e ".[dev]"
    LOG_LEVEL=INFO
    ```
 
-### Running the Application
+### Running the Application (Production Mode)
 
 ```bash
 # Development mode (with auto-reload)
@@ -237,6 +276,7 @@ The API will be available at `http://localhost:8000`.
 
 - **Health check**: `GET /health`
 - **API docs**: `http://localhost:8000/docs` (Swagger UI)
+- **Version info**: `GET /version` (shows `demo_mode` status)
 
 ### Running Tests
 
@@ -324,6 +364,102 @@ Pydantic Settings provides type validation, default values, `.env` file support,
 
 `SecretStr` prevents accidental logging or serialization of sensitive values. The key is only exposed via the explicit `get_secret_value()` method or the `*_str` helper properties.
 
+## Demo Mode Documentation
+
+### Overview
+
+Demo Mode provides a **fully self-contained demonstration path** for evaluators. When enabled, the application uses deterministic local fixtures instead of external APIs, allowing immediate demonstration of all major financial-analysis workflows without credentials.
+
+### Enabling Demo Mode
+
+```bash
+# Option 1: Environment variable
+export DEMO_MODE=true
+
+# Option 2: .env file (persistent)
+echo "DEMO_MODE=true" > .env
+```
+
+Then start the application normally:
+```bash
+uvicorn app.main:app --reload
+```
+
+### Demo Companies
+
+| Ticker | Company | Sector | Key Characteristics |
+|--------|---------|--------|---------------------|
+| **AAPL** | Apple Inc. | Technology | High margin, strong cash flow, mature growth |
+| **MSFT** | Microsoft Corp. | Technology | Cloud leader, recurring revenue, low debt |
+| **GOOGL** | Alphabet Inc. | Technology | Advertising dominant, cloud growing, cash rich |
+| **AMZN** | Amazon.com Inc. | Consumer Cyclical | High revenue, thin retail margins, AWS profit engine |
+| **TSLA** | Tesla Inc. | Consumer Cyclical | High growth, volatile, capital intensive |
+
+### Functionality Demonstrated
+
+| Workflow | Demo Support | Notes |
+|----------|-------------|-------|
+| Company Profile | ✅ | Name, sector, industry, market cap, description |
+| Market Quotes | ✅ | Price, volume, beta, P/E, 52-week range |
+| Financial Statements | ✅ | Income, Balance Sheet, Cash Flow (in $M) |
+| Key Ratios | ✅ | Profitability, liquidity, leverage, efficiency |
+| Valuation (DCF) | ✅ | Intrinsic value, upside, recommendation |
+| Risk Analysis | ✅ | Piotroski F-Score, Altman Z-Score, Beneish M-Score |
+| Financial Health | ✅ | Composite score with rating (STRONG/GOOD/WEAK) |
+| Investment Recommendation | ✅ | BUY/HOLD/SELL with confidence |
+| SEC Filings | ✅ | 10-K/10-Q metadata, accession numbers |
+| RAG / Document Search | ✅ | Query synthetic filing sections |
+| Chat / Q&A | ✅ | Ask questions about demo filings |
+
+### Determinism Guarantees
+
+- **Fixed values**: All prices, financials, and scores are static
+- **No network calls**: Zero external dependencies in demo mode
+- **Stable results**: Identical queries produce identical responses
+- **No timestamps**: Demo data uses fixed dates (2024-12-31)
+
+### Data Labeling
+
+All demo data is explicitly labeled:
+- Company names: `Apple Inc. [DEMO / SYNTHETIC DATA]`
+- Filing text chunks: `[DEMO / SYNTHETIC DATA] Apple Inc. 2024 Form 10-K...`
+- UI badges: **"DEMO MODE"** indicator in status bar, **"Synthetic Data"** badges
+- Version endpoint: `GET /version` returns `"demo_mode": true`
+
+### Switching Back to Production Mode
+
+```bash
+# Disable demo mode
+echo "DEMO_MODE=false" > .env
+
+# Or remove the line from .env (defaults to false)
+# Then configure real API keys per Configuration section above
+```
+
+### Technical Implementation
+
+Demo mode is implemented via **existing provider abstractions**:
+- `DemoMarketProvider` → implements `MarketDataProvider` interface
+- `DemoFinancialDataService` → replaces `FinancialDataService` 
+- `DemoSECService` → replaces `SECService`
+- `MemoryVectorStore` → replaces `QdrantStore` (pre-populated with demo embeddings)
+
+**No scattered `if demo_mode` conditionals** — services auto-select implementations via Settings.
+
+### Examiner Checklist
+
+- [ ] `DEMO_MODE=true` in `.env`
+- [ ] Backend starts: `uvicorn app.main:app --reload`
+- [ ] Frontend starts: `cd frontend && npm run dev`
+- [ ] Version endpoint shows `"demo_mode": true`
+- [ ] Status bar shows **"DEMO MODE"** amber badge
+- [ ] Analysis page for AAPL loads with synthetic data badges
+- [ ] Valuation shows intrinsic value & recommendation
+- [ ] Risk page shows Piotroski/Altman/Beneish scores
+- [ ] Search/Chat returns results from demo filings
+- [ ] No external API keys configured
+- [ ] No Qdrant/Redis required
+
 ## License
 
-See [LICENSE](LICENSE) for details.# Ai-financial-analyst
+See [LICENSE](LICENSE) for details.

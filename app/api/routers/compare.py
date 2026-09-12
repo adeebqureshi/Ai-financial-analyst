@@ -19,6 +19,7 @@ from app.api.dependencies.services import get_compare_service
 from app.schemas.base import APIResponse
 from app.schemas.responses import CompareResponseData
 from app.services.compare_service import CompareService
+from app.utils.tickers import normalize_ticker
 
 router = APIRouter(prefix="/compare", tags=["Compare"])
 
@@ -45,9 +46,7 @@ class CompareTickersRequest(BaseModel):
         seen: set[str] = set()
         result: list[str] = []
         for raw in v:
-            ticker = raw.strip().upper()
-            if not (1 <= len(ticker) <= 5) or not ticker.isalpha():
-                raise ValueError("Ticker must be 1-5 uppercase letters (e.g., 'AAPL').")
+            ticker = normalize_ticker(raw)
             if ticker not in seen:
                 seen.add(ticker)
                 result.append(ticker)

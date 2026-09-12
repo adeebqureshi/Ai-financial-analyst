@@ -122,7 +122,7 @@ class _FakeCoordinator:
     def __init__(self) -> None:
         self.calls = []
 
-    def hydrate_context(self, session_id, tickers, query, answer) -> None:
+    def hydrate_context(self, session_id, tickers, query, answer, *, owner_id=None) -> None:
         return None
 
     def run(self, **kwargs) -> WorkflowResult:

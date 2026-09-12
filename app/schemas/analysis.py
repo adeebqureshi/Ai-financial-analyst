@@ -26,6 +26,8 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.utils.tickers import normalize_ticker
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Shared Validators
 # ──────────────────────────────────────────────────────────────────────────────
@@ -33,21 +35,19 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 def _validate_ticker(value: str) -> str:
     """
-    Validate that a ticker symbol is 1-5 uppercase letters.
+    Validate and normalize a ticker symbol via the canonical validator.
 
     Args:
         value: The ticker symbol to validate.
 
     Returns:
-        The normalized ticker symbol.
+        The normalized uppercase ticker symbol.
 
     Raises:
-        ValueError: If the ticker does not match ``^[A-Z]{1,5}$``.
+        ValueError: If the ticker is empty, too long, or contains characters
+            outside the supported provider character set.
     """
-    ticker = value.strip().upper()
-    if not (1 <= len(ticker) <= 5) or not ticker.isalpha():
-        raise ValueError("Ticker must be 1-5 uppercase letters (e.g., 'AAPL').")
-    return ticker
+    return normalize_ticker(value)
 
 
 def _validate_positive(value: float, field_name: str) -> float:
@@ -207,16 +207,21 @@ class ValuationParams(BaseModel):
         },
     )
 
-    current_price: float = Field(..., gt=0, description="Current market price per share ($).")
+    current_price: float | None = Field(
+        default=None,
+        ge=0,
+        description="Current market price per share ($). Null/0 if unavailable.",
+    )
     growth_rate: float = Field(..., description="FCF growth rate (0.0-1.0).")
     risk_free_rate: float = Field(..., description="Risk-free rate (0.0-1.0).")
     beta: float = Field(..., ge=0, description="Stock beta.")
     market_return: float = Field(..., description="Expected market return (0.0-1.0).")
     tax_rate: float = Field(..., description="Effective tax rate (0.0-1.0).")
+    cost_of_debt: float = Field(default=0.05, ge=0, le=1, description="Pre-tax cost of debt (0.0-1.0).")
     terminal_growth: float = Field(default=0.03, ge=0, le=1, description="Terminal growth rate (0.0-1.0).")
     years: int = Field(default=5, ge=1, le=30, description="Number of projection years.")
 
-    @field_validator("growth_rate", "risk_free_rate", "market_return", "tax_rate")
+    @field_validator("growth_rate", "risk_free_rate", "market_return", "tax_rate", "cost_of_debt")
     @classmethod
     def validate_rates(cls, v: float) -> float:
         """Ensure all rates are within [0.0, 1.0]."""
