@@ -536,6 +536,10 @@ class Settings(BaseSettings):
         if self.environment == Environment.TEST:
             return
 
+        # Demo mode uses synthetic data and does not require external API keys.
+        if self.is_demo_mode:
+            return
+
         missing: list[str] = []
 
         if not self.openai_api_key_str:

@@ -281,6 +281,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings.debug,
         )
 
+        # Validate required configuration (API keys, etc.) before starting.
+        # This fails fast if critical configuration is missing.
+        settings.validate_required_keys()
+
         _run_startup_infrastructure_checks(settings, app_logger)
         _run_database_migrations(settings, app_logger)
         _run_chat_retention_cleanup(settings, app_logger)

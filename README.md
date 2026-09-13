@@ -278,6 +278,68 @@ The API will be available at `http://localhost:8000`.
 - **API docs**: `http://localhost:8000/docs` (Swagger UI)
 - **Version info**: `GET /version` (shows `demo_mode` status)
 
+### Docker Production Deployment
+
+For production deployments, use Docker Compose with the provided configuration:
+
+1. **Prepare environment configuration**:
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env with your production values (required for production):
+   # - CORS_ORIGINS: Comma-separated list of allowed frontend origins (e.g., https://app.example.com)
+   # - OPENAI_API_KEY: Your OpenAI API key
+   # - FMP_API_KEY: Your Financial Modeling Prep API key
+   # - AUTH_SECRET_KEY: Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+   # - ENVIRONMENT=production (already set in docker-compose.yml)
+   ```
+
+2. **Start the production stack**:
+   ```bash
+   # From the project root
+   docker compose -f docker/docker-compose.yml up -d
+   ```
+
+3. **Verify deployment**:
+   ```bash
+   # Check service health
+   docker compose -f docker/docker-compose.yml ps
+   
+   # View logs
+   docker compose -f docker/docker-compose.yml logs -f app
+   
+   # Health check endpoint
+   curl http://localhost:8000/health
+   ```
+
+**Required environment variables for production** (set in `.env`):
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `CORS_ORIGINS` | Comma-separated allowed frontend origins (e.g., `https://app.example.com,https://www.example.com`) | Yes |
+| `OPENAI_API_KEY` | OpenAI API key for LLM and embeddings | Yes |
+| `FMP_API_KEY` | Financial Modeling Prep API key for market data fallback | Yes |
+| `AUTH_SECRET_KEY` | JWT signing secret (generate with `python -c "import secrets; print(secrets.token_hex(32))"`) | Yes |
+| `ENVIRONMENT` | Set to `production` (configured in docker-compose.yml) | Yes |
+
+**Optional but recommended for production**:
+| Variable | Description |
+|----------|-------------|
+| `SEC_API_KEY` | SEC EDGAR API key for filing enrichment |
+| `LLAMA_PARSE_API_KEY` | LlamaParse API key for advanced PDF parsing |
+| `LOG_LEVEL` | Set to `INFO` or `WARNING` for production |
+
+**Demo Mode with Docker** (no API keys required):
+```bash
+# Enable demo mode in .env
+echo "DEMO_MODE=true" >> .env
+
+# Start with Docker Compose
+docker compose -f docker/docker-compose.yml up -d
+```
+
+In demo mode, the application uses synthetic data for 5 companies (AAPL, MSFT, GOOGL, AMZN, TSLA) and does not require any external API keys. All demo values are clearly labeled **[DEMO / SYNTHETIC DATA]**.
+
 ### Running Tests
 
 ```bash
