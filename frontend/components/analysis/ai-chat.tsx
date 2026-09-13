@@ -95,7 +95,7 @@ export function AIChat({ ticker }: Props) {
   }
 
   return (
-    <section className="rounded-[36px] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+    <section data-testid="ai-chat" className="rounded-[36px] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
 
       <div className="flex items-center justify-between border-b border-white/10 p-6">
 

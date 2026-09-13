@@ -70,7 +70,7 @@ export function FinancialHealth({
       : "High";
 
   return (
-    <section>
+    <section data-testid="financial-health">
 
       <div className="mb-8">
 

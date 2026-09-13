@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
+process.env.API_URL = "http://127.0.0.1:8000";
+
 Object.defineProperty(global, "fetch", {
   writable: true,
   value: vi.fn(),

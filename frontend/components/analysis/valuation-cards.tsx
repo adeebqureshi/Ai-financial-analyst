@@ -73,8 +73,7 @@ export function ValuationCards({
     intrinsicValue - currentPrice;
 
   return (
-
-    <section>
+    <section data-testid="valuation-cards">
 
       <div className="mb-8">
 

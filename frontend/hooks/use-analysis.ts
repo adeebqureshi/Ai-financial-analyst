@@ -19,6 +19,7 @@ export function useAnalysis(ticker?: string) {
     queryFn: () =>
       api.analyze(ticker as string),
     enabled: Boolean(ticker),
+    retry: false,
   });
 
   const mutation = useMutation({

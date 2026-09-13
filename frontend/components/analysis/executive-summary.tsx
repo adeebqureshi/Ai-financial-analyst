@@ -27,7 +27,7 @@ export function ExecutiveSummary({
   const positive = upside > 0;
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
+    <section data-testid="executive-summary" className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
 
       <div className="flex items-center gap-3">
         <Sparkles className="text-blue-400" size={20} />

@@ -4,7 +4,7 @@ import { ApiError, api } from "@/services/api";
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "/api/backend";
 
 describe("services/api.ts", () => {
   beforeEach(() => {

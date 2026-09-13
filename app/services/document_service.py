@@ -669,7 +669,7 @@ class DocumentService:
         except Exception as exc:
             logger.warning("Failed to refresh retrieval engine: %s", exc)
 
-def retrieve(
+    def retrieve(
         self,
         query: str,
         limit: int = 5,

@@ -4,12 +4,14 @@ import { cn } from "@/lib/utils";
 
 export function Skeleton({
   className,
+  animate = true,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { animate?: boolean }) {
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-white/10",
+        animate ? "animate-pulse" : "",
+        "rounded-md bg-white/10",
         className
       )}
       {...props}
@@ -19,11 +21,12 @@ export function Skeleton({
 
 export function SkeletonWrapper({
   className,
+  animate = true,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { animate?: boolean }) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-white/10", className)}
+      className={cn(animate ? "animate-pulse" : "", "rounded-md bg-white/10", className)}
       {...props}
     />
   );
@@ -31,8 +34,9 @@ export function SkeletonWrapper({
 
 export function SkeletonCard({
   className,
+  animate = true,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { animate?: boolean }) {
   return (
     <div
       data-testid="skeleton-card"
@@ -42,12 +46,12 @@ export function SkeletonCard({
       )}
       {...props}
     >
-      <Skeleton className="h-6 w-1/4 rounded" />
-      <Skeleton className="h-8 w-1/2 rounded" />
+      <Skeleton animate={animate} className="h-6 w-1/4 rounded" />
+      <Skeleton animate={animate} className="h-8 w-1/2 rounded" />
       <div className="space-y-3">
-        <Skeleton className="h-4 w-full rounded" />
-        <Skeleton className="h-4 w-3/4 rounded" />
-        <Skeleton className="h-4 w-1/2 rounded" />
+        <Skeleton animate={animate} className="h-4 w-full rounded" />
+        <Skeleton animate={animate} className="h-4 w-3/4 rounded" />
+        <Skeleton animate={animate} className="h-4 w-1/2 rounded" />
       </div>
     </div>
   );
@@ -55,8 +59,9 @@ export function SkeletonCard({
 
 export function SkeletonMetricCard({
   className,
+  animate = true,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { animate?: boolean }) {
   return (
     <div
       className={cn(
@@ -66,13 +71,13 @@ export function SkeletonMetricCard({
       {...props}
     >
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-32 rounded" />
-        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton animate={animate} className="h-4 w-32 rounded" />
+        <Skeleton animate={animate} className="h-10 w-10 rounded-full" />
       </div>
-      <Skeleton className="h-12 w-24 rounded" />
+      <Skeleton animate={animate} className="h-12 w-24 rounded" />
       <div className="flex items-center gap-2">
-        <Skeleton className="h-4 w-20 rounded-full" />
-        <Skeleton className="h-4 w-16 rounded" />
+        <Skeleton animate={animate} className="h-4 w-20 rounded-full" />
+        <Skeleton animate={animate} className="h-4 w-16 rounded" />
       </div>
     </div>
   );
@@ -82,10 +87,12 @@ export function SkeletonTable({
   rows = 5,
   cols = 4,
   className,
+  animate = true,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   rows?: number;
   cols?: number;
+  animate?: boolean;
 }) {
   return (
     <div
@@ -100,7 +107,7 @@ export function SkeletonTable({
           <tr className="border-b border-white/10">
             {Array.from({ length: cols }).map((_, i) => (
               <th key={i} className="p-6 text-left">
-                <Skeleton className="h-4 w-20 rounded" />
+                <Skeleton animate={animate} className="h-4 w-20 rounded" />
               </th>
             ))}
           </tr>
@@ -110,7 +117,7 @@ export function SkeletonTable({
             <tr key={rowIndex} className="border-b border-white/5">
               {Array.from({ length: cols }).map((_, colIndex) => (
                 <td key={colIndex} className="p-6 text-center">
-                  <Skeleton className="h-6 w-24 mx-auto rounded" />
+                  <Skeleton animate={animate} className="h-6 w-24 mx-auto rounded" />
                 </td>
               ))}
             </tr>
@@ -124,9 +131,11 @@ export function SkeletonTable({
 export function SkeletonChart({
   className,
   height = "400px",
+  animate = true,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   height?: string;
+  animate?: boolean;
 }) {
   return (
     <div
@@ -138,12 +147,12 @@ export function SkeletonChart({
       {...props}
     >
       <div className="mb-8">
-        <Skeleton className="h-4 w-32 rounded mb-2" />
-        <Skeleton className="h-8 w-48 rounded" />
+        <Skeleton animate={animate} className="h-4 w-32 rounded mb-2" />
+        <Skeleton animate={animate} className="h-8 w-48 rounded" />
       </div>
       <div className="h-[400px]" style={{ height }}>
         <div className="h-full flex items-center justify-center">
-          <Skeleton className="w-full h-full max-w-md rounded-lg" />
+          <Skeleton animate={animate} className="w-full h-full max-w-md rounded-lg" />
         </div>
       </div>
     </div>
@@ -153,9 +162,11 @@ export function SkeletonChart({
 export function SkeletonText({
   lines = 3,
   className,
+  animate = true,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   lines?: number;
+  animate?: boolean;
 }) {
   return (
     <div
@@ -165,6 +176,7 @@ export function SkeletonText({
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton
           key={i}
+          animate={animate}
           className={`h-4 rounded ${
             i === lines - 1 ? "w-3/4" : "w-full"
           }`}
@@ -177,9 +189,11 @@ export function SkeletonText({
 export function SkeletonList({
   items = 5,
   className,
+  animate = true,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   items?: number;
+  animate?: boolean;
 }) {
   return (
     <div
@@ -193,13 +207,13 @@ export function SkeletonList({
           className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4"
         >
           <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton animate={animate} className="h-10 w-10 rounded-full" />
             <div>
-              <Skeleton className="h-5 w-24 rounded mb-1" />
-              <Skeleton className="h-4 w-32 rounded" />
+              <Skeleton animate={animate} className="h-5 w-24 rounded mb-1" />
+              <Skeleton animate={animate} className="h-4 w-32 rounded" />
             </div>
           </div>
-          <Skeleton className="h-6 w-20 rounded" />
+          <Skeleton animate={animate} className="h-6 w-20 rounded" />
         </div>
       ))}
     </div>
@@ -211,15 +225,15 @@ export function SkeletonAnalysisView({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-testid="skeleton-analysis-view" className={cn("space-y-10", className)} {...props}>
-      <SkeletonCard className="max-w-4xl" />
-      <SkeletonCard className="max-w-4xl" />
-      <SkeletonChart />
-      <SkeletonCard />
-      <SkeletonCard />
-      <SkeletonCard />
-      <SkeletonChart height="500px" />
-      <SkeletonCard />
+    <div data-testid="skeleton-analysis-view" className={cn("animate-pulse space-y-10", className)} {...props}>
+      <SkeletonCard animate={false} className="max-w-4xl" />
+      <SkeletonCard animate={false} className="max-w-4xl" />
+      <SkeletonChart animate={false} />
+      <SkeletonCard animate={false} />
+      <SkeletonCard animate={false} />
+      <SkeletonCard animate={false} />
+      <SkeletonChart animate={false} height="500px" />
+      <SkeletonCard animate={false} />
     </div>
   );
 }

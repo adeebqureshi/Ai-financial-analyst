@@ -187,6 +187,29 @@ class PlannerAgent:
     ) -> None:
         intent_names = {intent.value for intent in plan.intents}
 
+        # A pure financial-health question must only run the tools needed to
+        # assess health (financials + ratios + health score). It must not
+        # speculatively run valuation (DCF) or pull live market data, nor fetch
+        # a company profile. This is disabled when the question also expresses a
+        # valuation/risk/comparison/portfolio/report/document intent.
+        text = f" {query.lower()} "
+
+        health_only = (
+            AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
+            and not any(
+                name in intent_names
+                for name in (
+                    AgentIntent.VALUATION.value,
+                    AgentIntent.RISK_ANALYSIS.value,
+                    AgentIntent.COMPARISON.value,
+                    AgentIntent.PORTFOLIO_ANALYSIS.value,
+                    AgentIntent.REPORT_GENERATION.value,
+                    AgentIntent.DOCUMENT_RESEARCH.value,
+                )
+            )
+            and _is_health_only_question(text)
+        )
+
         tools: list[ToolCall] = []
         seen: set[tuple[str, str]] = set()
 
@@ -234,7 +257,7 @@ class PlannerAgent:
             return
 
         # ── Company profile ───────────────────────────────────────────
-        if any(
+        if not health_only and any(
             name in intent_names
             for name in (
                 AgentIntent.FINANCIAL_ANALYSIS.value,
@@ -272,7 +295,7 @@ class PlannerAgent:
                 )
 
         # ── Market data (live snapshot for analysis/valuation) ────────
-        if any(
+        if not health_only and any(
             name in intent_names
             for name in (
                 AgentIntent.VALUATION.value,
@@ -303,10 +326,13 @@ class PlannerAgent:
 
         # ── Valuation (DCF) ───────────────────────────────────────────
         if (
-            AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
-            or AgentIntent.VALUATION.value in intent_names
-            or AgentIntent.COMPARISON.value in intent_names
-            or AgentIntent.REPORT_GENERATION.value in intent_names
+            not health_only
+            and (
+                AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
+                or AgentIntent.VALUATION.value in intent_names
+                or AgentIntent.COMPARISON.value in intent_names
+                or AgentIntent.REPORT_GENERATION.value in intent_names
+            )
         ):
             for ticker in plan.tickers:
                 add(
@@ -418,5 +444,36 @@ class PlannerAgent:
 
         return reasons
 
+_HEALTH_PHRASE_KEYWORDS = (
+    "financially healthy",
+    "financial health",
+    "healthy",
+    "solvency",
+    "liquidity",
+    "strong balance sheet",
+    "financial strength",
+)
+
+_ANALYSIS_ACTION_KEYWORDS = (
+    "analyze",
+    "analysis",
+    "fundamentals",
+    "profitability",
+)
+
+
+def _is_health_only_question(text: str) -> bool:
+    """
+    True when the question is specifically about financial health and is not a
+    general company analysis request (which would also need company/market data
+    and a valuation).
+    """
+    if not any(keyword in text for keyword in _HEALTH_PHRASE_KEYWORDS):
+        return False
+
+    if any(keyword in text for keyword in _ANALYSIS_ACTION_KEYWORDS):
+        return False
+
+    return True
 
 

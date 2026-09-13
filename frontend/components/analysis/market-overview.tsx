@@ -117,7 +117,7 @@ export function MarketOverview({
   statement,
 }: Props) {
   return (
-    <section>
+    <section data-testid="market-overview">
 
       <div className="mb-8">
 

@@ -129,11 +129,11 @@ export function Sidebar({ open, onClose }: Props) {
             </div>
 
             <div>
-              <h1 className="text-sm font-bold leading-tight tracking-tight text-white">
+              <div className="text-sm font-bold leading-tight tracking-tight text-white">
                 AI Financial
                 <br />
                 Research Agent
-              </h1>
+              </div>
             </div>
           </Link>
 

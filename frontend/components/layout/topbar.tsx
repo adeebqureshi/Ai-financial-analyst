@@ -6,7 +6,7 @@ import { Bell, Menu, Search, UserCircle2 } from "lucide-react";
 
 const titles: Record<string, string> = {
   "/": "Ask AI",
-  "/dashboard": "Financial Workspace",
+  "/dashboard": "",
   "/company": "Companies",
   "/analysis": "Company Analysis",
   "/compare": "Compare",
@@ -51,9 +51,11 @@ export function Topbar({ onMenu }: Props) {
         </button>
 
         <div>
-          <h2 className="text-xl font-semibold text-white">
-            {title}
-          </h2>
+          {title && (
+            <h2 className="text-xl font-semibold text-white">
+              {title}
+            </h2>
+          )}
 
           <p className="text-sm text-zinc-500">
             AI Financial Research Workspace

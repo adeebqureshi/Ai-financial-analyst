@@ -42,7 +42,7 @@ function getErrorInfo(error: unknown) {
       return {
         icon: WifiOff,
         title: "Server Error",
-        message: "Our servers are having trouble. Please try again in a moment.",
+        message: "Our servers are having trouble. Please wait a moment and retry.",
         isRetryable: true,
       };
     }

@@ -48,7 +48,7 @@ export function ChartTabs({
     useState("Revenue");
 
   return (
-    <section className="rounded-[36px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
+    <section data-testid="chart-tabs" className="rounded-[36px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
 
       <div className="flex flex-wrap gap-3">
 

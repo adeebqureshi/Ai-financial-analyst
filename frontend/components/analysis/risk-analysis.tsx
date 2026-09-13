@@ -87,7 +87,7 @@ export function RiskAnalysis({
 
   return (
 
-    <section>
+    <section data-testid="risk-analysis">
 
       <div className="mb-8">
 

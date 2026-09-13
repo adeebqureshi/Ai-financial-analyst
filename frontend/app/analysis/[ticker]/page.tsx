@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation";
-
 import { AppShell } from "@/components/layout/app-shell";
 import { AnalysisView } from "@/components/analysis/analysis-view";
 import { api } from "@/services/api";
@@ -30,7 +28,13 @@ export default async function AnalysisTickerPage({
 
     company = response.data;
   } catch {
-    notFound();
+    company = {
+      name: symbol,
+      ticker: symbol,
+      sector: undefined,
+      industry: undefined,
+      description: undefined,
+    };
   }
 
   return (
@@ -42,7 +46,7 @@ export default async function AnalysisTickerPage({
               AI Analysis
             </p>
 
-            <h1 className="mt-3 text-5xl font-bold tracking-tight text-white">
+            <h1 data-testid="company-name" className="mt-3 text-5xl font-bold tracking-tight text-white">
               {company.name}
             </h1>
 

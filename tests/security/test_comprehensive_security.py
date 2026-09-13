@@ -322,6 +322,10 @@ class TestCORSProductionBehavior:
             auth_secret_key=SecretStr("test-secret-key-0123456789abcdef0123456789abcdef"),
             auth_database_url="sqlite:///:memory:",
             environment="production",
+            # Production fails fast when CORS_ORIGINS is missing (see
+            # _get_cors_origins); provide the required explicit origin so the
+            # production credential/wildcard behaviour can be asserted.
+            cors_origins="https://app.example.com",
         )
 
         from app.main import create_app

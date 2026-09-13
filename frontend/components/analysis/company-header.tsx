@@ -49,7 +49,7 @@ export function CompanyHeader({
     : company.name;
 
   return (
-    <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-[#0B1220] via-[#090B11] to-[#05060A] p-10">
+    <section data-testid="company-header" className="relative overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-[#0B1220] via-[#090B11] to-[#05060A] p-10">
 
       <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full bg-blue-500/10 blur-[120px]" />
 

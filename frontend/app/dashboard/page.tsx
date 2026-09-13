@@ -14,7 +14,7 @@ export default function DashboardPage() {
     <AppShell>
       <section className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-widest text-zinc-500">
+          <p data-testid="financial-workspace-title" className="text-sm uppercase tracking-widest text-zinc-500">
             Financial Workspace
           </p>
 

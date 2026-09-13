@@ -1,0 +1,154 @@
+node.exe : npm notice run frontend@0.1.0 npx
+At C:\Users\ASUS\AppData\Roaming\npm\npx.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/npm/bin/npx-cli.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run frontend@0.1.0 npx:String) [], RemoteExceptio 
+   n
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run playwright test --reporter=list
+
+Running 6 tests using 6 workers
+
+  Γ£ô  6 [chromium] ΓÇ║ e2e\analysis.spec.ts:62:7 ΓÇ║ Comparison workflow ΓÇ║ renders comparison page with default tickers (3.5s)
+  Γ£ô  5 [chromium] ΓÇ║ e2e\analysis.spec.ts:54:7 ΓÇ║ Dashboard workflow ΓÇ║ displays AI search component (3.9s)
+  Γ£ÿ  4 [chromium] ΓÇ║ e2e\analysis.spec.ts:43:7 ΓÇ║ Dashboard workflow ΓÇ║ renders dashboard with metric cards (4.2s)
+  Γ£ÿ  2 [chromium] ΓÇ║ e2e\analysis.spec.ts:24:7 ΓÇ║ Analysis workflow ΓÇ║ displays loading skeleton while analysis loads (8.6s)
+  Γ£ÿ  1 [chromium] ΓÇ║ e2e\analysis.spec.ts:8:7 ΓÇ║ Analysis workflow ΓÇ║ navigates to analysis page and displays financial data (8.9s)
+  Γ£ÿ  3 [chromium] ΓÇ║ e2e\analysis.spec.ts:30:7 ΓÇ║ Analysis workflow ΓÇ║ shows error state when analysis fails (9.9s)
+
+
+  1) [chromium] ΓÇ║ e2e\analysis.spec.ts:8:7 ΓÇ║ Analysis workflow ΓÇ║ navigates to analysis page and displays financial data 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('h1')
+    Expected substring: "Apple"
+    Error: strict mode violation: locator('h1') resolved to 2 elements:
+        1) <h1 class="text-sm font-bold leading-tight tracking-tight text-white">ΓÇª</h1> aka getByRole('link', { name: 'AI Financial Research Agent' })
+        2) <h1 class="mt-3 text-5xl font-bold tracking-tight text-white">Apple Inc.</h1> aka getByRole('heading', { name: 'Apple Inc.' })
+
+    Call log:
+      - Expect "toContainText" locator('h1') with timeout 5000ms
+      - waiting for locator('h1')
+
+
+       9 |     await page.goto("/analysis/AAPL");
+      10 |
+    > 11 |     await expect(page.locator("h1")).toContainText("Apple");
+         |                                      ^
+      12 |     await expect(page.locator("text=AI Analysis")).toBeVisible();
+      13 |
+      14 |     await expect(page.locator("[data-testid='company-header']")).toBeVisible();
+        at C:\Users\ASUS\Desktop\ai-financial-analyst\frontend\e2e\analysis.spec.ts:11:38
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\analysis-Analysis-workflow-fc019-and-displays-financial-data-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\analysis-Analysis-workflow-fc019-and-displays-financial-data-chromium\error-context.md
+
+  2) [chromium] ΓÇ║ e2e\analysis.spec.ts:24:7 ΓÇ║ Analysis workflow ΓÇ║ displays loading skeleton while analysis loads 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.animate-pulse')
+    Expected: visible
+    Error: strict mode violation: locator('.animate-pulse') resolved to 36 elements:
+        1) <div class="animate-pulse bg-white/10 h-6 w-1/4 rounded"></div> aka locator('.animate-pulse').first()
+        2) <div class="animate-pulse bg-white/10 h-8 w-1/2 rounded"></div> aka locator('.animate-pulse.bg-white\\/10.h-8').first()
+        3) <div class="animate-pulse bg-white/10 h-4 w-full rounded"></div> aka locator('.animate-pulse.bg-white\\/10.h-4').first()
+        4) <div class="animate-pulse bg-white/10 h-4 w-3/4 rounded"></div> aka locator('.animate-pulse.bg-white\\/10.h-4.w-3\\/4').first()
+        5) <div class="animate-pulse bg-white/10 h-4 w-1/2 rounded"></div> aka locator('.animate-pulse.bg-white\\/10.h-4.w-1\\/2').first()
+        6) <div class="animate-pulse bg-white/10 h-6 w-1/4 rounded"></div> aka locator('div:nth-child(2) > .animate-pulse.bg-white\\/10.h-6')
+        7) <div class="animate-pulse bg-white/10 h-8 w-1/2 rounded"></div> aka locator('div:nth-child(2) > .animate-pulse.bg-white\\/10.h-8')
+        8) <div class="animate-pulse bg-white/10 h-4 w-full rounded"></div> aka locator('div:nth-child(2) > .space-y-3 > .animate-pulse.bg-white\\/10.h-4.w-full')
+        9) <div class="animate-pulse bg-white/10 h-4 w-3/4 rounded"></div> aka locator('div:nth-child(2) > .space-y-3 > .animate-pulse.bg-white\\/10.h-4.w-3\\/4')
+        10) <div class="animate-pulse bg-white/10 h-4 w-1/2 rounded"></div> aka locator('div:nth-child(2) > .space-y-3 > .animate-pulse.bg-white\\/10.h-4.w-1\\/2')
+        ...
+
+    Call log:
+      - Expect "toBeVisible" locator('.animate-pulse') with timeout 5000ms
+      - waiting for locator('.animate-pulse')
+
+
+      25 |     await page.goto("/analysis/AAPL");
+      26 |
+    > 27 |     await expect(page.locator(".animate-pulse")).toBeVisible();
+         |                                                  ^
+      28 |   });
+      29 |
+      30 |   test("shows error state when analysis fails", async ({ page }) => {
+        at C:\Users\ASUS\Desktop\ai-financial-analyst\frontend\e2e\analysis.spec.ts:27:50
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\analysis-Analysis-workflow-49c99-eleton-while-analysis-loads-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\analysis-Analysis-workflow-49c99-eleton-while-analysis-loads-chromium\error-context.md
+
+  3) [chromium] ΓÇ║ e2e\analysis.spec.ts:30:7 ΓÇ║ Analysis workflow ΓÇ║ shows error state when analysis fails 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('text=Analysis Failed')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('text=Analysis Failed') with timeout 5000ms
+      - waiting for locator('text=Analysis Failed')
+
+
+      35 |     await page.goto("/analysis/INVALID");
+      36 |
+    > 37 |     await expect(page.locator("text=Analysis Failed")).toBeVisible();
+         |                                                        ^
+      38 |     await expect(page.locator("text=Try again")).toBeVisible();
+      39 |   });
+      40 | });
+        at C:\Users\ASUS\Desktop\ai-financial-analyst\frontend\e2e\analysis.spec.ts:37:56
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\analysis-Analysis-workflow-43a54-r-state-when-analysis-fails-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\analysis-Analysis-workflow-43a54-r-state-when-analysis-fails-chromium\error-context.md
+
+  4) [chromium] ΓÇ║ e2e\analysis.spec.ts:43:7 ΓÇ║ Dashboard workflow ΓÇ║ renders dashboard with metric cards 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('text=Financial Workspace')
+    Expected: visible
+    Error: strict mode violation: locator('text=Financial Workspace') resolved to 2 elements:
+        1) <h2 class="text-xl font-semibold text-white">Financial Workspace</h2> aka getByRole('heading', { name: 'Financial Workspace' })
+        2) <p class="text-sm uppercase tracking-widest text-zinc-500">Financial Workspace</p> aka getByRole('main').getByText('Financial Workspace')
+
+    Call log:
+      - Expect "toBeVisible" locator('text=Financial Workspace') with timeout 5000ms
+      - waiting for locator('text=Financial Workspace')
+
+
+      44 |     await page.goto("/dashboard");
+      45 |
+    > 46 |     await expect(page.locator("text=Financial Workspace")).toBeVisible();
+         |                                                            ^
+      47 |     await expect(page.locator("text=Your financial data workspace")).toBeVisible();
+      48 |     await expect(page.locator("text=Portfolio Value")).toBeVisible();
+      49 |     await expect(page.locator("text=Today's Gain")).toBeVisible();
+        at C:\Users\ASUS\Desktop\ai-financial-analyst\frontend\e2e\analysis.spec.ts:46:60
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\analysis-Dashboard-workflo-f24a1-dashboard-with-metric-cards-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\analysis-Dashboard-workflo-f24a1-dashboard-with-metric-cards-chromium\error-context.md
+
+  4 failed
+    [chromium] ΓÇ║ e2e\analysis.spec.ts:8:7 ΓÇ║ Analysis workflow ΓÇ║ navigates to analysis page and displays financial data 
+    [chromium] ΓÇ║ e2e\analysis.spec.ts:24:7 ΓÇ║ Analysis workflow ΓÇ║ displays loading skeleton while analysis loads 
+    [chromium] ΓÇ║ e2e\analysis.spec.ts:30:7 ΓÇ║ Analysis workflow ΓÇ║ shows error state when analysis fails 
+    [chromium] ΓÇ║ e2e\analysis.spec.ts:43:7 ΓÇ║ Dashboard workflow ΓÇ║ renders dashboard with metric cards 
+  2 passed (12.5s)

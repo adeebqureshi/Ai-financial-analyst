@@ -71,21 +71,7 @@ vi.mock("@/components/analysis/ai-chat", () => ({
 
 import { useAnalysis } from "@/hooks/use-analysis";
 
-type UseAnalysisReturn = {
-  query: {
-    isPending: boolean;
-    isError: boolean;
-    data: unknown;
-    refetch: ReturnType<typeof vi.fn>;
-  };
-  mutate: ReturnType<typeof vi.fn>;
-  mutateAsync: ReturnType<typeof vi.fn>;
-  isPending: boolean;
-  isError: boolean;
-  isSuccess: boolean;
-  error: Error | null;
-  data: unknown;
-};
+type UseAnalysisReturn = ReturnType<typeof useAnalysis>;
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -94,9 +80,13 @@ const createWrapper = () => {
       mutations: { retry: false },
     },
   });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  function QueryProvider({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+  }
+
+  return QueryProvider;
 };
 
 const mockAnalysisData = {
@@ -151,7 +141,7 @@ describe("AnalysisView", () => {
       isSuccess: true,
       error: null,
       data: mockAnalysisData,
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
   });
 
   it("renders skeleton while loading", () => {
@@ -164,7 +154,7 @@ describe("AnalysisView", () => {
       isSuccess: false,
       error: null,
       data: undefined,
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
 
     render(<AnalysisView ticker="AAPL" />, { wrapper });
     expect(screen.getByTestId("skeleton-analysis-view")).toBeInTheDocument();
@@ -181,7 +171,7 @@ describe("AnalysisView", () => {
       isSuccess: false,
       error: mockError,
       data: undefined,
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
 
     render(<AnalysisView ticker="AAPL" />, { wrapper });
 
@@ -200,7 +190,7 @@ describe("AnalysisView", () => {
       isSuccess: true,
       error: null,
       data: { data: null },
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
 
     render(<AnalysisView ticker="AAPL" />, { wrapper });
 
@@ -242,7 +232,7 @@ describe("AnalysisView", () => {
       isSuccess: false,
       error: mockError,
       data: undefined,
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
 
     render(<AnalysisView ticker="AAPL" />, { wrapper });
 
@@ -264,7 +254,7 @@ describe("AnalysisView", () => {
       isSuccess: false,
       error: apiError,
       data: undefined,
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
 
     render(<AnalysisView ticker="AAPL" />, { wrapper });
 
@@ -284,7 +274,7 @@ describe("AnalysisView", () => {
       isSuccess: false,
       error: mockError,
       data: undefined,
-    } as UseAnalysisReturn);
+    } as unknown as UseAnalysisReturn);
 
     render(<AnalysisView ticker="AAPL" />, { wrapper });
 

@@ -43,7 +43,7 @@ describe("ErrorDisplay", () => {
     render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
     expect(screen.getByText("Server Error")).toBeInTheDocument();
-    expect(screen.getByText("Our servers are having trouble. Please try again in a moment.")).toBeInTheDocument();
+    expect(screen.getByText("Our servers are having trouble. Please wait a moment and retry.")).toBeInTheDocument();
     expect(screen.getByText("Try again")).toBeInTheDocument();
   });
 
@@ -142,7 +142,7 @@ describe("ErrorInline", () => {
     const error = new ApiError("Server Error", 500, "/api/test");
     render(<ErrorInline error={error} onRetry={mockOnRetry} />);
 
-    expect(screen.getByText("Our servers are having trouble. Please try again in a moment.")).toBeInTheDocument();
+    expect(screen.getByText("Our servers are having trouble. Please wait a moment and retry.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   });
 

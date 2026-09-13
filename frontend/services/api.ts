@@ -15,9 +15,16 @@ import type {
   SearchResultData,
 } from "@/types/analysis";
 
-const API =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://127.0.0.1:8000";
+function getApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return process.env.API_URL ?? "http://127.0.0.1:8000";
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? "/api/backend";
+}
+
+function getAPI(): string {
+  return getApiBaseUrl();
+}
 
 export class ApiError extends Error {
   constructor(
@@ -57,11 +64,10 @@ async function request<T>(
   endpoint: string,
   init?: RequestInit
 ): Promise<T> {
-  const response = await fetch(API + endpoint, {
+  const response = await fetch(getAPI() + endpoint, {
     headers: {
       "Content-Type": "application/json",
     },
-    cache: "no-store",
     ...init,
   });
 
@@ -170,7 +176,7 @@ async function requestChatStream(
   handlers: ChatStreamHandlers,
   signal?: AbortSignal
 ): Promise<void> {
-  const response = await fetch(API + "/chat/stream", {
+  const response = await fetch(getAPI() + "/chat/stream", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -353,7 +359,7 @@ export const api = {
 
     form.append("file", file);
 
-    return fetch(API + "/documents/upload", {
+    return fetch(getAPI() + "/documents/upload", {
       method: "POST",
       body: form,
     }).then(async (response) => {
