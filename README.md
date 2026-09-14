@@ -21,11 +21,12 @@ The project follows Clean Architecture principles, where dependencies flow inwar
 │             app/services/ — Orchestration                 │
 ├─────────────────────────────────────────────────────────┤
 │           Domain Layer (Entities + Business Logic)         │
-│      app/models/ — app/schemas/ — app/agents/            │
+│  app/models/ — app/schemas/ — app/agents/ — app/financial/│
 ├─────────────────────────────────────────────────────────┤
 │              Infrastructure Layer (I/O)                  │
-│  app/ingestion/ — app/parsers/ — app/retrievers/         │
-│  app/sandbox/ — app/db/ — app/evaluation/                │
+│  app/ingestion/ — app/parsers/ — app/retrieval/          │
+│  app/sandbox/ — app/infrastructure/ — app/db/            │
+│  app/llm/ — app/vectorstore/ — app/embeddings/           │
 ├─────────────────────────────────────────────────────────┤
 │                 Core Layer (Cross-cutting)                │
 │   app/core/ — config, logging, exceptions, constants     │
@@ -48,6 +49,7 @@ The project follows Clean Architecture principles, where dependencies flow inwar
 app/
 ├── __init__.py              # Package marker, version, architecture docs
 ├── main.py                  # FastAPI application factory + entry point
+├── application.py           # Application setup (lifespan, middleware, routes)
 ├── core/                    # Cross-cutting concerns (innermost layer)
 │   ├── __init__.py          # Re-exports public API of core modules
 │   ├── config.py            # Pydantic Settings configuration + singleton
@@ -55,24 +57,66 @@ app/
 │   ├── exceptions.py        # Domain-specific exception hierarchy
 │   └── constants.py         # Centralized constants (no magic numbers)
 ├── api/                     # FastAPI routers and middleware
+│   ├── dependencies/        # FastAPI dependency injection
+│   ├── middleware/          # Custom middleware (CORS, rate limiting, etc.)
+│   ├── routes/              # Route modules
+│   └── routers/             # APIRouter instances
 ├── services/                # Application use-case orchestration
 ├── models/                  # Domain entities and ORM models
 ├── schemas/                 # Pydantic request/response DTOs
 ├── db/                      # Database connection and session management
 ├── ingestion/               # Data ingestion pipelines (SEC EDGAR, FMP)
 ├── parsers/                 # Financial document parsers (XBRL, HTML)
-├── retrievers/              # Vector store retrieval components
+├── retrieval/               # Vector store retrieval components
 ├── agents/                  # LLM agent definitions and orchestration
 ├── sandbox/                 # Code execution sandbox for analysis
 ├── evaluation/              # Evaluation and benchmarking utilities
-└── utils/                   # Shared helper functions
+├── financial/               # Financial calculation engines (Piotroski, Altman, etc.)
+├── rag/                     # RAG pipeline (embeddings, reranking, hybrid search)
+├── auth/                    # Authentication & authorization
+├── chat/                    # Chat persistence & session management
+├── comparison/              # Company comparison & ranking
+├── portfolio/               # Portfolio analytics (Sharpe, CAGR, drawdown)
+├── recommendation/          # Investment recommendation engine
+├── reports/                 # Report generation (Markdown, structured)
+├── embeddings/              # Embedding models & providers
+├── enums/                   # Shared enumerations
+├── infrastructure/          # Infrastructure adapters (Redis, Postgres, health)
+├── llm/                     # LLM providers, clients, streaming
+├── orchestrator/            # Workflow orchestration (LangGraph)
+├── utils/                   # Shared helper functions
+├── vectorstore/             # Vector store implementations (Qdrant, Chroma)
+└── workflow/                # Workflow engine (nodes, edges, state)
 
-tests/                       # Comprehensive unit tests
+tests/                       # Comprehensive unit tests (organized by module)
 ├── conftest.py              # Shared pytest fixtures
-├── test_constants.py       # Constants module tests
-├── test_exceptions.py       # Exception hierarchy tests
-├── test_config.py           # Configuration tests
-└── test_logging.py          # Logging tests
+├── agents/                  # Agent tests
+├── api/                     # API endpoint tests
+├── auth/                    # Authentication tests
+├── chat/                    # Chat persistence tests
+├── clients/                 # External client tests
+├── comparison/              # Comparison tests
+├── core/                    # Core module tests (config, logging)
+├── data/                    # Data model tests
+├── embeddings/              # Embedding tests
+├── financial/               # Financial engine tests
+├── infrastructure/          # Infrastructure tests
+├── ingestion/               # Ingestion pipeline tests
+├── llm/                     # LLM provider tests
+├── models/                  # ORM model tests
+├── orchestrator/            # Orchestrator tests
+├── parsers/                 # Parser tests
+├── portfolio/               # Portfolio analytics tests
+├── rag/                     # RAG pipeline tests
+├── recommendation/          # Recommendation engine tests
+├── reports/                 # Report generation tests
+├── retrieval/               # Retrieval tests
+├── sandbox/                 # Sandbox tests
+├── security/                # Security tests
+├── services/                # Service tests
+├── storage/                 # Storage tests
+├── vectorstore/             # Vector store tests
+└── workflow/                # Workflow engine tests
 
 configs/                     # YAML/JSON configuration files
 docs/                        # Project documentation
@@ -528,14 +572,14 @@ The project includes a quantitative evaluation module for verifying the financia
 
 ### `app/evaluation/run.py` — Synthetic Reference Evaluation
 
-Runs a deterministic evaluation of the core financial calculation engines (Piotroski F-Score, Altman Z-Score, Beneish M-Score, DCF Valuation) against pre-computed reference values from synthetic demo fixtures.
+Runs a deterministic evaluation of the core financial calculation engines (Piotroski F-Score, Altman Z-Score, Beneish M-Score, DCF Valuation) against independently defined expected reference values from complete synthetic multi-period financial data.
 
-**Purpose:** Validates that calculation engines are correctly wired and produce numerically stable outputs. This is a **reference evaluation using synthetic data** — it does not measure live predictive accuracy or real-world financial performance.
+**Purpose:** Validates that calculation engines are correctly wired, produce numerically stable outputs, and match expected results for known synthetic inputs. This is a **synthetic reference evaluation** — it does not measure live predictive accuracy or real-world financial performance.
 
 **Usage:**
 
 ```bash
-# Run evaluation (requires demo fixtures)
+# Run evaluation
 python -m app.evaluation.run
 ```
 
@@ -545,41 +589,41 @@ python -m app.evaluation.run
 
 ```
 ======================================================================
-FINANCIAL RECOMMENDATION SYSTEM — SYNTHETIC EVALUATION
+FINANCIAL CALCULATION ENGINES — SYNTHETIC REFERENCE EVALUATION
 ======================================================================
-Mode: REFERENCE EVALUATION (synthetic demo fixtures)
+Mode: REFERENCE EVALUATION (complete synthetic multi-period data)
 Purpose: Verify calculation engines produce expected values
-Data:  DEMO / SYNTHETIC DATA — NOT LIVE MARKET DATA
+Data:  SYNTHETIC / REFERENCE — NOT LIVE MARKET DATA
 ======================================================================
 
 Evaluating AAPL...
-  piotroski_score                calc=      4.0000 ref=      8.0000 rel_err= 50.00% [FAIL]
-  altman_score                   calc=      7.7188 ref=      4.2000 rel_err= 83.78% [FAIL]
-  beneish_score                  calc=     -2.4800 ref=     -2.1000 rel_err= 18.10% [FAIL]
-  dcf_intrinsic_value            calc=    124.8251 ref=    207.0000 rel_err= 39.70% [FAIL]
+  piotroski_score                calc=      7.0000 ref=      7.0000 rel_err=  0.00% [PASS]
+  altman_score                   calc=      8.1227 ref=      8.1227 rel_err=  0.00% [PASS]
+  beneish_score                  calc=     -2.7020 ref=     -2.7020 rel_err=  0.00% [PASS]
+  dcf_intrinsic_value            calc=     93.9189 ref=     93.9189 rel_err=  0.00% [PASS]
 ...
 
 SUMMARY
 ======================================================================
-  AAPL  : 0/4 passed (0.0%)
-  MSFT  : 0/4 passed (0.0%)
-  GOOGL : 0/4 passed (0.0%)
-  AMZN  : 0/4 passed (0.0%)
-  TSLA  : 0/4 passed (0.0%)
-  OVERALL: 0/20 passed (0.0%)
+  AAPL  : 4/4 passed (100.0%)
+  MSFT  : 4/4 passed (100.0%)
+  GOOGL : 4/4 passed (100.0%)
+  AMZN  : 4/4 passed (100.0%)
+  TSLA  : 4/4 passed (100.0%)
+  OVERALL: 20/20 passed (100.0%)
 
-NOTE: This evaluation uses SYNTHETIC demo data and simplified
-      calculation inputs. It validates engine wiring, not live accuracy.
+NOTE: This evaluation uses SYNTHETIC multi-period reference data.
+      It validates engine wiring and numerical stability, NOT live accuracy.
 ======================================================================
 ```
-
-**Interpretation:** Metrics may show `FAIL` because the evaluation uses simplified calculation inputs (single-period statements, neutral assumptions) while the reference values were computed using the full `FinancialDataService` with multi-period historical data. This is expected — the evaluation validates that engines execute without error and produce numerically reasonable outputs, not that simplified inputs match full-history references.
 
 **Key Metrics Evaluated:**
 - **Piotroski F-Score** (0-9): Financial strength indicator
 - **Altman Z-Score**: Bankruptcy risk predictor
 - **Beneish M-Score**: Earnings manipulation detector
 - **DCF Intrinsic Value**: Discounted cash flow valuation per share
+
+**Evaluation Fixtures:** Complete synthetic multi-period financial data (current + prior period) for 5 companies (AAPL, MSFT, GOOGL, AMZN, TSLA) with independently computed expected results in `app/evaluation/fixtures.py`.
 
 ## License
 

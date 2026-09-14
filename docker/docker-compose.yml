@@ -14,16 +14,19 @@ services:
       - ../.env
 
     environment:
-      # Production database: PostgreSQL (replaces the SQLite dev default).
+      # Production database: PostgreSQL
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/financial
-      # Auth + chat stores share PostgreSQL so state survives restarts and is
-      # shared across workers/replicas.
+
+      # Auth + chat stores share PostgreSQL
       AUTH_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/financial
       CHAT_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/financial
-      # Redis: rate limiting (db 0) and chat session cache (db 1).
+
+      # Redis
       REDIS_URL: redis://redis:6379/0
       RATE_LIMIT_REDIS_URL: redis://redis:6379/0
       CHAT_REDIS_URL: redis://redis:6379/1
+
+      # Docker app runs in production environment
       ENVIRONMENT: production
 
     depends_on:
@@ -35,16 +38,31 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 40s
 
+
   redis:
     image: redis:7
 
-    command: ["redis-server", "--appendonly", "yes"]
+    # Expose Redis to the Windows host so the
+    # locally running FastAPI application can connect.
+    ports:
+      - "6379:6379"
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
 
     volumes:
       - redis-data:/data
@@ -52,14 +70,26 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 5s
 
+
   postgres:
     image: postgres:17
+
+    # Expose PostgreSQL to the Windows host so
+    # Alembic and the locally running FastAPI application
+    # can connect through localhost:5432.
+    ports:
+      - "5432:5432"
 
     environment:
       POSTGRES_USER: postgres
@@ -72,11 +102,16 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d financial"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d financial"
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
+
 
 volumes:
   postgres-data:

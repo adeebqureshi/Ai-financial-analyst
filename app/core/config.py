@@ -548,6 +548,9 @@ class Settings(BaseSettings):
         if self.is_production and not self.fmp_api_key_str:
             missing.append("FMP_API_KEY")
 
+        if self.is_production and self.auth_enabled and not self.auth_secret_key_str:
+            missing.append("AUTH_SECRET_KEY")
+
         if missing:
             raise ConfigurationError(
                 message=(

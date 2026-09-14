@@ -44,6 +44,24 @@ htmlcov/
 storage/cache/
 storage/logs/
 
+# Database files
+*.db
+*.db-wal
+*.db-shm
+data/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Frontend logs
+npmci*.log
+tsc*.log
+vitest*.log
+pw*.log
+build.log
+eslint.log
+
 # Node (stray installs at repo root)
 node_modules/
 .next/
