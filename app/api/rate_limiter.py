@@ -70,6 +70,10 @@ class RateLimiterBackend(ABC):
     def health_check(self) -> bool:
         """Check if backend is healthy."""
 
+    def clear_all(self) -> None:
+        """Clear all rate limit state (for testing)."""
+        pass
+
 
 class LocalMemoryBackend(RateLimiterBackend):
     """Thread-safe in-memory rate limiter backend (fallback when Redis unavailable)."""
@@ -118,6 +122,11 @@ class LocalMemoryBackend(RateLimiterBackend):
 
     def health_check(self) -> bool:
         return True
+
+    def clear_all(self) -> None:
+        """Clear all rate limit state (for testing)."""
+        with self._lock:
+            self._counters.clear()
 
 
 class RedisBackend(RateLimiterBackend):
@@ -216,6 +225,29 @@ class RedisBackend(RateLimiterBackend):
             return client.ping()
         except Exception:
             return False
+
+    def clear_all(self) -> None:
+        """Clear all rate limit keys from Redis (for testing)."""
+        client = self._ensure_client()
+        if client is None:
+            return
+        try:
+            # Use SCAN to find all rate limit keys and delete them
+            cursor = 0
+            deleted_count = 0
+            while True:
+                cursor, keys = client.scan(cursor, match="ratelimit:*", count=100)
+                if keys:
+                    client.delete(*keys)
+                    deleted_count += len(keys)
+                if cursor == 0:
+                    break
+            if deleted_count:
+                logger.info("Cleared %d rate limit keys from Redis for testing", deleted_count)
+        except Exception as exc:
+            logger.warning("Failed to clear Redis rate limit keys: %s", exc)
+            self._drop_client()
+            raise
 
 
 class HybridRateLimiter:
@@ -402,4 +434,25 @@ def reset_rate_limiter() -> None:
     """Reset the singleton (for testing)."""
     global _rate_limiter
     with _rate_limiter_lock:
+        if _rate_limiter is not None:
+            # Clear backend state before discarding the instance
+            try:
+                _rate_limiter._local_backend.clear_all()
+                _rate_limiter._redis_backend.clear_all()
+            except Exception:
+                pass  # Best effort cleanup
         _rate_limiter = None
+
+
+def clear_all_rate_limits() -> None:
+    """Clear all rate limit state across all backends (for testing)."""
+    # Create a temporary Redis backend to clear Redis state
+    from app.core.config import get_settings
+    settings = get_settings()
+    redis_backend = RedisBackend(settings.rate_limit_redis_url)
+    redis_backend.clear_all()
+    # Also clear the singleton's local backend if it exists
+    global _rate_limiter
+    with _rate_limiter_lock:
+        if _rate_limiter is not None:
+            _rate_limiter._local_backend.clear_all()

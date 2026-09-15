@@ -1,5 +1,6 @@
 "use client";
 
+import type { Components } from "react-markdown";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -240,7 +241,27 @@ const markdownComponents: Components = {
   ),
 };
 
-export function AgentWorkspace() {
+type AgentWorkspaceProps = {
+  /** Workspace caption shown above the input; defaults to "AI Financial Agent". */
+  caption?: string;
+  /**
+   * Real backend connection indicator rendered in the empty and workspace
+   * headers. The workspace never invents connection state.
+   */
+  connection?: React.ReactNode;
+};
+
+const emptyMarkdownComponents: Components = {
+  p: (props) => (
+    <p
+      {...props}
+      className="mt-3 hidden max-w-xl truncate text-sm text-zinc-500 lg:block"
+    />
+  ),
+  a: (props) => <a {...props} />,
+};
+
+export function AgentWorkspace({ caption, connection }: AgentWorkspaceProps) {
   const [input, setInput] = useState("");
 
   const [documentId, setDocumentId] = useState<string>("");
@@ -369,9 +390,13 @@ export function AgentWorkspace() {
     <div className="mx-auto max-w-5xl space-y-10">
       {/* Hero */}
       <section>
-        <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-300">
-          <Bot size={16} />
-          AI FINANCIAL RESEARCH AGENT
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-300">
+            <Bot size={16} />
+            {caption ?? "AI FINANCIAL RESEARCH AGENT"}
+          </div>
+
+          {connection}
         </div>
 
         <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -475,12 +500,12 @@ export function AgentWorkspace() {
               Try asking
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {examplePrompts.map((prompt) => (
                 <button
                   key={prompt}
                   onClick={() => runResearch(prompt)}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-left text-sm text-zinc-300 transition-all hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-white"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm text-zinc-300 transition-all hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-white"
                 >
                   {prompt}
                 </button>

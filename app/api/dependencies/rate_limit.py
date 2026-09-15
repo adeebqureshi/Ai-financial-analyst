@@ -204,7 +204,9 @@ class RateLimitHeadersMiddleware:
 
 def reset_rate_limits_for_testing() -> None:
     """Reset rate limiter state for testing."""
+    from app.api.rate_limiter import clear_all_rate_limits, reset_rate_limiter
     reset_rate_limiter()
+    clear_all_rate_limits()
 
 
 __all__ = [

@@ -474,13 +474,14 @@ class TestRateLimitingIntegration:
         # Counters are keyed by the concrete minute/hour window
         minute_key = f"ratelimit:user:123:minute:{int(time.time() // 60)}"
         hour_key = f"ratelimit:user:123:hour:{int(time.time() // 3600)}"
-        assert limiter._local_backend.get(minute_key) == 3
-        assert limiter._local_backend.get(hour_key) == 3
+        backend = limiter._get_backend()
+        assert backend.get(minute_key) == 3
+        assert backend.get(hour_key) == 3
 
         # Resetting the identifier clears both counters
         limiter.reset_limits("user:123")
-        assert limiter._local_backend.get(minute_key) == 0
-        assert limiter._local_backend.get(hour_key) == 0
+        assert backend.get(minute_key) == 0
+        assert backend.get(hour_key) == 0
 
 
 class TestRateLimitConcurrency:

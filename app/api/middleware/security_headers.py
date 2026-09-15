@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
 
 from app.core.config import Settings, get_settings
 
@@ -22,8 +21,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - X-Frame-Options: DENY
     - X-XSS-Protection: 1; mode=block
     - Referrer-Policy: strict-origin-when-cross-origin
-    - Strict-Transport-Security (HSTS): max-age=31536000; includeSubDomains (production only)
-    - Content-Security-Policy: restrictive default (can be customized)
+    - Strict-Transport-Security (HSTS): production only
+    - Content-Security-Policy: restrictive default
     - Permissions-Policy: restrictive default
     """
 
@@ -44,7 +43,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
 
         # Control referrer information
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Referrer-Policy"] = (
+            "strict-origin-when-cross-origin"
+        )
 
         # HSTS - only in production with HTTPS
         if self._settings.is_production:
@@ -52,19 +53,40 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "max-age=31536000; includeSubDomains; preload"
             )
 
-        # Content Security Policy - restrictive default
-        # Adjust based on your frontend requirements
-        csp = (
-            "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https:; "
-            "font-src 'self'; "
-            "connect-src 'self'; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
-        )
+        # ------------------------------------------------------------------
+        # Content Security Policy
+        #
+        # Normal application/API routes use a restrictive CSP.
+        #
+        # FastAPI's Swagger/ReDoc documentation loads its UI assets from
+        # jsDelivr, so /docs and /redoc need a documentation-specific CSP.
+        # ------------------------------------------------------------------
+
+        if request.url.path in {"/docs", "/redoc"}:
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+                "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self' data: https://cdn.jsdelivr.net; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self'"
+            )
+        else:
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self'"
+            )
+
         response.headers["Content-Security-Policy"] = csp
 
         # Permissions Policy - restrict browser features
@@ -87,6 +109,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def add_security_headers_middleware(app, settings: Settings | None = None):
+def add_security_headers_middleware(
+    app,
+    settings: Settings | None = None,
+):
     """Add security headers middleware to the FastAPI app."""
-    app.add_middleware(SecurityHeadersMiddleware, settings=settings)
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        settings=settings,
+    )

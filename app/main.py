@@ -1,28 +1,3 @@
-"""
-AI Financial Analyst — Application Entry Point
-
-This module provides the FastAPI application factory and ASGI entry point.
-It wires together all layers of the Clean Architecture:
-
-- Core layer: Configuration, logging, exceptions, constants.
-- API layer: Routers, middleware, dependency injection, exception handlers.
-- Service layer: Health and version services.
-
-Design Decisions:
-- Application factory pattern (create_app): Allows test isolation and deferred initialization.
-- CORS configuration: Environment-aware — permissive in development, restrictive in production.
-- Middleware registration: RequestLoggingMiddleware is added for automatic request/response logging.
-- Swagger customization: Professional API documentation with title, description, version, contact, license, tags, and servers.
-- Startup/shutdown events: Clean lifecycle management — logging is set up on startup and flushed on shutdown.
-- Module-level app: The app = create_app() line allows ASGI servers to import the application directly.
-
-Usage:
-Development:
-    uvicorn app.main:app --reload
-
-Production:
-    gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
-"""
 
 from __future__ import annotations
 
