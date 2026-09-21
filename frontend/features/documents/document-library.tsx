@@ -6,19 +6,14 @@ import {
   FileText,
   Loader2,
   Trash2,
-  Sparkles,
-  Send,
   BookOpen,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ChatSurface } from "@/components/ui/chat-surface";
 import { GlassCard } from "@/components/ui/glass-card";
-import { PremiumButton } from "@/components/ui/premium-button";
 import { api } from "@/services/api";
-import type {
-  ChatData,
-  DocumentData,
-} from "@/types/analysis";
+import type { DocumentData } from "@/types/analysis";
 
 type UploadState =
   | "idle"
@@ -26,8 +21,6 @@ type UploadState =
   | "processing"
   | "success"
   | "error";
-
-type AskState = "idle" | "asking" | "done" | "error";
 
 export function DocumentLibrary() {
   const queryClient = useQueryClient();
@@ -42,15 +35,6 @@ export function DocumentLibrary() {
   const [selectedId, setSelectedId] = useState<
     string | null
   >(null);
-
-  const [question, setQuestion] = useState("");
-
-  const [askState, setAskState] =
-    useState<AskState>("idle");
-
-  const [chat, setChat] = useState<ChatData | null>(
-    null
-  );
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -127,27 +111,6 @@ export function DocumentLibrary() {
 
     if (activeId === documentId) {
       setSelectedId(null);
-    }
-  }
-
-  async function handleAsk() {
-    if (!question.trim() || !activeId) return;
-
-    setAskState("asking");
-
-    setChat(null);
-
-    try {
-      const response = await api.chat({
-        message: question.trim(),
-        document_id: activeId,
-      });
-
-      setChat(response.data ?? null);
-
-      setAskState("done");
-    } catch {
-      setAskState("error");
     }
   }
 
@@ -268,7 +231,6 @@ export function DocumentLibrary() {
                   key={doc.document_id}
                   onClick={() => {
                     setSelectedId(doc.document_id);
-                    setChat(null);
                   }}
                   className={`flex cursor-pointer items-center gap-4 rounded-2xl border p-4 transition-colors ${
                     active
@@ -311,106 +273,18 @@ export function DocumentLibrary() {
           </div>
         </GlassCard>
 
-        {/* Ask AI */}
-        <GlassCard className="p-6">
-          <h2 className="text-xl font-semibold text-white">
-            Ask AI about this document
-          </h2>
-
-          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <FileText size={18} className="text-zinc-500" />
-
-            <select
-              value={activeId ?? ""}
-              onChange={(e) => {
-                setSelectedId(e.target.value || null);
-                setChat(null);
-              }}
-              className="flex-1 bg-transparent text-white outline-none"
-            >
-              {documents.length === 0 && (
-                <option value="">No documents uploaded</option>
-              )}
-
-              {documents.map((doc) => (
-                <option
-                  key={doc.document_id}
-                  value={doc.document_id}
-                  className="bg-[#0B1220]"
-                >
-                  {doc.filename}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <textarea
-            rows={4}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            disabled={!selected}
-            placeholder={
-              selected
-                ? "e.g. What did management say about AI infrastructure spending?"
-                : "Upload a document first."
-            }
-            className="mt-4 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white outline-none placeholder:text-zinc-500 disabled:opacity-50"
-          />
-
-          <div className="mt-4 flex justify-end">
-            <PremiumButton
-              disabled={!selected || !question.trim() || askState === "asking"}
-              onClick={handleAsk}
-            >
-              {askState === "asking" ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Asking…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Ask AI
-                  <Send className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </PremiumButton>
-          </div>
-
-          {chat && (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="whitespace-pre-wrap leading-relaxed text-zinc-200">
-                {chat.message}
-              </p>
-
-              {chat.sources.length > 0 && (
-                <div className="mt-5 border-t border-white/10 pt-4">
-                  <p className="text-xs uppercase tracking-widest text-zinc-500">
-                    Sources
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {chat.sources.map((source, index) => (
-                      <span
-                        key={index}
-                        className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs text-blue-300"
-                      >
-                        {source.filename}
-                        {source.page != null ? ` — Page ${source.page}` : ""}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {askState === "error" && (
-            <p className="mt-4 text-sm text-red-400">
-              Something went wrong while asking the AI.
-            </p>
-          )}
-        </GlassCard>
+        {/* Ask AI — shared chat surface (streaming, session, citations) */}
+        <ChatSurface
+          key={activeId ?? "no-document"}
+          scope={activeId ? `document-${activeId}` : "documents"}
+          documentId={activeId ?? undefined}
+          inputLabel="Ask a question about the selected document"
+          placeholder={
+            selected
+              ? "e.g. What did management say about AI infrastructure spending?"
+              : "Upload a document first."
+          }
+        />
       </div>
     </div>
   );

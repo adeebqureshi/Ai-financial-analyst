@@ -17,7 +17,6 @@ test.describe("Analysis workflow", () => {
     await expect(page.locator("[data-testid='valuation-cards']")).toBeVisible();
     await expect(page.locator("[data-testid='financial-health']")).toBeVisible();
     await expect(page.locator("[data-testid='risk-analysis']")).toBeVisible();
-    await expect(page.locator("[data-testid='chart-tabs']")).toBeVisible();
     await expect(page.locator("[data-testid='ai-chat']")).toBeVisible();
   });
 
@@ -40,15 +39,19 @@ test.describe("Analysis workflow", () => {
 });
 
 test.describe("Dashboard workflow", () => {
-  test("renders dashboard with metric cards", async ({ page }) => {
+  test("renders dashboard without fabricated metrics", async ({ page }) => {
     await page.goto("/dashboard");
 
     await expect(page.locator("text=Financial Workspace")).toBeVisible();
     await expect(page.locator("text=Your financial data workspace")).toBeVisible();
-    await expect(page.locator("text=Portfolio Value")).toBeVisible();
-    await expect(page.locator("text=Today's Gain")).toBeVisible();
-    await expect(page.locator("text=Sharpe Ratio")).toBeVisible();
-    await expect(page.locator("text=Cash Available")).toBeVisible();
+    await expect(page.locator("text=Watchlist")).toBeVisible();
+    await expect(page.locator("text=Quick Actions")).toBeVisible();
+
+    // De-fabrication guarantees: no portfolio/Sharpe/Fear & Greed placeholders
+    await expect(page.locator("text=Portfolio Value")).toHaveCount(0);
+    await expect(page.locator("text=Sharpe Ratio")).toHaveCount(0);
+    await expect(page.locator("text=Cash Available")).toHaveCount(0);
+    await expect(page.locator("text=Fear & Greed")).toHaveCount(0);
   });
 
   test("displays AI search component", async ({ page }) => {

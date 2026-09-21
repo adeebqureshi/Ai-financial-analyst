@@ -11,6 +11,7 @@ const pipeline = [
 
 export default function ResearchPage() {
   return (
+    <>
       <section className="mb-10">
         <p className="text-sm uppercase tracking-widest text-zinc-500">
           Research
@@ -57,6 +58,6 @@ export default function ResearchPage() {
       </section>
 
       <DocumentLibrary />
-
+    </>
   );
 }

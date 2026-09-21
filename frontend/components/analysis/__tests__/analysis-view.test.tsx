@@ -57,12 +57,6 @@ vi.mock("@/components/analysis/risk-analysis", () => ({
   },
 }));
 
-vi.mock("@/components/charts", () => ({
-  ChartTabs: function ChartTabs() {
-    return <div data-testid="chart-tabs" />;
-  },
-}));
-
 vi.mock("@/components/analysis/ai-chat", () => ({
   AIChat: function AIChat() {
     return <div data-testid="ai-chat" />;
@@ -208,7 +202,6 @@ describe("AnalysisView", () => {
     expect(screen.getByTestId("valuation-cards")).toBeInTheDocument();
     expect(screen.getByTestId("financial-health")).toBeInTheDocument();
     expect(screen.getByTestId("risk-analysis")).toBeInTheDocument();
-    expect(screen.getByTestId("chart-tabs")).toBeInTheDocument();
     expect(screen.getByTestId("ai-chat")).toBeInTheDocument();
   });
 

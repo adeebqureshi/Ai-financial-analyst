@@ -2,6 +2,7 @@ import { DocumentSearch } from "@/features/documents/document-search";
 
 export default function SearchPage() {
   return (
+    <>
       <section className="mb-10">
         <p className="text-sm uppercase tracking-widest text-zinc-500">
           Research
@@ -19,6 +20,6 @@ export default function SearchPage() {
       </section>
 
       <DocumentSearch />
-
+    </>
   );
 }

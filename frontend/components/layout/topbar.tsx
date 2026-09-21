@@ -1,19 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import { Command, Menu, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Bell, Menu, Search, UserCircle2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { CommandPalette } from "./command-palette";
 
 const titles: Record<string, string> = {
-  "/": "Ask AI",
-  "/dashboard": "",
-  "/company": "Companies",
-  "/analysis": "Company Analysis",
+  "/dashboard": "Overview",
+  "/company": "Profile",
+  "/analysis": "Analyze",
   "/compare": "Compare",
-  "/comparison": "Compare",
   "/portfolio": "Portfolio",
   "/reports": "Reports",
-  "/research": "Research",
+  "/research": "Documents",
   "/search": "Search",
   "/watchlist": "Watchlist",
   "/screener": "Screener",
@@ -26,68 +27,61 @@ type Props = {
 
 export function Topbar({ onMenu }: Props) {
   const pathname = usePathname();
-
   const segments = pathname.split("/").filter(Boolean);
-
-  let title = "Ask AI";
-
-  if (segments.length >= 1) {
-    title = titles[`/${segments[0]}`] ?? "Ask AI";
-  }
-
-  if (pathname.startsWith("/analysis/") && segments.length >= 2) {
-    title = "Company Analysis";
-  }
+  const title =
+    segments.length >= 1 ? titles[`/${segments[0]}`] ?? "Workspace" : "Workspace";
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/10 bg-[#05060A]/70 px-4 backdrop-blur-xl sm:px-6 lg:px-10">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-3">
         <button
+          type="button"
           onClick={onMenu}
           aria-label="Open navigation"
-          className="rounded-2xl border border-white/10 bg-white/5 p-3 text-zinc-300 hover:text-white lg:hidden"
+          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
         >
-          <Menu size={20} />
+          <Menu size={20} aria-hidden="true" />
         </button>
 
-        <div>
-          {title && (
-            <h2 className="text-xl font-semibold text-white">
-              {title}
-            </h2>
-          )}
-
-          <p className="text-sm text-zinc-500">
-            AI Financial Research Workspace
-          </p>
+        <div className="min-w-0">
+          <h1 className="truncate text-title text-foreground">{title}</h1>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Link
-          href="/"
-          className="hidden h-12 w-64 items-center rounded-2xl border border-white/10 bg-white/5 px-4 transition hover:border-blue-500/30 md:flex lg:w-96"
-        >
-          <Search
-            size={18}
-            className="text-zinc-500"
-          />
+      <div className="flex shrink-0 items-center gap-2">
+        <CommandPalette>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            aria-label="Open command palette"
+            title="Open command palette (Ctrl+K)"
+            className="hidden min-w-64 justify-between text-muted-foreground md:inline-flex"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Search size={15} aria-hidden="true" />
+              Search or navigate…
+            </span>
+            <kbd className="rounded border border-border bg-background px-1.5 text-[11px] text-muted-foreground">
+              ⌘K
+            </kbd>
+          </Button>
+        </CommandPalette>
 
-          <span className="ml-3 truncate text-sm text-zinc-500">
-            Ask the AI financial agent...
-          </span>
-        </Link>
+        <div className="md:hidden">
+          <CommandPalette>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Open command palette"
+            >
+              <Command size={17} aria-hidden="true" />
+            </Button>
+          </CommandPalette>
+        </div>
 
-        <button className="rounded-2xl border border-white/10 bg-white/5 p-3 text-zinc-400 hover:text-white">
-          <Bell size={20} />
-        </button>
-
-        <button className="rounded-full border border-white/10 bg-white/5 p-2">
-          <UserCircle2
-            size={34}
-            className="text-white"
-          />
-        </button>
+        <ThemeToggle />
       </div>
     </header>
   );

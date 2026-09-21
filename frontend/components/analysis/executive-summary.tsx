@@ -9,7 +9,6 @@ import {
 
 type Props = {
   recommendation: string;
-  confidence: number;
   summary: string;
   upside: number;
   intrinsicValue: number;
@@ -18,7 +17,6 @@ type Props = {
 
 export function ExecutiveSummary({
   recommendation,
-  confidence,
   summary,
   upside,
   intrinsicValue,
@@ -49,10 +47,6 @@ export function ExecutiveSummary({
           }`}
         >
           {recommendation}
-        </div>
-
-        <div className="rounded-full bg-blue-500/20 px-5 py-2 text-blue-300">
-          {confidence}% Confidence
         </div>
 
       </div>

@@ -3,7 +3,6 @@
 import {
   Activity,
   Building2,
-  Globe,
   Landmark,
   AlertTriangle,
 } from "lucide-react";
@@ -18,8 +17,6 @@ type Props = {
   };
 
   recommendation: string;
-
-  confidence?: number;
 };
 
 function badgeColor(recommendation: string) {
@@ -41,7 +38,6 @@ function isDemoData(name: string): boolean {
 export function CompanyHeader({
   company,
   recommendation,
-  confidence = 91,
 }: Props) {
   const isDemo = isDemoData(company.name);
   const displayName = isDemo
@@ -126,54 +122,6 @@ export function CompanyHeader({
             <div className="mt-4 text-4xl font-bold">
               {recommendation}
             </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-7">
-
-            <div className="text-sm text-zinc-500">
-              AI Confidence
-            </div>
-
-            <div className="mt-3 flex items-end gap-2">
-
-              <span className="text-5xl font-bold text-white">
-                {confidence}
-              </span>
-
-              <span className="pb-2 text-zinc-500">
-                %
-              </span>
-
-            </div>
-
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
-
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400"
-                style={{
-                  width: `${confidence}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-
-            <div className="flex items-center gap-3">
-
-              <Globe
-                size={18}
-                className="text-blue-400"
-              />
-
-              <span className="text-zinc-400">
-                {isDemo ? "Demo mode — synthetic data" : "Live backend connected"}
-              </span>
-
-            </div>
-
           </div>
 
         </div>

@@ -189,6 +189,18 @@ export interface ScreenData {
   total: number;
 }
 
+/** Request payload for `POST /screen` (single candidate company). */
+export interface ScreenRequestData {
+  min_piotroski: number;
+  min_altman: number;
+  max_beneish: number;
+  min_upside: number;
+  max_results: number;
+  statement: FinancialStatementInput;
+  valuation: ValuationParams;
+}
+
+
 export interface ErrorDetail {
   field: string | null;
   message: string;

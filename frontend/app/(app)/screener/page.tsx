@@ -1,15 +1,15 @@
+import { PageHeader } from "@/components/ui/page-header";
+import { CriteriaCheck } from "@/components/screener/criteria-check";
 
 export default function ScreenerPage() {
   return (
-      <div className="mx-auto max-w-7xl">
-        <h1 className="text-3xl font-bold tracking-tight text-white">
-          Screener
-        </h1>
+    <div className="mx-auto max-w-7xl space-y-8">
+      <PageHeader
+        title="Financial Criteria Check"
+        description="Evaluate one candidate company against screening criteria using real analysis data and your own valuation assumptions."
+      />
 
-        <p className="mt-3 text-zinc-400">
-          Screen stocks using fundamental filters.
-        </p>
-      </div>
-
+      <CriteriaCheck />
+    </div>
   );
 }

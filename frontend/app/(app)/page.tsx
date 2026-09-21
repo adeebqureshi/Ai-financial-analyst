@@ -1,6 +1,5 @@
-import { AgentWorkspace } from "@/features/agent";
-import { ConnectionStatus } from "@/components/layout/connection-status";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <AgentWorkspace connection={<ConnectionStatus />} />;
+  redirect("/dashboard");
 }

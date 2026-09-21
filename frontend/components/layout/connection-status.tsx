@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
 
 type HealthState =
@@ -39,19 +36,23 @@ function toComponentNames(value: unknown): string[] {
     .filter((name): name is string => name !== null);
 }
 
-type Props = {
-  defaultTicker?: string;
+const POLL_INTERVAL_MS = 30_000;
+
+type HealthPayload = {
+  status?: unknown;
+  components?: unknown;
 };
 
 /**
  * Real backend connection indicator.
  *
  * Combines `GET /health` (service status) with `GET /version` (app version
- * and demo-mode flag). Each state — connected, degraded, unavailable, and
- * loading — is rendered explicitly so the shell never invents status.
+ * and demo-mode flag). Loading, connected, degraded, and unavailable states
+ * are rendered explicitly from real responses — the shell never invents
+ * status. Polls every 30 seconds and exposes a manual retry when the
+ * backend is unreachable.
  */
-export function ConnectionStatus({ defaultTicker = "AAPL" }: Props) {
-  const router = useRouter();
+export function ConnectionStatus() {
   const [state, setState] = useState<HealthState>({ status: "checking" });
   const [attempt, setAttempt] = useState(0);
 
@@ -61,14 +62,11 @@ export function ConnectionStatus({ defaultTicker = "AAPL" }: Props) {
     async function check() {
       // Health first, because it carries per-component status for the
       // degraded case. If health is unreachable, the backend is unavailable.
-      let health: {
-        status?: unknown;
-        components?: unknown;
-      } | null = null;
+      let health: HealthPayload | null = null;
 
       try {
         const response = await api.health();
-        health = (response?.data ?? null) as typeof health;
+        health = (response?.data ?? null) as HealthPayload | null;
       } catch (err) {
         if (!cancelled) {
           setState({
@@ -129,8 +127,13 @@ export function ConnectionStatus({ defaultTicker = "AAPL" }: Props) {
 
     void check();
 
+    const poll = window.setInterval(() => {
+      void check();
+    }, POLL_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      window.clearInterval(poll);
     };
   }, [attempt]);
 
@@ -206,18 +209,6 @@ export function ConnectionStatus({ defaultTicker = "AAPL" }: Props) {
           DEMO MODE
         </span>
       )}
-
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => router.push(`/analysis/${defaultTicker}`)}
-        aria-label={`Open analysis for ${defaultTicker}`}
-        title={`Open analysis for ${defaultTicker}`}
-        className="-mr-1 text-muted-foreground hover:text-foreground"
-      >
-        <Search size={14} aria-hidden="true" />
-      </Button>
     </span>
   );
 }

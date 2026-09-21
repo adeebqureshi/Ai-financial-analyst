@@ -118,6 +118,29 @@ export interface ChatStreamHandlers {
   onError?: (message: string) => void;
 }
 
+export interface ChatSessionSummary {
+  session_id: string;
+  title: string | null;
+  updated_at: string | null;
+}
+
+export interface ChatSessionListData {
+  sessions: ChatSessionSummary[];
+  total: number;
+}
+
+export interface ChatMessageData {
+  role: "user" | "assistant";
+  content: string;
+  created_at?: string | null;
+}
+
+export interface ChatSessionMessagesData {
+  session_id: string;
+  messages: ChatMessageData[];
+  total: number;
+}
+
 function handleStreamFrame(
   frame: string,
   handlers: ChatStreamHandlers
@@ -330,6 +353,26 @@ export const api = {
     signal?: AbortSignal
   ): Promise<void> {
     return requestChatStream(body, handlers, signal);
+  },
+
+  listChatSessions(): Promise<ApiResponse<ChatSessionListData>> {
+    return request("/chat/sessions");
+  },
+
+  listChatSessionMessages(
+    sessionId: string
+  ): Promise<ApiResponse<ChatSessionMessagesData>> {
+    return request(
+      `/chat/sessions/${encodeURIComponent(sessionId)}/messages`
+    );
+  },
+
+  deleteChatSession(
+    sessionId: string
+  ): Promise<ApiResponse<{ deleted: boolean }>> {
+    return request(`/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "DELETE",
+    });
   },
 
   search(

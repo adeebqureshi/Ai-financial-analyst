@@ -66,10 +66,6 @@ export default async function AnalysisTickerPage({
               )}
             </div>
           </div>
-
-          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-medium text-emerald-400">
-            Backend Connected
-          </div>
         </div>
 
         <AnalysisView ticker={symbol} />

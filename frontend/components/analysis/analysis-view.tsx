@@ -1,5 +1,8 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+
+import { api } from "@/services/api";
 import { useAnalysis } from "@/hooks/use-analysis";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { SkeletonAnalysisView } from "@/components/ui/skeleton";
@@ -11,7 +14,6 @@ import { FinancialHealth } from "./financial-health";
 import { RiskAnalysis } from "./risk-analysis";
 import { MarketOverview } from "./market-overview";
 import { AIChat } from "./ai-chat";
-import { ChartTabs } from "@/components/charts";
 
 import type {
   AnalyzeData,
@@ -22,25 +24,39 @@ type Props = {
   ticker: string;
 };
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function buildSeries(
-  current: number,
-  years: string[],
-  growth: number
-): number[] {
-  return years.map((_, index) => {
-    const steps = years.length - 1 - index;
-    return current / Math.pow(1 + growth, steps);
-  });
-}
-
 export function AnalysisView({
   ticker,
 }: Props) {
   const { query } = useAnalysis(ticker);
+
+  const result =
+    (query.data as ApiResponse<AnalyzeData> | undefined)?.data ?? null;
+
+  const health = result?.health ?? null;
+
+  /**
+   * Real risk assessment from `POST /risk-analysis`, requested with the
+   * health scores returned by `/analyze`. Only runs once those scores exist;
+   * the endpoint does not provide volatility or business/financial risk
+   * percentages, so none are displayed.
+   */
+  const riskQuery = useQuery({
+    queryKey: [
+      "risk-analysis",
+      ticker,
+      health?.piotroski_score,
+      health?.altman_score,
+      health?.beneish_score,
+    ],
+    queryFn: () =>
+      api.riskAnalysis({
+        piotroski_score: health!.piotroski_score,
+        altman_score: health!.altman_score,
+        beneish_score: health!.beneish_score,
+      }),
+    enabled: Boolean(health),
+    retry: false,
+  });
 
   if (query.isPending) {
     return <SkeletonAnalysisView />;
@@ -56,10 +72,7 @@ export function AnalysisView({
     );
   }
 
-  const api =
-    (query.data as ApiResponse<AnalyzeData>).data;
-
-  if (!api) {
+  if (!result) {
     return (
       <ErrorDisplay
         error={new Error("No analysis data was returned for this ticker.")}
@@ -69,107 +82,24 @@ export function AnalysisView({
   }
 
   const recommendation =
-    api.recommendation;
+    result.recommendation;
 
   const valuation =
-    api.valuation;
-
-  const health =
-    api.health;
+    result.valuation;
 
   const market =
-    api.market;
+    result.market;
 
   const statement =
-    api.statement;
+    result.statement;
 
   const company = {
-    name: api.company.name,
-    ticker: api.company.ticker,
-    sector: api.company.sector ?? undefined,
-    industry: api.company.industry ?? undefined,
-    description: api.company.description ?? undefined,
+    name: result.company.name,
+    ticker: result.company.ticker,
+    sector: result.company.sector ?? undefined,
+    industry: result.company.industry ?? undefined,
+    description: result.company.description ?? undefined,
   };
-
-  // Confidence from health score + valuation conviction
-  const healthConfidence =
-    (health.score / 100) * 0.6;
-
-  const upsideConfidence =
-    Math.min(Math.abs(valuation.upside) / 100, 1) * 0.4;
-
-  const confidence = Math.round(
-    clamp(
-      (healthConfidence + upsideConfidence) * 100,
-      55,
-      98
-    )
-  );
-
-  // Risk metrics derived from market + health data
-  const beta = market.beta ?? 1.0;
-
-  const volatility = clamp(
-    Math.round(beta * 20),
-    10,
-    90
-  );
-
-  const businessRisk = clamp(
-    Math.round(
-      80 - (health.piotroski_score / 9) * 70
-    ),
-    5,
-    90
-  );
-
-  const financialRisk = clamp(
-    Math.round(100 - (health.altman_score / 4) * 90),
-    5,
-    95
-  );
-
-  // Historical series anchored to the current statement
-  const years = ["2022", "2023", "2024", "2025", "2026"];
-
-  const revenue = buildSeries(
-    statement.revenue,
-    years,
-    0.12
-  );
-
-  const income = years.map((year, index) => ({
-    year,
-    revenue: revenue[index],
-    netIncome:
-      statement.net_income /
-      Math.pow(1.10, years.length - 1 - index),
-  }));
-
-  const balance = years.map((year, index) => {
-    const steps = years.length - 1 - index;
-    return {
-      year,
-      assets:
-        statement.total_assets /
-        Math.pow(1.07, steps),
-      liabilities:
-        statement.total_liabilities /
-        Math.pow(1.06, steps),
-    };
-  });
-
-  const cashflow = years.map((year, index) => ({
-    year,
-    value:
-      statement.free_cash_flow /
-      Math.pow(1.09, years.length - 1 - index),
-  }));
-
-  const revenueChartData = years.map((year, index) => ({
-    year,
-    revenue: revenue[index],
-  }));
 
   return (
 
@@ -178,12 +108,10 @@ export function AnalysisView({
       <CompanyHeader
         company={company}
         recommendation={recommendation}
-        confidence={confidence}
       />
 
       <ExecutiveSummary
         recommendation={recommendation}
-        confidence={confidence}
         summary={
           company.description ??
           `${company.name} currently appears ${recommendation.toLowerCase()} based on AI valuation, profitability, financial quality and risk assessment.`
@@ -216,31 +144,25 @@ export function AnalysisView({
       />
 
       <FinancialHealth
-        score={health.score}
-        rating={health.rating}
+        score={health!.score}
+        rating={health!.rating}
         piotroski={
-          health.piotroski_score
+          health!.piotroski_score
         }
         altman={
-          health.altman_score
+          health!.altman_score
         }
         beneish={
-          health.beneish_score
+          health!.beneish_score
         }
       />
 
       <RiskAnalysis
-        beta={beta}
-        volatility={volatility}
-        businessRisk={businessRisk}
-        financialRisk={financialRisk}
-      />
-
-      <ChartTabs
-        revenue={revenueChartData}
-        income={income}
-        balance={balance}
-        cashflow={cashflow}
+        beta={market.beta ?? null}
+        risk={riskQuery.data?.data ?? null}
+        isLoading={riskQuery.isPending}
+        isError={riskQuery.isError}
+        onRetry={() => riskQuery.refetch()}
       />
 
       <AIChat ticker={ticker} />

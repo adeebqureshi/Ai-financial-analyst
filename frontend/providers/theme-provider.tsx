@@ -22,7 +22,7 @@ export const THEME_STORAGE_KEY = "afa-theme";
  * flips this single constant to ``light``, making the light-first palette the
  * default without touching any component.
  */
-export const DEFAULT_THEME: Theme = "dark";
+export const DEFAULT_THEME: Theme = "light";
 
 type ThemeContextValue = {
   theme: Theme;

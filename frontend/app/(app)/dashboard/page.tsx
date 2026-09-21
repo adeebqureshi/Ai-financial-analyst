@@ -1,15 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { AISearch } from "@/components/dashboard/ai-search";
-import { MetricCard } from "@/components/dashboard/metric-card";
-import { MarketChart } from "@/components/dashboard/market-chart";
 import { Watchlist } from "@/components/dashboard/watchlist";
-import { NewsFeed } from "@/components/dashboard/news-feed";
-import { PortfolioAllocation } from "@/components/dashboard/portfolio-allocation";
-import { RecentAnalysis } from "@/components/dashboard/recent-analysis";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 
 export default function DashboardPage() {
   return (
+    <>
       <section className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p data-testid="financial-workspace-title" className="text-sm uppercase tracking-widest text-zinc-500">
@@ -49,53 +45,14 @@ export default function DashboardPage() {
 
       <AISearch />
 
-      <section className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          title="Portfolio Value"
-          value="$248,921"
-          change={5.4}
-          icon="briefcase"
-        />
-
-        <MetricCard
-          title="Today's Gain"
-          value="+$4,312"
-          change={2.7}
-          icon="trending"
-        />
-
-        <MetricCard
-          title="Sharpe Ratio"
-          value="1.84"
-          change={1.8}
-          icon="shield"
-        />
-
-        <MetricCard
-          title="Cash Available"
-          value="$42,100"
-          change={-1.2}
-          icon="dollar"
-        />
-      </section>
-
       <section className="mt-10">
-        <MarketChart />
-      </section>
-
-      <section className="mt-10 grid gap-8 xl:grid-cols-2">
         <Watchlist />
-        <NewsFeed />
-      </section>
-
-      <section className="mt-10 grid gap-8 xl:grid-cols-2">
-        <PortfolioAllocation />
-        <RecentAnalysis />
       </section>
 
       <section className="mt-10">
         <QuickActions />
       </section>
 
+    </>
   );
 }
