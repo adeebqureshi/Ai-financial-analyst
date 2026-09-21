@@ -1,40 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  CloudUpload,
-  FileText,
-  Loader2,
-  Trash2,
-  BookOpen,
-} from "lucide-react";
+import { CloudUpload, FileText, Loader2, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ChatSurface } from "@/components/ui/chat-surface";
-import { GlassCard } from "@/components/ui/glass-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { api } from "@/services/api";
 import type { DocumentData } from "@/types/analysis";
 
-type UploadState =
-  | "idle"
-  | "uploading"
-  | "processing"
-  | "success"
-  | "error";
+type UploadState = "idle" | "uploading" | "processing" | "success" | "error";
 
 export function DocumentLibrary() {
   const queryClient = useQueryClient();
 
-  const [uploadState, setUploadState] =
-    useState<UploadState>("idle");
-
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadError, setUploadError] = useState("");
-
   const [dragOver, setDragOver] = useState(false);
-
-  const [selectedId, setSelectedId] = useState<
-    string | null
-  >(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,13 +31,10 @@ export function DocumentLibrary() {
     queryFn: () => api.listDocuments(),
   });
 
-  const documents: DocumentData[] =
-    documentsQuery.data?.data?.documents ?? [];
+  const documents: DocumentData[] = documentsQuery.data?.data?.documents ?? [];
 
   const invalidateDocuments = () => {
-    queryClient.invalidateQueries({
-      queryKey: ["documents"],
-    });
+    void queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
 
   const uploadMutation = useMutation({
@@ -63,9 +48,7 @@ export function DocumentLibrary() {
   });
 
   const selected =
-    documents.find(
-      (doc) => doc.document_id === selectedId
-    ) ??
+    documents.find((doc) => doc.document_id === selectedId) ??
     documents[0] ??
     null;
 
@@ -75,7 +58,6 @@ export function DocumentLibrary() {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-
     const isPdf =
       file.type === "application/pdf" ||
       file.name.toLowerCase().endsWith(".pdf");
@@ -91,18 +73,11 @@ export function DocumentLibrary() {
 
     try {
       await uploadMutation.mutateAsync(file);
-
-      setSelectedId((current) => current ?? null);
-
       setUploadState("success");
-
-      setTimeout(() => setUploadState("idle"), 2000);
+      window.setTimeout(() => setUploadState("idle"), 2000);
     } catch (err) {
       setUploadState("error");
-
-      setUploadError(
-        err instanceof Error ? err.message : "Upload failed."
-      );
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
     }
   }
 
@@ -115,176 +90,205 @@ export function DocumentLibrary() {
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-300">
-          <BookOpen size={16} />
-          Document Research
-        </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle as="h2">Upload a document</CardTitle>
+            <p className="mt-1 text-label text-muted-foreground">
+              Financial PDFs are parsed, chunked and indexed for retrieval.
+            </p>
+          </div>
+        </CardHeader>
 
-        <h1 className="mt-6 text-4xl font-bold text-white">
-          Financial Document Intelligence
-        </h1>
+        <CardBody>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf"
+            className="sr-only"
+            aria-label="Choose a PDF document to upload"
+            onChange={(event) => {
+              void handleFiles(event.target.files);
+            }}
+          />
 
-        <p className="mt-3 max-w-2xl text-zinc-400">
-          Upload a financial PDF — it is parsed, chunked, embedded
-          and indexed for retrieval. Then ask grounded questions
-          with page-level citations.
-        </p>
-      </header>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragOver(false);
+              void handleFiles(event.dataTransfer.files);
+            }}
+            className={`flex h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              dragOver
+                ? "border-brand bg-brand-subtle"
+                : "border-border bg-background hover:border-border-strong"
+            }`}
+          >
+            {uploadState === "uploading" ? (
+              <>
+                <Loader2
+                  className="motion-safe:animate-spin text-brand"
+                  size={28}
+                  aria-hidden="true"
+                />
+                <span className="text-label text-muted-foreground">
+                  Uploading…
+                </span>
+              </>
+            ) : (
+              <>
+                <CloudUpload className="text-brand" size={30} aria-hidden="true" />
+                <span className="text-label text-foreground">
+                  Drop a PDF here or click to browse
+                </span>
+                <span className="text-caption text-muted-foreground">
+                  Financial reports, 10-K filings, earnings releases
+                </span>
+              </>
+            )}
+          </button>
 
-      {/* Upload */}
-      <GlassCard glow className="p-8">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            handleFiles(e.dataTransfer.files);
-          }}
-          className={`flex h-44 w-full flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed transition-colors ${
-            dragOver
-              ? "border-blue-400 bg-blue-500/10"
-              : "border-white/10 bg-white/[0.02] hover:border-blue-400/40"
-          }`}
-        >
-          {uploadState === "uploading" ? (
-            <>
-              <Loader2 className="animate-spin text-blue-400" size={32} />
-              <span className="text-zinc-300">Uploading…</span>
-            </>
-          ) : uploadState === "processing" ? (
-            <>
-              <Loader2 className="animate-spin text-blue-400" size={32} />
-              <span className="text-zinc-300">Indexing document…</span>
-            </>
-          ) : (
-            <>
-              <CloudUpload className="text-blue-400" size={36} />
-              <span className="text-lg text-zinc-300">
-                Drop a PDF here or click to browse
-              </span>
-              <span className="text-sm text-zinc-500">
-                Financial reports, 10-K filings, earnings releases
-              </span>
-            </>
+          {uploadState === "success" && (
+            <p role="status" className="mt-3 text-center text-caption text-gain">
+              Document indexed successfully.
+            </p>
           )}
-        </button>
 
-        {uploadState === "success" && (
-          <p className="mt-4 text-center text-sm text-emerald-400">
-            Document indexed successfully.
-          </p>
-        )}
+          {uploadState === "error" && (
+            <p role="alert" className="mt-3 text-center text-caption text-loss">
+              {uploadError}
+            </p>
+          )}
+        </CardBody>
+      </Card>
 
-        {uploadState === "error" && (
-          <p className="mt-4 text-center text-sm text-red-400">
-            {uploadError}
-          </p>
-        )}
-      </GlassCard>
-
-      <div className="grid gap-8 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Library */}
-        <GlassCard className="p-6">
-          <h2 className="text-xl font-semibold text-white">
-            Document Library
-          </h2>
+        <Card aria-labelledby="library-heading">
+          <CardHeader>
+            <div>
+              <CardTitle as="h2" id="library-heading">
+                Document library
+              </CardTitle>
+              <p className="mt-1 text-caption text-subtle-foreground">
+                {documents.length} indexed document
+                {documents.length === 1 ? "" : "s"}
+              </p>
+            </div>
+          </CardHeader>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            {documents.length} indexed document(s)
-          </p>
-
-          <div className="mt-6 space-y-3">
-            {documentsQuery.isLoading && (
-              <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-sm text-zinc-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading documents…
+          <CardBody>
+            {documentsQuery.isPending && (
+              <div role="status" aria-busy="true">
+                <SkeletonList items={3} />
+                <span className="sr-only">Loading documents…</span>
               </div>
             )}
 
-            {!documentsQuery.isLoading && documents.length === 0 && (
-              <p className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-center text-sm text-zinc-500">
-                No documents uploaded yet.
-              </p>
+            {documentsQuery.isError && (
+              <ErrorDisplay
+                error={documentsQuery.error}
+                onRetry={() => void documentsQuery.refetch()}
+                title="Documents unavailable"
+                compact
+              />
             )}
 
-            {documents.map((doc) => {
-              const active = doc.document_id === activeId;
+            {!documentsQuery.isPending &&
+              !documentsQuery.isError &&
+              documents.length === 0 && (
+                <EmptyState
+                  icon={<FileText size={20} aria-hidden="true" />}
+                  title="No documents uploaded yet"
+                  description="Upload a PDF above to build the knowledge base the AI agent retrieves from."
+                />
+              )}
 
-              return (
-                <div
-                  key={doc.document_id}
-                  onClick={() => {
-                    setSelectedId(doc.document_id);
-                  }}
-                  className={`flex cursor-pointer items-center gap-4 rounded-2xl border p-4 transition-colors ${
-                    active
-                      ? "border-blue-400/40 bg-blue-500/10"
-                      : "border-white/5 bg-white/[0.02] hover:bg-white/[0.05]"
-                  }`}
-                >
-                  <div className="rounded-xl bg-white/5 p-3">
-                    <FileText
-                      className={active ? "text-blue-300" : "text-zinc-400"}
-                      size={22}
-                    />
-                  </div>
+            <div className="space-y-2">
+              {documents.map((doc) => {
+                const active = doc.document_id === activeId;
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-white">
-                      {doc.filename}
-                    </p>
-
-                    <p className="mt-1 text-sm text-zinc-500">
-                      {doc.pages} pages · {doc.chunks} chunks · {doc.status}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    aria-label={`Delete ${doc.filename}`}
-                    disabled={deleteMutation.isPending}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(doc.document_id);
-                    }}
-                    className="rounded-xl border border-white/10 p-2 text-zinc-400 transition-colors hover:border-red-400/40 hover:text-red-400 disabled:opacity-50"
+                return (
+                  <div
+                    key={doc.document_id}
+                    className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                      active
+                        ? "border-brand/40 bg-brand-subtle"
+                        : "border-border bg-background hover:bg-muted/50"
+                    }`}
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </GlassCard>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(doc.document_id)}
+                      aria-pressed={active}
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <FileText size={18} aria-hidden="true" />
+                      </span>
+
+                      <span className="min-w-0">
+                        <span className="block truncate text-label font-medium text-foreground">
+                          {doc.filename}
+                        </span>
+                        <span className="mt-0.5 block text-caption text-muted-foreground">
+                          {doc.pages} pages · {doc.chunks} chunks
+                        </span>
+                      </span>
+                    </button>
+
+                    <StatusBadge status={doc.status} />
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Delete ${doc.filename}`}
+                      disabled={deleteMutation.isPending}
+                      onClick={() => {
+                        void handleDelete(doc.document_id);
+                      }}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {deleteMutation.isError && (
+              <div className="mt-3">
+                <ErrorDisplay
+                  error={deleteMutation.error}
+                  title="Delete failed"
+                  compact
+                />
+              </div>
+            )}
+          </CardBody>
+        </Card>
 
         {/* Ask AI — shared chat surface (streaming, session, citations) */}
-        <ChatSurface
-          key={activeId ?? "no-document"}
-          scope={activeId ? `document-${activeId}` : "documents"}
-          documentId={activeId ?? undefined}
-          inputLabel="Ask a question about the selected document"
-          placeholder={
-            selected
-              ? "e.g. What did management say about AI infrastructure spending?"
-              : "Upload a document first."
-          }
-        />
+        <div className="min-h-0">
+          <ChatSurface
+            key={activeId ?? "no-document"}
+            scope={activeId ? `document-${activeId}` : "documents"}
+            documentId={activeId ?? undefined}
+            inputLabel="Ask a question about the selected document"
+            placeholder={
+              selected
+                ? "e.g. What did management say about AI infrastructure spending?"
+                : "Upload a document first."
+            }
+          />
+        </div>
       </div>
     </div>
   );

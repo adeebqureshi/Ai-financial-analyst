@@ -1,12 +1,8 @@
 "use client";
 
-import {
-  Activity,
-  AlertTriangle,
-  BarChart3,
-  CheckCircle2,
-  ShieldCheck,
-} from "lucide-react";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricCard, formatRatio } from "@/components/ui/metric";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 
 type Props = {
   score: number;
@@ -16,40 +12,26 @@ type Props = {
   beneish: number;
 };
 
-function HealthCard({
-  title,
-  value,
-  subtitle,
-  color,
-  icon,
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-  color: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition-all duration-300 hover:border-blue-500/30 hover:bg-white/[0.05]">
+/**
+ * Standard academic interpretation thresholds for the two backend scores:
+ * Altman Z > 3 safe / 1.8-3 grey / < 1.8 distress, and Beneish M > -1.78
+ * flags possible manipulation. They are applied to real backend scores and
+ * labelled as interpretations of those scores.
+ */
+function bankruptcyRiskLabel(altman: number): string {
+  if (altman > 3) return "Low";
+  if (altman > 1.8) return "Moderate";
+  return "High";
+}
 
-      <div className={`inline-flex rounded-2xl p-3 ${color}`}>
-        {icon}
-      </div>
+function manipulationRiskLabel(beneish: number): string {
+  return beneish > -1.78 ? "High" : "Low";
+}
 
-      <p className="mt-5 text-sm text-zinc-500">
-        {title}
-      </p>
-
-      <h2 className="mt-3 text-4xl font-bold text-white">
-        {value}
-      </h2>
-
-      <p className="mt-3 text-sm text-zinc-500">
-        {subtitle}
-      </p>
-
-    </div>
-  );
+function toneFor(level: string): BadgeProps["variant"] {
+  if (level === "Low") return "success";
+  if (level === "Moderate") return "warning";
+  return "danger";
 }
 
 export function FinancialHealth({
@@ -59,139 +41,103 @@ export function FinancialHealth({
   altman,
   beneish,
 }: Props) {
-  const fraudRisk =
-    beneish > -1.78 ? "High" : "Low";
+  const bankruptcyRisk = bankruptcyRiskLabel(altman);
+  const manipulationRisk = manipulationRiskLabel(beneish);
 
-  const bankruptcyRisk =
-    altman > 3
-      ? "Low"
-      : altman > 1.8
-      ? "Moderate"
-      : "High";
+  const piotroskiRead =
+    piotroski >= 7
+      ? "strong financial quality"
+      : piotroski >= 5
+      ? "average financial quality"
+      : "weak financial quality";
 
   return (
-    <section data-testid="financial-health">
-
-      <div className="mb-8">
-
-        <h2 className="text-3xl font-bold text-white">
-          Financial Health
+    <section data-testid="financial-health" aria-labelledby="health-heading">
+      <div className="mb-4">
+        <h2 id="health-heading" className="text-title text-foreground">
+          Financial health
         </h2>
-
-        <p className="mt-2 text-zinc-500">
-          AI quality assessment of the business
+        <p className="mt-1 text-label text-muted-foreground">
+          Backend quality scores and their standard interpretation.
         </p>
-
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-
-        <HealthCard
-          title="Health Score"
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Health score"
           value={`${score}/100`}
-          subtitle={rating}
-          color="bg-emerald-500/10"
-          icon={
-            <ShieldCheck
-              size={22}
-              className="text-emerald-400"
-            />
-          }
+          hint={rating}
         />
 
-        <HealthCard
-          title="Piotroski F Score"
+        <MetricCard
+          label="Piotroski F-Score"
           value={`${piotroski}/9`}
-          subtitle="Financial strength"
-          color="bg-blue-500/10"
-          icon={
-            <BarChart3
-              size={22}
-              className="text-blue-400"
-            />
-          }
+          hint="Financial strength"
         />
 
-        <HealthCard
-          title="Altman Z"
-          value={altman.toFixed(2)}
-          subtitle={`${bankruptcyRisk} bankruptcy risk`}
-          color="bg-violet-500/10"
-          icon={
-            <CheckCircle2
-              size={22}
-              className="text-violet-400"
-            />
-          }
+        <MetricCard
+          label="Altman Z-Score"
+          value={formatRatio(altman)}
+          hint={`${bankruptcyRisk} bankruptcy risk`}
         />
 
-        <HealthCard
-          title="Beneish M"
-          value={beneish.toFixed(2)}
-          subtitle={`${fraudRisk} manipulation risk`}
-          color="bg-orange-500/10"
-          icon={
-            <AlertTriangle
-              size={22}
-              className="text-orange-400"
-            />
-          }
+        <MetricCard
+          label="Beneish M-Score"
+          value={formatRatio(beneish)}
+          hint={`${manipulationRisk} manipulation risk`}
         />
-
       </div>
 
-      <div className="mt-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-emerald-500/5 via-blue-500/5 to-violet-500/5 p-6">
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle as="h3">Score interpretation</CardTitle>
+          <span className="text-caption text-subtle-foreground">
+            Derived from the values above
+          </span>
+        </CardHeader>
 
-        <div className="flex items-center gap-3">
+        <CardBody>
+          <dl className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-3 border-b border-border py-2">
+              <dt className="text-label text-muted-foreground">
+                Health rating
+              </dt>
+              <dd className="text-label font-medium text-foreground">
+                {rating}
+              </dd>
+            </div>
 
-          <Activity
-            size={20}
-            className="text-cyan-400"
-          />
+            <div className="flex items-center justify-between gap-3 border-b border-border py-2">
+              <dt className="text-label text-muted-foreground">
+                Bankruptcy risk (Altman Z)
+              </dt>
+              <dd>
+                <Badge variant={toneFor(bankruptcyRisk)}>{bankruptcyRisk}</Badge>
+              </dd>
+            </div>
 
-          <h3 className="text-xl font-semibold text-white">
-            AI Financial Interpretation
-          </h3>
+            <div className="flex items-center justify-between gap-3 border-b border-border py-2">
+              <dt className="text-label text-muted-foreground">
+                Earnings manipulation risk (Beneish M)
+              </dt>
+              <dd>
+                <Badge variant={toneFor(manipulationRisk)}>
+                  {manipulationRisk}
+                </Badge>
+              </dd>
+            </div>
 
-        </div>
-
-        <div className="mt-6 space-y-3 text-zinc-300 leading-7">
-
-          <p>
-            • Financial Health Rating:
-            <span className="ml-2 font-semibold text-white">
-              {rating}
-            </span>
-          </p>
-
-          <p>
-            • Bankruptcy Risk:
-            <span className="ml-2 font-semibold text-white">
-              {bankruptcyRisk}
-            </span>
-          </p>
-
-          <p>
-            • Earnings Manipulation Risk:
-            <span className="ml-2 font-semibold text-white">
-              {fraudRisk}
-            </span>
-          </p>
-
-          <p>
-            • Piotroski analysis indicates
-            {" "}
-            {piotroski >= 7
-              ? "strong financial quality."
-              : piotroski >= 5
-              ? "average financial quality."
-              : "weak financial quality."}
-          </p>
-
-        </div>
-
-      </div>
-
+            <div className="flex items-center justify-between gap-3 border-b border-border py-2">
+              <dt className="text-label text-muted-foreground">
+                Piotroski F-Score
+              </dt>
+              <dd className="text-label font-medium text-foreground">
+                {piotroskiRead}
+              </dd>
+            </div>
+          </dl>
+        </CardBody>
+      </Card>
     </section>
   );
 }

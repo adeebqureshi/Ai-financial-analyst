@@ -11,7 +11,7 @@ export function Skeleton({
     <div
       className={cn(
         animate ? "animate-pulse" : "",
-        "rounded-md bg-white/10",
+        "rounded-md bg-muted",
         className
       )}
       {...props}
@@ -26,7 +26,7 @@ export function SkeletonWrapper({
 }: React.HTMLAttributes<HTMLDivElement> & { animate?: boolean }) {
   return (
     <div
-      className={cn(animate ? "animate-pulse" : "", "rounded-md bg-white/10", className)}
+      className={cn(animate ? "animate-pulse" : "", "rounded-md bg-muted", className)}
       {...props}
     />
   );
@@ -41,7 +41,7 @@ export function SkeletonCard({
     <div
       data-testid="skeleton-card"
       className={cn(
-        "rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl space-y-6",
+        "space-y-6 rounded-xl border border-border bg-card p-8",
         className
       )}
       {...props}
@@ -65,7 +65,7 @@ export function SkeletonMetricCard({
   return (
     <div
       className={cn(
-        "rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl space-y-4",
+        "space-y-4 rounded-xl border border-border bg-card p-8",
         className
       )}
       {...props}
@@ -97,14 +97,14 @@ export function SkeletonTable({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.03]",
+        "overflow-hidden rounded-xl border border-border bg-card",
         className
       )}
       {...props}
     >
       <table className="w-full">
         <thead>
-          <tr className="border-b border-white/10">
+          <tr className="border-b border-border">
             {Array.from({ length: cols }).map((_, i) => (
               <th key={i} className="p-6 text-left">
                 <Skeleton animate={animate} className="h-4 w-20 rounded" />
@@ -114,7 +114,7 @@ export function SkeletonTable({
         </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-white/5">
+            <tr key={rowIndex} className="border-b border-border last:border-0">
               {Array.from({ length: cols }).map((_, colIndex) => (
                 <td key={colIndex} className="p-6 text-center">
                   <Skeleton animate={animate} className="h-6 w-24 mx-auto rounded" />
@@ -141,7 +141,7 @@ export function SkeletonChart({
     <div
       data-testid="skeleton-chart"
       className={cn(
-        "rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl",
+        "rounded-xl border border-border bg-card p-8",
         className
       )}
       {...props}
@@ -204,7 +204,7 @@ export function SkeletonList({
         <div
           key={i}
           data-testid="skeleton-list-item"
-          className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4"
+          className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4"
         >
           <div className="flex items-center gap-4">
             <Skeleton animate={animate} className="h-10 w-10 rounded-full" />
@@ -225,7 +225,14 @@ export function SkeletonAnalysisView({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-testid="skeleton-analysis-view" className={cn("animate-pulse space-y-10", className)} {...props}>
+    <div
+      data-testid="skeleton-analysis-view"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading analysis"
+      className={cn("animate-pulse space-y-10", className)}
+      {...props}
+    >
       <SkeletonCard animate={false} className="max-w-4xl" />
       <SkeletonCard animate={false} className="max-w-4xl" />
       <SkeletonChart animate={false} />

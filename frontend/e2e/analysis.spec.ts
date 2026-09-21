@@ -8,7 +8,8 @@ test.describe("Analysis workflow", () => {
   test("navigates to analysis page and displays financial data", async ({ page }) => {
     await page.goto("/analysis/AAPL");
 
-    await expect(page.locator("h1")).toContainText("Apple");
+    // The company name is in the CompanyHeader with testid
+    await expect(page.locator("[data-testid='company-name']")).toContainText("Apple");
     await expect(page.locator("text=AI Analysis")).toBeVisible();
 
     await expect(page.locator("[data-testid='company-header']")).toBeVisible();
@@ -23,7 +24,8 @@ test.describe("Analysis workflow", () => {
   test("displays loading skeleton while analysis loads", async ({ page }) => {
     await page.goto("/analysis/AAPL");
 
-    await expect(page.locator(".animate-pulse")).toBeVisible();
+    // Use the specific testid for the analysis skeleton
+    await expect(page.locator("[data-testid='skeleton-analysis-view']")).toBeVisible();
   });
 
   test("shows error state when analysis fails", async ({ page }) => {
@@ -57,7 +59,8 @@ test.describe("Dashboard workflow", () => {
   test("displays AI search component", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await expect(page.locator("text=Ask the AI Agent")).toBeVisible();
+    // AISearch component has this heading
+    await expect(page.locator("text=Ask AI about any public company")).toBeVisible();
   });
 });
 

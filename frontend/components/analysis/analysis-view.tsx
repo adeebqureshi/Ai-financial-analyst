@@ -112,17 +112,10 @@ export function AnalysisView({
 
       <ExecutiveSummary
         recommendation={recommendation}
-        summary={
-          company.description ??
-          `${company.name} currently appears ${recommendation.toLowerCase()} based on AI valuation, profitability, financial quality and risk assessment.`
-        }
+        summary={company.description ?? null}
         upside={valuation.upside}
-        intrinsicValue={
-          valuation.intrinsic_value
-        }
-        currentPrice={
-          valuation.current_price
-        }
+        intrinsicValue={valuation.intrinsic_value}
+        currentPrice={valuation.current_price}
       />
 
       <MarketOverview

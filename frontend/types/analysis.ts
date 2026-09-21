@@ -240,6 +240,7 @@ export interface ValuationParams {
   beta: number;
   market_return: number;
   tax_rate: number;
+  cost_of_debt?: number;
   terminal_growth?: number;
   years?: number;
 }

@@ -1,20 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 
-type Stock = {
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+
+type Shortcut = {
   symbol: string;
   company: string;
 };
 
 /**
- * Static navigation shortcuts only — no prices or changes are shown because
- * no dashboard endpoint provides them. Live values appear on each company's
+ * Navigation shortcuts only — no prices or changes are shown because no
+ * dashboard endpoint provides them. Live values appear on each company's
  * analysis page, sourced from the backend.
  */
-const stocks: Stock[] = [
+const shortcuts: Shortcut[] = [
   { symbol: "AAPL", company: "Apple" },
   { symbol: "MSFT", company: "Microsoft" },
   { symbol: "NVDA", company: "NVIDIA" },
@@ -24,52 +25,43 @@ const stocks: Stock[] = [
 
 export function Watchlist() {
   return (
-    <section className="rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
+    <Card aria-labelledby="shortcuts-heading">
+      <CardHeader>
+        <div>
+          <CardTitle as="h2" id="shortcuts-heading">
+            Shortcuts
+          </CardTitle>
+          <p className="mt-1 text-label text-muted-foreground">
+            Quick links to AI analysis for frequently researched companies.
+          </p>
+        </div>
+      </CardHeader>
 
-      <div className="mb-8">
-
-        <h2 className="text-2xl font-bold text-white">
-          Watchlist
-        </h2>
-
-        <p className="mt-2 text-zinc-500">
-          Shortcut links — open a company for its live AI analysis
-        </p>
-
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-
-        {stocks.map((stock, index) => (
-          <motion.div
-            key={stock.symbol}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.06 }}
-            whileHover={{ x: 5 }}
-            className="rounded-2xl border border-white/5 bg-white/[0.02] transition hover:border-blue-500/20 hover:bg-blue-500/5"
-          >
+      <CardBody>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {shortcuts.map((shortcut) => (
             <Link
-              href={`/analysis/${stock.symbol}`}
-              className="flex w-full items-center justify-between px-5 py-4"
+              key={shortcut.symbol}
+              href={`/analysis/${shortcut.symbol}`}
+              className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors hover:border-border-strong hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div>
-                <h3 className="font-semibold text-white">
-                  {stock.symbol}
-                </h3>
+              <span className="min-w-0">
+                <span className="block font-mono text-label font-semibold text-foreground">
+                  {shortcut.symbol}
+                </span>
+                <span className="block truncate text-caption text-muted-foreground">
+                  {shortcut.company}
+                </span>
+              </span>
 
-                <p className="text-sm text-zinc-500">
-                  {stock.company}
-                </p>
-              </div>
-
-              <ArrowUpRight size={16} className="text-zinc-500" />
+              <ArrowUpRight
+                className="size-4 shrink-0 text-muted-foreground transition group-hover:text-foreground"
+                aria-hidden="true"
+              />
             </Link>
-          </motion.div>
-        ))}
-
-      </div>
-
-    </section>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
   );
 }

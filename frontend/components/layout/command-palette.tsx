@@ -10,10 +10,11 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ArrowUpRight, Search, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isActivePath, navigationDestinations } from "./nav-items";
 
 type PaletteItem = {
   label: string;
@@ -21,18 +22,10 @@ type PaletteItem = {
   group: string;
 };
 
-/* The nine approved Phase 2 destinations. */
-const ITEMS: PaletteItem[] = [
-  { label: "Ask AI", href: "/dashboard", group: "CO-PILOT" },
-  { label: "Reports", href: "/reports", group: "CO-PILOT" },
-  { label: "Documents", href: "/research", group: "RESEARCH" },
-  { label: "Search", href: "/search", group: "RESEARCH" },
-  { label: "Overview", href: "/dashboard", group: "MARKETS" },
-  { label: "Screener", href: "/screener", group: "MARKETS" },
-  { label: "Compare", href: "/compare", group: "MARKETS" },
-  { label: "Analyze", href: "/analysis", group: "COMPANY" },
-  { label: "Profile", href: "/company", group: "COMPANY" },
-];
+/* Same destinations as the sidebar — defined once in `nav-items.ts`. */
+const ITEMS: PaletteItem[] = navigationDestinations.map(
+  ({ title, href, group }) => ({ label: title, href, group })
+);
 
 type Props = {
   children: ReactNode;
@@ -52,7 +45,10 @@ export function CommandPalette({ children }: Props) {
   const inputId = useId();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   const child = Children.only(children) as ReactElement<{
     onClick?: () => void;
@@ -92,6 +88,8 @@ export function CommandPalette({ children }: Props) {
   }, [open]);
 
   function openPalette() {
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setOpen(true);
     setQuery("");
     setActiveIndex(0);
@@ -100,6 +98,9 @@ export function CommandPalette({ children }: Props) {
   function close() {
     setOpen(false);
     setQuery("");
+    // Return focus to the trigger so keyboard users are not dropped at <body>.
+    restoreFocusRef.current?.focus();
+    restoreFocusRef.current = null;
   }
 
   function navigate(href: string) {
@@ -113,6 +114,32 @@ export function CommandPalette({ children }: Props) {
       close();
       return;
     }
+
+    if (event.key === "Tab") {
+      // Keep focus inside the modal dialog.
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'button, input, a[href], select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+
+      return;
+    }
+
+    if (filtered.length === 0) return;
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -152,9 +179,11 @@ export function CommandPalette({ children }: Props) {
           }}
         >
           <div
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={inputId}
+            onKeyDown={onKeyDown}
             className="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-overlay"
           >
             <div className="flex items-center gap-3 border-b border-border px-4">
@@ -228,6 +257,7 @@ export function CommandPalette({ children }: Props) {
                       <span className="block">{item.label}</span>
                       <span className="block text-caption text-muted-foreground">
                         {item.group}
+                        {isActivePath(pathname, item.href) && " · Current page"}
                       </span>
                     </span>
                     <ArrowUpRight

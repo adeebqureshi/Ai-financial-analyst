@@ -1,7 +1,12 @@
 "use client";
 
 import { Search, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Field, TickerInput } from "@/components/ui/field";
 
 type Props = {
   tickers: string[];
@@ -14,86 +19,113 @@ export function ComparisonToolbar({
   onAdd,
   onRemove,
 }: Props) {
+  const inputId = useId();
   const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   function add() {
-    onAdd(input);
+    const symbol = input.trim().toUpperCase();
+
+    if (!symbol) {
+      setError("Enter a ticker symbol to add.");
+      return;
+    }
+
+    if (!/^[A-Z]{1,5}$/.test(symbol)) {
+      setError("Ticker symbols are 1–5 letters (e.g. TSLA).");
+      return;
+    }
+
+    setError(null);
+    onAdd(symbol);
     setInput("");
   }
 
   return (
-
-    <section className="rounded-[32px] border border-white/10 bg-white/[0.03] p-8">
-
-      <div className="flex flex-wrap gap-5">
-
-        <div className="flex flex-1 items-center rounded-2xl bg-white/5 px-5">
-
-          <Search
-            className="text-zinc-500"
-            size={20}
-          />
-
-          <input
-            value={input}
-            onChange={(e) =>
-              setInput(e.target.value)
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") add();
-            }}
-            placeholder="Add company (e.g. TSLA)..."
-            className="h-14 flex-1 bg-transparent px-4 outline-none text-white"
-          />
-
-        </div>
-
-        <button
-          onClick={add}
-          className="flex h-14 items-center gap-2 rounded-2xl bg-blue-600 px-6 font-medium text-white transition hover:bg-blue-500"
-        >
-
-          <Plus size={18} />
-
-          Add
-
-        </button>
-
-      </div>
-
-      <div className="mt-8 flex flex-wrap gap-3">
-
-        {tickers.map((ticker) => (
-
-          <div
-            key={ticker}
-            className="flex items-center gap-2 rounded-full bg-blue-600/15 px-5 py-2 text-blue-300"
-          >
-
-            {ticker}
-
-            <button
-              onClick={() => onRemove(ticker)}
-              aria-label={`Remove ${ticker}`}
-              className="text-blue-400 transition hover:text-white"
-            >
-              <X size={14} />
-            </button>
-
-          </div>
-
-        ))}
-
-        {tickers.length === 0 && (
-          <p className="py-2 text-sm text-zinc-500">
-            No companies selected. Add at least one ticker.
+    <Card aria-labelledby="comparison-toolbar-heading">
+      <CardHeader>
+        <div>
+          <CardTitle as="h2" id="comparison-toolbar-heading">
+            Companies to compare
+          </CardTitle>
+          <p className="mt-1 text-label text-muted-foreground">
+            Add two or more tickers. Values are computed by the backend
+            <code className="mx-1 font-mono text-caption">/compare</code>
+            endpoint.
           </p>
-        )}
+        </div>
+      </CardHeader>
 
-      </div>
+      <CardBody>
+        <form
+          className="flex flex-col gap-3 sm:flex-row sm:items-start"
+          onSubmit={(event) => {
+            event.preventDefault();
+            add();
+          }}
+        >
+          <Field
+            label="Add a ticker"
+            htmlFor={inputId}
+            error={error}
+            className="flex-1"
+          >
+            <div className="flex items-center gap-2 rounded-md border border-input bg-card px-3 focus-within:border-border-strong focus-within:ring-2 focus-within:ring-ring">
+              <Search
+                size={16}
+                className="shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
 
-    </section>
+              <TickerInput
+                id={inputId}
+                value={input}
+                onValueChange={(value) => {
+                  setInput(value);
+                  setError(null);
+                }}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? `${inputId}-error` : undefined}
+                placeholder="TSLA"
+                className="border-0 bg-transparent ring-0 focus-visible:ring-0"
+              />
+            </div>
+          </Field>
 
+          <Button type="submit" className="sm:mt-0">
+            <Plus size={16} aria-hidden="true" />
+            Add
+          </Button>
+        </form>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {tickers.map((ticker) => (
+            <span
+              key={ticker}
+              className="inline-flex items-center gap-1.5"
+            >
+              <Badge variant="brand" className="py-1 font-mono">
+                {ticker}
+              </Badge>
+
+              <button
+                type="button"
+                onClick={() => onRemove(ticker)}
+                aria-label={`Remove ${ticker} from the comparison`}
+                className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+
+          {tickers.length === 0 && (
+            <p className="py-1 text-label text-muted-foreground">
+              No companies selected. Add at least two tickers.
+            </p>
+          )}
+        </div>
+      </CardBody>
+    </Card>
   );
-
 }

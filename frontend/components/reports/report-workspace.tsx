@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Loader2, Search, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { api } from "@/services/api";
 import { ReportViewer } from "@/components/analysis/report-viewer";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { Field, TickerInput } from "@/components/ui/field";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
-import type {
-  ApiResponse,
-  ReportData,
-} from "@/types/analysis";
+import type { ApiResponse, ReportData } from "@/types/analysis";
 
 const suggestions = [
   "AAPL",
@@ -23,12 +26,12 @@ export function ReportWorkspace() {
   const [ticker, setTicker] = useState("");
   const [report, setReport] = useState<ReportData | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   async function generate() {
-    const symbol = ticker.trim().toUpperCase();
+    const normalized = ticker.trim().toUpperCase();
 
-    if (!/^[A-Z]{1,5}$/.test(symbol) || generating) {
+    if (!/^[A-Z]{1,5}$/.test(normalized) || generating) {
       return;
     }
 
@@ -37,9 +40,7 @@ export function ReportWorkspace() {
     setReport(null);
 
     try {
-      const response = await api.report({
-        ticker: symbol,
-      });
+      const response = await api.report({ ticker: normalized });
 
       const data = (response as ApiResponse<ReportData>).data;
 
@@ -49,113 +50,104 @@ export function ReportWorkspace() {
 
       setReport(data);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to generate the report."
-      );
+      setError(err);
     } finally {
       setGenerating(false);
     }
   }
 
+  const valid = /^[A-Z]{1,5}$/.test(ticker.trim().toUpperCase());
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
+      <Card aria-labelledby="report-form-heading">
+        <CardHeader>
+          <div>
+            <CardTitle as="h2" id="report-form-heading">
+              Generate a report
+            </CardTitle>
+            <p className="mt-1 text-label text-muted-foreground">
+              The backend researches the company and writes the report; this can
+              take a while.
+            </p>
+          </div>
+        </CardHeader>
 
-      <section className="rounded-[32px] border border-white/10 bg-white/[0.03] p-8">
-
-        <div className="flex h-16 items-center rounded-2xl border border-white/10 bg-white/5 px-6">
-
-          <Search
-            size={20}
-            className="text-zinc-500"
-          />
-
-          <input
-            value={ticker}
-            onChange={(e) =>
-              setTicker(e.target.value)
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") generate();
+        <CardBody>
+          <form
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void generate();
             }}
-            placeholder="Enter ticker (AAPL, MSFT, NVDA...)"
-            className="ml-4 flex-1 bg-transparent text-base text-white outline-none placeholder:text-zinc-500"
-          />
-
-          <button
-            onClick={generate}
-            disabled={generating}
-            className="flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {generating ? (
-              <>
-                <Loader2
-                  size={18}
-                  className="animate-spin"
-                />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} />
-                Generate Report
-              </>
-            )}
-          </button>
-
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-3">
-
-          {suggestions.map((s) => (
-
-            <button
-              key={s}
-              onClick={() => {
-                setTicker(s);
-                setReport(null);
-              }}
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-zinc-300 hover:bg-blue-500/10"
+            <Field
+              label="Ticker symbol"
+              htmlFor="report-ticker"
+              required
+              className="sm:max-w-40"
             >
-              {s}
-            </button>
+              <TickerInput
+                id="report-ticker"
+                value={ticker}
+                onValueChange={setTicker}
+                placeholder="AAPL"
+              />
+            </Field>
 
-          ))}
+            <Button type="submit" disabled={!valid || generating}>
+              <Sparkles size={16} aria-hidden="true" />
+              {generating ? "Generating…" : "Generate report"}
+            </Button>
+          </form>
 
+          <div className="mt-4 flex flex-wrap gap-2">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => {
+                  setTicker(suggestion);
+                  setReport(null);
+                }}
+                className="rounded-full border border-border bg-muted px-3 py-1 font-mono text-caption text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+
+      {error !== null && (
+        <ErrorDisplay error={error} onRetry={() => void generate()} />
+      )}
+
+      {generating && (
+        <div role="status" aria-busy="true">
+          <SkeletonCard />
+          <span className="sr-only">Generating report…</span>
         </div>
+      )}
 
-      </section>
-
-      {error && (
-        <section className="rounded-3xl border border-red-500/20 bg-red-500/10 p-8 text-red-300">
-          {error}
-        </section>
+      {!generating && error === null && !report && (
+        <EmptyState
+          icon={<Sparkles size={20} aria-hidden="true" />}
+          title="No report yet"
+          description="Enter a ticker symbol and generate a report to see the research here."
+        />
       )}
 
       {report && (
-
-        <div className="space-y-6">
-
-          <div className="flex items-center gap-3">
-
-            <FileText
-              size={22}
-              className="text-blue-400"
-            />
-
-            <h2 className="text-3xl font-bold text-white">
-              {report.title}
-            </h2>
-
+        <section aria-labelledby="report-title">
+          <h2 id="report-title" className="text-title text-foreground">
+            {report.title}
+          </h2>
+          <div className="mt-4">
+            <ReportViewer report={report.content} />
           </div>
-
-          <ReportViewer report={report.content} />
-
-        </div>
-
+        </section>
       )}
-
     </div>
   );
 }

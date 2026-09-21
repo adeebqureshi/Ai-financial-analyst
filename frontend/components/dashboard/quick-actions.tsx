@@ -1,101 +1,119 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
-  Building2,
-  Bot,
-  BarChart3,
-  FileText,
   ArrowRight,
+  BookOpenText,
+  Crosshair,
+  FileText,
+  GitCompare,
+  Search,
+  SlidersHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 
-const actions = [
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+
+type Action = {
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+/**
+ * Destinations that exist in the application. Descriptions state what the
+ * destination actually does — no workflow is advertised that the app cannot
+ * perform (e.g. there is no PDF export and no portfolio tracker).
+ */
+const actions: Action[] = [
   {
-    title: "Analyze Company",
-    description: "Run complete AI analysis",
+    title: "Analyze a company",
+    description: "Run the AI pipeline for one ticker",
     href: "/analysis",
-    icon: Building2,
-    color: "from-blue-500/20 to-cyan-500/20",
+    icon: Crosshair,
   },
   {
-    title: "AI Assistant",
-    description: "Ask finance questions",
-    href: "/analysis",
-    icon: Bot,
-    color: "from-violet-500/20 to-fuchsia-500/20",
-  },
-  {
-    title: "Compare Stocks",
-    description: "Side-by-side comparison",
+    title: "Compare companies",
+    description: "Side-by-side valuation and health",
     href: "/compare",
-    icon: BarChart3,
-    color: "from-emerald-500/20 to-teal-500/20",
+    icon: GitCompare,
   },
   {
-    title: "Generate Report",
-    description: "Export PDF report",
+    title: "Criteria check",
+    description: "Screen one candidate against your criteria",
+    href: "/screener",
+    icon: SlidersHorizontal,
+  },
+  {
+    title: "Generate a report",
+    description: "LLM research report for a company",
     href: "/reports",
     icon: FileText,
-    color: "from-orange-500/20 to-yellow-500/20",
+  },
+  {
+    title: "Documents",
+    description: "Upload filings and ask grounded questions",
+    href: "/research",
+    icon: BookOpenText,
+  },
+  {
+    title: "Search knowledge base",
+    description: "Hybrid vector + keyword retrieval",
+    href: "/search",
+    icon: Search,
   },
 ];
 
 export function QuickActions() {
   return (
-    <section className="rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white">
-          Quick Actions
-        </h2>
+    <Card aria-labelledby="quick-actions-heading">
+      <CardHeader>
+        <div>
+          <CardTitle as="h2" id="quick-actions-heading">
+            Quick actions
+          </CardTitle>
+          <p className="mt-1 text-label text-muted-foreground">
+            Launch common research workflows
+          </p>
+        </div>
+      </CardHeader>
 
-        <p className="mt-2 text-zinc-500">
-          Launch common workflows
-        </p>
-      </div>
+      <CardBody>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {actions.map((action) => {
+            const Icon = action.icon;
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {actions.map((action, index) => {
-          const Icon = action.icon;
-
-          return (
-            <Link key={action.title} href={action.href}>
-              <motion.button
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.08 }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.02,
-                }}
-                className={`group w-full rounded-3xl border border-white/10 bg-gradient-to-br ${action.color} p-6 text-left backdrop-blur-xl`}
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group flex items-start justify-between gap-3 rounded-lg border border-border bg-background p-4 transition-colors hover:border-border-strong hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="flex items-center justify-between">
-                  <div className="rounded-2xl bg-white/10 p-3">
-                    <Icon
-                      size={24}
-                      className="text-white"
-                    />
-                  </div>
+                <span className="flex min-w-0 items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-brand">
+                    <Icon size={17} aria-hidden="true" />
+                  </span>
 
-                  <ArrowRight
-                    size={18}
-                    className="text-zinc-400 transition group-hover:translate-x-1 group-hover:text-white"
-                  />
-                </div>
+                  <span className="min-w-0">
+                    <span className="block text-label font-medium text-foreground">
+                      {action.title}
+                    </span>
+                    <span className="mt-0.5 block text-caption text-muted-foreground">
+                      {action.description}
+                    </span>
+                  </span>
+                </span>
 
-                <h3 className="mt-8 text-lg font-semibold text-white">
-                  {action.title}
-                </h3>
-
-                <p className="mt-2 text-sm text-zinc-300">
-                  {action.description}
-                </p>
-              </motion.button>
-            </Link>
-          );
-        })}
-      </div>
-    </section>
+                <ArrowRight
+                  className="mt-1 size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground"
+                  aria-hidden="true"
+                />
+              </Link>
+            );
+          })}
+        </div>
+      </CardBody>
+    </Card>
   );
 }

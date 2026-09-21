@@ -1,11 +1,9 @@
 "use client";
 
-import {
-  Activity,
-  Building2,
-  Landmark,
-  AlertTriangle,
-} from "lucide-react";
+import { Activity, Building2, Landmark } from "lucide-react";
+
+import { Badge, DemoBadge, RecommendationBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 type Props = {
   company: {
@@ -19,115 +17,86 @@ type Props = {
   recommendation: string;
 };
 
-function badgeColor(recommendation: string) {
-  const r = recommendation.toUpperCase();
-
-  if (r.includes("BUY"))
-    return "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
-
-  if (r.includes("SELL"))
-    return "bg-red-500/15 border-red-500/30 text-red-400";
-
-  return "bg-yellow-500/15 border-yellow-500/30 text-yellow-300";
-}
-
+/** The backend flags synthetic fixtures by suffixing the company name. */
 function isDemoData(name: string): boolean {
   return name.includes("[DEMO / SYNTHETIC DATA]");
 }
 
-export function CompanyHeader({
-  company,
-  recommendation,
-}: Props) {
+export function CompanyHeader({ company, recommendation }: Props) {
   const isDemo = isDemoData(company.name);
   const displayName = isDemo
     ? company.name.replace(" [DEMO / SYNTHETIC DATA]", "")
     : company.name;
 
   return (
-    <section data-testid="company-header" className="relative overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-[#0B1220] via-[#090B11] to-[#05060A] p-10">
+    <section data-testid="company-header" aria-labelledby="company-heading">
+      <Card className="p-6 sm:p-8">
+        <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="brand">
+                <Activity size={13} aria-hidden="true" />
+                AI Analysis
+              </Badge>
 
-      <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full bg-blue-500/10 blur-[120px]" />
-
-      <div className="relative z-10 flex flex-col justify-between gap-10 xl:flex-row">
-
-        <div className="max-w-4xl">
-
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-300">
-            <Activity size={16} />
-            AI Financial Analysis
-            {isDemo && (
-              <span className="ml-2 flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-                <AlertTriangle size={10} />
-                DEMO DATA
-              </span>
-            )}
-          </div>
-
-          <h1 className="mt-8 text-6xl font-bold tracking-tight text-white">
-            {displayName}
-          </h1>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-
-            <span className="rounded-full bg-white/5 px-4 py-2 text-zinc-300">
-              {company.ticker}
-            </span>
-
-            {company.sector && (
-              <span className="rounded-full bg-white/5 px-4 py-2 text-zinc-300">
-                <Landmark className="mr-2 inline" size={14} />
-                {company.sector}
-              </span>
-            )}
-
-            {company.industry && (
-              <span className="rounded-full bg-white/5 px-4 py-2 text-zinc-300">
-                <Building2 className="mr-2 inline" size={14} />
-                {company.industry}
-              </span>
-            )}
-
-            {isDemo && (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-400">
-                Synthetic Data
-              </span>
-            )}
-
-          </div>
-
-          <p className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
-            {company.description ??
-              "Enterprise AI generated equity research covering valuation, financial quality, risk assessment, intrinsic value and investment recommendation."}
-            {isDemo && (
-              <span className="ml-2 text-amber-400">
-                (All values are synthetic/demo data)
-              </span>
-            )}
-          </p>
-
-        </div>
-
-        <div className="flex w-full max-w-sm flex-col gap-5">
-
-          <div
-            className={`rounded-3xl border p-7 ${badgeColor(
-              recommendation
-            )}`}
-          >
-            <div className="text-sm uppercase tracking-[0.25em]">
-              Recommendation
+              {isDemo && <DemoBadge label="Demo data" />}
             </div>
 
-            <div className="mt-4 text-4xl font-bold">
-              {recommendation}
+            <h1
+              id="company-heading"
+              className="mt-4 text-display break-words text-foreground"
+            >
+              {displayName}
+            </h1>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="font-mono">
+                {company.ticker}
+              </Badge>
+
+              {company.sector && (
+                <Badge variant="neutral">
+                  <Landmark size={13} aria-hidden="true" />
+                  {company.sector}
+                </Badge>
+              )}
+
+              {company.industry && (
+                <Badge variant="neutral">
+                  <Building2 size={13} aria-hidden="true" />
+                  {company.industry}
+                </Badge>
+              )}
             </div>
+
+            {company.description && (
+              <p className="mt-5 text-body text-muted-foreground">
+                {company.description}
+              </p>
+            )}
+
+            {isDemo && (
+              <p className="mt-2 text-caption text-warning">
+                All values shown for this company come from the backend&apos;s
+                synthetic demo fixtures, not from live market data.
+              </p>
+            )}
           </div>
 
+          <div className="w-full shrink-0 rounded-lg border border-border bg-background p-5 sm:max-w-72">
+            <p className="text-caption font-medium uppercase tracking-wide text-subtle-foreground">
+              Backend recommendation
+            </p>
+
+            <div className="mt-3">
+              <RecommendationBadge
+                recommendation={recommendation}
+                className="px-3 py-1 text-body"
+              />
+            </div>
+          </div>
         </div>
-
-      </div>
-
+      </Card>
     </section>
   );
 }

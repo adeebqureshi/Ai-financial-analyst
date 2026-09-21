@@ -4,6 +4,8 @@ import { RefreshCw, AlertTriangle, AlertCircle, WifiOff, Lock } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api";
 
+import { Button } from "./button";
+
 type ErrorDisplayProps = {
   error: unknown;
   onRetry?: () => void;
@@ -92,46 +94,42 @@ export function ErrorDisplay({
   return (
     <div
       className={cn(
-        "rounded-2xl border p-6 text-center transition-colors",
-        compact
-          ? "border-white/10 bg-white/[0.02] p-4"
-          : "border-red-500/20 bg-red-500/10",
+        "rounded-lg border border-loss/30 bg-loss-subtle text-center",
+        compact ? "p-4" : "p-6",
         className
       )}
       role="alert"
-      aria-live="polite"
     >
       <Icon
-        size={compact ? 24 : 40}
-        className={cn(
-          "mx-auto text-red-400",
-          compact && "text-red-400"
-        )}
+        className={cn("mx-auto text-loss", compact ? "size-6" : "size-9")}
         aria-hidden="true"
       />
 
-      <h2 className={cn("mt-4 font-bold", compact ? "text-lg" : "text-2xl")} style={{ color: "white" }}>
+      <h2
+        className={cn(
+          "mt-3 text-foreground",
+          compact ? "text-body font-semibold" : "text-title"
+        )}
+      >
         {title ?? defaultTitle}
       </h2>
 
-      <p className={cn("mt-2 text-zinc-300", compact ? "text-sm" : "text-base")}>
+      <p
+        className={cn(
+          "mt-1.5 text-muted-foreground",
+          compact ? "text-caption" : "text-label"
+        )}
+      >
         {message}
       </p>
 
       {isRetryable && onRetry && (
-        <button
-          onClick={onRetry}
-          className={cn(
-            "mt-4 inline-flex items-center gap-2 rounded-xl font-medium transition focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[#05060A]",
-            compact
-              ? "px-4 py-2 text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
-              : "px-6 py-3 bg-white text-black hover:bg-blue-100"
-          )}
-          aria-label="Retry the failed operation"
-        >
-          <RefreshCw size={16} aria-hidden="true" />
-          Try again
-        </button>
+        <div className="mt-4 flex justify-center">
+          <Button variant="secondary" size={compact ? "sm" : "md"} onClick={onRetry}>
+            <RefreshCw className="size-3.5" aria-hidden="true" />
+            Try again
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -151,22 +149,23 @@ export function ErrorInline({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-red-400 text-sm",
+        "inline-flex flex-wrap items-center gap-2 rounded-md border border-loss/30 bg-loss-subtle px-3 py-2 text-label text-loss",
         className
       )}
       role="alert"
-      aria-live="polite"
     >
-      <Icon size={16} aria-hidden="true" />
-      <span>{message}</span>
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <span className="min-w-0">{message}</span>
       {isRetryable && onRetry && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onRetry}
-          className="ml-2 px-3 py-1 text-xs font-medium rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition"
+          className="text-loss hover:bg-loss/10 hover:text-loss"
           aria-label="Retry"
         >
-          <RefreshCw size={12} aria-hidden="true" />
-        </button>
+          <RefreshCw className="size-3.5" aria-hidden="true" />
+        </Button>
       )}
     </div>
   );

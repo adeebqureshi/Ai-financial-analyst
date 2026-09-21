@@ -1,20 +1,33 @@
 "use client";
 
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  TrendingUp,
-  ShieldCheck,
-  Sparkles,
-  Target,
-} from "lucide-react";
+  MetricCard,
+  formatCurrency,
+  formatPercent,
+} from "@/components/ui/metric";
+import { RecommendationBadge } from "@/components/ui/badge";
 
 type Props = {
   recommendation: string;
-  summary: string;
+  /**
+   * Company profile text from `/analyze`, or null when the backend has none.
+   * The UI never invents a narrative when it is absent.
+   */
+  summary: string | null;
   upside: number;
   intrinsicValue: number;
   currentPrice: number;
 };
 
+/**
+ * Headline read of a completed analysis.
+ *
+ * Every figure here is a backend value: the recommendation, the intrinsic
+ * value, the current price and the upside percentage. The only derived number
+ * is the per-share difference between intrinsic value and price, which is
+ * labelled as such.
+ */
 export function ExecutiveSummary({
   recommendation,
   summary,
@@ -22,86 +35,61 @@ export function ExecutiveSummary({
   intrinsicValue,
   currentPrice,
 }: Props) {
-  const positive = upside > 0;
+  const difference = intrinsicValue - currentPrice;
 
   return (
-    <section data-testid="executive-summary" className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
-
-      <div className="flex items-center gap-3">
-        <Sparkles className="text-blue-400" size={20} />
-
-        <span className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-          Executive Summary
-        </span>
-      </div>
-
-      <div className="mt-8 flex flex-wrap items-center gap-4">
-
-        <div
-          className={`rounded-full px-5 py-2 text-lg font-semibold ${
-            recommendation === "BUY"
-              ? "bg-emerald-500/20 text-emerald-400"
-              : recommendation === "SELL"
-              ? "bg-red-500/20 text-red-400"
-              : "bg-yellow-500/20 text-yellow-300"
-          }`}
-        >
-          {recommendation}
-        </div>
-
-      </div>
-
-      <p className="mt-8 max-w-4xl text-lg leading-8 text-zinc-300">
-        {summary}
-      </p>
-
-      <div className="mt-10 grid gap-5 md:grid-cols-4">
-
-        <div className="rounded-2xl bg-white/5 p-5">
-          <TrendingUp className="mb-4 text-emerald-400" />
-          <div className="text-sm text-zinc-500">
-            Upside Potential
+    <section data-testid="executive-summary" aria-labelledby="analysis-summary-heading">
+      <Card>
+        <CardHeader>
+          <div className="min-w-0">
+            <CardTitle as="h2" id="analysis-summary-heading">
+              Analysis summary
+            </CardTitle>
+            <p className="mt-1 text-label text-muted-foreground">
+              Recommendation and valuation returned by the backend.
+            </p>
           </div>
-          <div className="mt-2 text-3xl font-bold text-white">
-            {upside.toFixed(2)}%
-          </div>
-        </div>
 
-        <div className="rounded-2xl bg-white/5 p-5">
-          <Target className="mb-4 text-blue-400" />
-          <div className="text-sm text-zinc-500">
-            Intrinsic Value
-          </div>
-          <div className="mt-2 text-3xl font-bold text-white">
-            ${intrinsicValue.toFixed(2)}
-          </div>
-        </div>
+          <RecommendationBadge recommendation={recommendation} />
+        </CardHeader>
 
-        <div className="rounded-2xl bg-white/5 p-5">
-          <TrendingUp className="mb-4 text-orange-400" />
-          <div className="text-sm text-zinc-500">
-            Market Price
-          </div>
-          <div className="mt-2 text-3xl font-bold text-white">
-            ${currentPrice.toFixed(2)}
-          </div>
-        </div>
+        <CardBody className="space-y-6">
+          {summary ? (
+            <p className="max-w-4xl text-body text-muted-foreground">{summary}</p>
+          ) : (
+            <p className="text-body text-subtle-foreground">
+              The backend did not return a company profile for this ticker.
+            </p>
+          )}
 
-        <div className="rounded-2xl bg-white/5 p-5">
-          <ShieldCheck className="mb-4 text-violet-400" />
-          <div className="text-sm text-zinc-500">
-            Margin of Safety
-          </div>
-          <div
-            className={`mt-2 text-3xl font-bold ${
-              positive ? "text-emerald-400" : "text-red-400"
-            }`}
-          >
-            {(intrinsicValue-currentPrice).toFixed(2)}
-          </div>
-        </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Backend upside"
+              value={formatPercent(upside)}
+              delta={upside}
+              hint="Intrinsic value vs. current price"
+            />
 
-      </div>
+            <MetricCard
+              label="Intrinsic value"
+              value={formatCurrency(intrinsicValue)}
+              hint="Backend valuation model"
+            />
+
+            <MetricCard
+              label="Current price"
+              value={formatCurrency(currentPrice)}
+              hint="Latest market quote"
+            />
+
+            <MetricCard
+              label="Intrinsic − price"
+              value={formatCurrency(difference)}
+              hint="Per-share difference"
+            />
+          </div>
+        </CardBody>
+      </Card>
     </section>
   );
 }

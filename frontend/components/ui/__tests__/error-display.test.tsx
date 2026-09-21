@@ -118,7 +118,7 @@ describe("ErrorDisplay", () => {
     render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveAttribute("aria-live", "polite");
+    expect(alert).toBeInTheDocument();
   });
 });
 

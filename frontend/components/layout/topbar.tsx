@@ -6,20 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { CommandPalette } from "./command-palette";
-
-const titles: Record<string, string> = {
-  "/dashboard": "Overview",
-  "/company": "Profile",
-  "/analysis": "Analyze",
-  "/compare": "Compare",
-  "/portfolio": "Portfolio",
-  "/reports": "Reports",
-  "/research": "Documents",
-  "/search": "Search",
-  "/watchlist": "Watchlist",
-  "/screener": "Screener",
-  "/settings": "Settings",
-};
+import { titleForPathname } from "./nav-items";
 
 type Props = {
   onMenu: () => void;
@@ -27,9 +14,7 @@ type Props = {
 
 export function Topbar({ onMenu }: Props) {
   const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
-  const title =
-    segments.length >= 1 ? titles[`/${segments[0]}`] ?? "Workspace" : "Workspace";
+  const title = titleForPathname(pathname);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-6 lg:px-8">

@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  Activity,
-  BadgeDollarSign,
-  Calculator,
-  DollarSign,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+  MetricCard,
+  formatCurrency,
+  formatPercent,
+  formatRatioAsPercent,
+} from "@/components/ui/metric";
 
 type Props = {
   intrinsicValue: number;
@@ -16,178 +14,61 @@ type Props = {
   discountRate: number;
 };
 
-function currency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function Card({
-  title,
-  value,
-  subtitle,
-  icon,
-  accent,
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  accent: string;
-}) {
-  return (
-    <div className="group rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/30 hover:bg-white/[0.05]">
-
-      <div
-        className={`inline-flex rounded-2xl p-3 ${accent}`}
-      >
-        {icon}
-      </div>
-
-      <p className="mt-5 text-sm text-zinc-500">
-        {title}
-      </p>
-
-      <h2 className="mt-3 text-4xl font-bold tracking-tight text-white">
-        {value}
-      </h2>
-
-      <p className="mt-3 text-sm text-zinc-500">
-        {subtitle}
-      </p>
-
-    </div>
-  );
-}
-
+/**
+ * Valuation tiles for a completed analysis.
+ *
+ * All four values are returned by the backend valuation model; the UI adds no
+ * commentary of its own beyond naming the model that produced the discount
+ * rate (a WACC discount rate computed server-side).
+ */
 export function ValuationCards({
   intrinsicValue,
   currentPrice,
   upside,
   discountRate,
 }: Props) {
-
-  const margin =
-    intrinsicValue - currentPrice;
-
   return (
-    <section data-testid="valuation-cards">
-
-      <div className="mb-8">
-
-        <h2 className="text-3xl font-bold text-white">
+    <section data-testid="valuation-cards" aria-labelledby="valuation-heading">
+      <div className="mb-4">
+        <h2 id="valuation-heading" className="text-title text-foreground">
           Valuation
         </h2>
-
-        <p className="mt-2 text-zinc-500">
-          AI generated intrinsic value model
+        <p className="mt-1 text-label text-muted-foreground">
+          Backend DCF output for this ticker.
         </p>
-
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-
-        <Card
-          title="Intrinsic Value"
-          value={currency(intrinsicValue)}
-          subtitle="Estimated fair value"
-          icon={
-            <BadgeDollarSign
-              className="text-blue-400"
-              size={22}
-            />
-          }
-          accent="bg-blue-500/10"
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Intrinsic value"
+          value={formatCurrency(intrinsicValue)}
+          hint="Estimated fair value per share"
         />
 
-        <Card
-          title="Current Price"
-          value={currency(currentPrice)}
-          subtitle="Latest market price"
-          icon={
-            <DollarSign
-              className="text-emerald-400"
-              size={22}
-            />
-          }
-          accent="bg-emerald-500/10"
+        <MetricCard
+          label="Current price"
+          value={formatCurrency(currentPrice)}
+          hint="Latest market price"
         />
 
-        <Card
-          title="Upside"
-          value={`${upside.toFixed(2)}%`}
-          subtitle={
-            upside >= 0
-              ? "Potential appreciation"
-              : "Potential downside"
-          }
-          icon={
-            upside >= 0 ? (
-              <TrendingUp
-                className="text-green-400"
-                size={22}
-              />
-            ) : (
-              <TrendingDown
-                className="text-red-400"
-                size={22}
-              />
-            )
-          }
-          accent={
-            upside >= 0
-              ? "bg-green-500/10"
-              : "bg-red-500/10"
-          }
+        <MetricCard
+          label="Upside"
+          value={formatPercent(upside)}
+          delta={upside}
+          hint={upside >= 0 ? "Intrinsic value above price" : "Intrinsic value below price"}
         />
 
-        <Card
-          title="Discount Rate"
-          value={`${(
-            discountRate * 100
-          ).toFixed(2)}%`}
-          subtitle={`Margin of Safety ${currency(
-            margin
-          )}`}
-          icon={
-            <Calculator
-              className="text-violet-400"
-              size={22}
-            />
-          }
-          accent="bg-violet-500/10"
+        <MetricCard
+          label="Discount rate"
+          value={formatRatioAsPercent(discountRate)}
+          hint="WACC used by the backend DCF"
         />
-
       </div>
 
-      <div className="mt-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-blue-500/5 via-cyan-500/5 to-emerald-500/5 p-6">
-
-        <div className="flex items-center gap-3">
-
-          <Activity
-            size={20}
-            className="text-cyan-400"
-          />
-
-          <h3 className="text-xl font-semibold text-white">
-            AI Valuation Insight
-          </h3>
-
-        </div>
-
-        <p className="mt-4 leading-8 text-zinc-300">
-          {upside >= 15
-            ? "The model estimates that the company is trading below its intrinsic value, indicating a potentially attractive long-term opportunity."
-            : upside <= -15
-            ? "The model estimates that the company is trading above intrinsic value, suggesting limited upside under current assumptions."
-            : "The current market price is close to estimated intrinsic value, suggesting a fairly valued business under current assumptions."}
-        </p>
-
-      </div>
-
+      <p className="mt-3 text-caption text-subtle-foreground">
+        Intrinsic value, upside and the discount rate are model outputs from the
+        backend valuation endpoint, not live market data.
+      </p>
     </section>
-
   );
 }

@@ -1,8 +1,7 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { CriteriaCheck } from "@/components/screener/criteria-check";
 import { api } from "@/services/api";
 
@@ -119,12 +118,64 @@ beforeEach(() => {
   vi.mocked(api.screen).mockResolvedValue(screenResponse);
 });
 
-async function fetchAnalysis(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText("Ticker"), "AAPL");
-  await user.click(screen.getByRole("button", { name: /fetch analysis/i }));
+async function fetchAnalysis() {
+  fireEvent.change(screen.getByLabelText(/Ticker/i), {
+    target: { value: "AAPL" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /fetch analysis/i }));
   await waitFor(() =>
     expect(screen.getByTestId("criteria-company-data")).toBeInTheDocument()
   );
 }
 
-// __TESTS__
+function fillAssumptions() {
+  fireEvent.change(screen.getByLabelText(/FCF growth rate/i), {
+    target: { value: "0.08" },
+  });
+  fireEvent.change(screen.getByLabelText(/Risk-free rate/i), {
+    target: { value: "0.0425" },
+  });
+  fireEvent.change(screen.getByLabelText(/Expected market return/i), {
+    target: { value: "0.10" },
+  });
+  fireEvent.change(screen.getByLabelText(/Effective tax rate/i), {
+    target: { value: "0.21" },
+  });
+}
+
+describe("CriteriaCheck", () => {
+  it("fetches analysis and shows company data", async () => {
+    render(<CriteriaCheck />, { wrapper: createWrapper() });
+    await fetchAnalysis();
+    expect(screen.getByText("Apple Inc.")).toBeInTheDocument();
+    expect(api.analyze).toHaveBeenCalledWith("AAPL");
+  });
+
+  it("blocks the check when assumptions are missing", async () => {
+    render(<CriteriaCheck />, { wrapper: createWrapper() });
+    await fetchAnalysis();
+    fireEvent.click(
+      screen.getByRole("button", { name: /run financial criteria check/i })
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText(/growth rate between 0 and 1/i)
+      ).toBeInTheDocument()
+    );
+    expect(api.screen).not.toHaveBeenCalled();
+  });
+
+  it("runs the check and renders the backend result", async () => {
+    render(<CriteriaCheck />, { wrapper: createWrapper() });
+    await fetchAnalysis();
+    fillAssumptions();
+    fireEvent.click(
+      screen.getByRole("button", { name: /run financial criteria check/i })
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("criteria-result")).toBeInTheDocument()
+    );
+    expect(api.screen).toHaveBeenCalledOnce();
+    expect(screen.getByText(/meets the criteria/i)).toBeInTheDocument();
+  });
+});

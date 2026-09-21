@@ -18,7 +18,7 @@ describe("Skeleton components", () => {
       const skeleton = screen.getByTestId("test-skeleton");
       expect(skeleton).toHaveClass("animate-pulse");
       expect(skeleton).toHaveClass("rounded-md");
-      expect(skeleton).toHaveClass("bg-white/10");
+      expect(skeleton).toHaveClass("bg-muted");
     });
 
     it("applies custom className", () => {
@@ -36,9 +36,9 @@ describe("Skeleton components", () => {
     it("renders card structure with title and content skeletons", () => {
       render(<SkeletonCard />);
       const card = screen.getByTestId("skeleton-card");
-      expect(card).toHaveClass("rounded-[32px]");
+      expect(card).toHaveClass("rounded-xl");
       expect(card).toHaveClass("border");
-      expect(card).toHaveClass("bg-white/[0.03]");
+      expect(card).toHaveClass("bg-card");
       expect(card).toHaveClass("p-8");
       expect(card).toHaveClass("space-y-6");
     });
@@ -48,7 +48,7 @@ describe("Skeleton components", () => {
     it("renders metric card structure", () => {
       render(<SkeletonMetricCard data-testid="metric-card" />);
       const card = screen.getByTestId("metric-card");
-      expect(card).toHaveClass("rounded-[32px]");
+      expect(card).toHaveClass("rounded-xl");
       expect(card).toHaveClass("space-y-4");
     });
   });
@@ -86,7 +86,7 @@ describe("Skeleton components", () => {
     it("renders chart container with title area", () => {
       render(<SkeletonChart />);
       const container = screen.getByTestId("skeleton-chart");
-      expect(container).toHaveClass("rounded-[32px]");
+      expect(container).toHaveClass("rounded-xl");
     });
 
     it("applies custom height", () => {

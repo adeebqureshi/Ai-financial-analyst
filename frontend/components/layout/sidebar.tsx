@@ -2,78 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  BookOpenText,
-  Bot,
-  Building2,
-  FileText,
-  LayoutDashboard,
-  Search,
-  Sparkles,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { useEffect } from "react";
+import { Bot, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { ConnectionStatus } from "./connection-status";
+import { isActivePath, navigationGroups } from "./nav-items";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-};
-
-type NavGroup = {
-  label: string;
-  items: NavItem[];
-};
-
-/* Approved Phase 2 information architecture. */
-const groups: NavGroup[] = [
-  {
-    label: "CO-PILOT",
-    items: [
-      { title: "Ask AI", href: "/dashboard", icon: Sparkles },
-      { title: "Reports", href: "/reports", icon: FileText },
-    ],
-  },
-  {
-    label: "RESEARCH",
-    items: [
-      { title: "Documents", href: "/research", icon: BookOpenText },
-      { title: "Search", href: "/search", icon: Search },
-    ],
-  },
-  {
-    label: "MARKETS",
-    items: [
-      { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
-      { title: "Screener", href: "/screener", icon: BarChart3 },
-      { title: "Compare", href: "/compare", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "COMPANY",
-    items: [
-      { title: "Analyze", href: "/analysis", icon: Building2 },
-      { title: "Profile", href: "/company", icon: Building2 },
-    ],
-  },
-];
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(href + "/");
-}
-
 export function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname();
+
+  // Escape closes the mobile drawer (the desktop rail is always visible).
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
 
   return (
     <>
@@ -86,18 +41,22 @@ export function Sidebar({ open, onClose }: Props) {
       )}
 
       <aside
+        aria-label="Primary navigation"
         className={cn(
           "fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-sidebar-border bg-sidebar",
           "transition-transform duration-200",
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          // `invisible` keeps the closed mobile drawer out of the tab order;
+          // it is always visible from `lg` up, where the rail is persistent.
+          open
+            ? "translate-x-0"
+            : "-translate-x-full invisible lg:visible lg:translate-x-0"
         )}
-        aria-label="Primary navigation"
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
           <Link
             href="/dashboard"
             onClick={onClose}
-            className="flex min-w-0 items-center gap-3"
+            className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             aria-label="AI Financial Analyst home"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
@@ -119,7 +78,7 @@ export function Sidebar({ open, onClose }: Props) {
         </div>
 
         <nav aria-label="Primary" className="flex-1 overflow-y-auto px-3 py-4">
-          {groups.map((group) => (
+          {navigationGroups.map((group) => (
             <div key={group.label} className="mb-5 last:mb-0">
               <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {group.label}
@@ -128,11 +87,11 @@ export function Sidebar({ open, onClose }: Props) {
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = isActive(pathname, item.href);
+                  const active = isActivePath(pathname, item.href);
 
                   return (
                     <Link
-                      key={item.title}
+                      key={item.href}
                       href={item.href}
                       onClick={onClose}
                       aria-current={active ? "page" : undefined}
