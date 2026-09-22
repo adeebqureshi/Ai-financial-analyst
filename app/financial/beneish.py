@@ -1,14 +1,5 @@
-"""
-beneish.py
-
-Beneish M-Score model.
-"""
-
 from __future__ import annotations
-
-
 class BeneishMScore:
-
     @staticmethod
     def calculate(
         dsri: float,
@@ -20,7 +11,6 @@ class BeneishMScore:
         lvgi: float,
         tata: float,
     ) -> float:
-
         return (
             -4.84
             + 0.920 * dsri
@@ -32,13 +22,10 @@ class BeneishMScore:
             + 4.679 * tata
             - 0.327 * lvgi
         )
-
     @staticmethod
     def interpretation(
         score: float,
     ) -> str:
-
         if score > -1.78:
             return "HIGH_RISK"
-
         return "LOW_RISK"

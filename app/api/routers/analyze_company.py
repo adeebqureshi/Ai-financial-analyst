@@ -1,52 +1,18 @@
-"""
-Analyze Company Route
-
-This module defines the frontend analysis endpoint (``POST /analyze-company``)
-which performs a comprehensive AI-driven financial analysis of a company using
-real, company-specific financial data.
-
-Design Decisions:
-    - **No business logic in route**: The route handler delegates entirely
-      to ``AnalysisService.analyze_ticker()``, the same Phase 2 entry point
-      used by ``POST /analyze``.
-    - **No duplicated data**: The route does not fabricate or hardcode any
-      financial figures; the service fetches the real financial statements,
-      market data and risk scores for the requested ticker.
-    - **Dependency injection**: ``AnalysisService`` is injected via
-      ``Depends(get_analysis_service)``, making it overridable in tests.
-    - **Standard response format**: Returns ``APIResponse[AnalyzeResponseData]``
-      for consistency with all other endpoints.
-    - **Rate limiting**: Endpoint is rate limited per user/IP.
-"""
-
 from __future__ import annotations
-
 import asyncio
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
-
 from app.api.dependencies import rate_limit_analyze_company
 from app.api.dependencies.services import get_analysis_service
 from app.schemas.base import APIResponse
 from app.schemas.responses import AnalyzeResponseData
 from app.services.analysis_service import AnalysisService
 from app.utils.tickers import normalize_ticker
-
 router = APIRouter(
     prefix="/analyze-company",
     tags=["Frontend"],
 )
-
-
 class AnalyzeCompanyRequest(BaseModel):
-    """
-    Frontend payload for ``POST /analyze-company``.
-
-    The frontend only supplies a ticker; the full analysis inputs are
-    built server-side from real company-specific financial data.
-    """
-
     ticker: str = Field(
         ...,
         min_length=1,
@@ -58,14 +24,10 @@ class AnalyzeCompanyRequest(BaseModel):
         max_length=2000,
         description="Optional analysis query.",
     )
-
     @field_validator("ticker")
     @classmethod
     def validate_ticker_symbol(cls, v: str) -> str:
-        """Normalize and validate the ticker symbol via the canonical validator."""
         return normalize_ticker(v)
-
-
 @router.post(
     "",
     response_model=APIResponse[AnalyzeResponseData],
@@ -81,22 +43,11 @@ async def analyze_company(
     payload: AnalyzeCompanyRequest,
     service: AnalysisService = Depends(get_analysis_service),
 ) -> APIResponse[AnalyzeResponseData]:
-    """
-    Frontend entrypoint.
-
-    Args:
-        payload: The frontend payload containing the ticker.
-        service: Injected ``AnalysisService`` instance.
-
-    Returns:
-        An ``APIResponse`` containing the analysis results.
-    """
     result = await asyncio.to_thread(
         service.analyze_ticker,
         ticker=payload.ticker,
         query=payload.query,
     )
-
     return APIResponse.success_response(
         message=f"Analysis completed for {result.ticker}",
         data=result,

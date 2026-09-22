@@ -1,23 +1,6 @@
-"""
-Demo RAG Fixtures — Synthetic Filing Content for Vector Search
-
-This module provides deterministic synthetic filing text chunks and embeddings
-for demonstrating RAG/search functionality without external Qdrant.
-"""
-
 from __future__ import annotations
-
 from app.rag.embedding import Embedding
 from app.rag.memory_store import MemoryVectorStore
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Synthetic Filing Text Chunks
-# ──────────────────────────────────────────────────────────────────────────────
-
-# Each chunk represents a section from a synthetic SEC filing
-# All content is clearly labeled as DEMO / SYNTHETIC DATA
-
 DEMO_FILING_CHUNKS: dict[str, list[dict[str, str]]] = {
     "AAPL": [
         {
@@ -272,35 +255,14 @@ DEMO_FILING_CHUNKS: dict[str, list[dict[str, str]]] = {
         },
     ],
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Vector Store Initialization
-# ──────────────────────────────────────────────────────────────────────────────
-
 def create_demo_vector_store() -> MemoryVectorStore:
-    """
-    Create a pre-populated in-memory vector store with demo filing chunks.
-
-    Uses deterministic local embeddings (via the existing fallback mechanism)
-    so no external embedding API is required.
-
-    Returns:
-        A MemoryVectorStore populated with demo filing embeddings.
-    """
     store = MemoryVectorStore()
-
-    # Import here to avoid circular imports
     from app.embeddings.embedding_service import _fallback_vector, EmbeddingService
-
     embedder = EmbeddingService()
-
-    # Add all demo chunks to the vector store
     for ticker, chunks in DEMO_FILING_CHUNKS.items():
         for i, chunk_data in enumerate(chunks):
             text = chunk_data["text"]
             vector = embedder.embed_text(text)
-
             embedding = Embedding(
                 text=text,
                 vector=vector,
@@ -313,65 +275,32 @@ def create_demo_vector_store() -> MemoryVectorStore:
                 },
             )
             store.add(embedding)
-
     return store
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Retrieval Context Builder
-# ──────────────────────────────────────────────────────────────────────────────
-
 from app.retrieval.models import RetrievedChunk as RetrievalChunk, RetrievalContext
-
-
 def build_demo_retrieval_context(
     query: str,
     ticker: str | None = None,
     limit: int = 5,
 ) -> RetrievalContext:
-    """
-    Build a deterministic retrieval context for demo queries.
-
-    This bypasses the vector store and directly returns relevant demo chunks
-    based on keyword matching, ensuring deterministic results.
-
-    Args:
-        query: The search query.
-        ticker: Optional ticker to scope results.
-        limit: Maximum number of chunks to return.
-
-    Returns:
-        A RetrievalContext with relevant demo chunks.
-    """
     import time
-
     start = time.perf_counter()
-
     query_lower = query.lower()
     scored_chunks: list[tuple[float, dict]] = []
-
-    # Score chunks by keyword overlap
     for tkr, chunks in DEMO_FILING_CHUNKS.items():
         if ticker and tkr != ticker.upper():
             continue
         for i, chunk in enumerate(chunks):
             text_lower = chunk["text"].lower()
-            # Simple keyword scoring
             score = sum(1 for word in query_lower.split() if word in text_lower)
             if score > 0:
                 scored_chunks.append((score, {**chunk, "ticker": tkr, "chunk_index": i}))
-
-    # Sort by score descending
     scored_chunks.sort(key=lambda x: x[0], reverse=True)
-
-    # Take top-k
     top_chunks = scored_chunks[:limit]
-
     retrieval_chunks = [
         RetrievalChunk(
             id=f"demo_{chunk['ticker']}_{chunk['chunk_index']:06d}",
             text=chunk["text"],
-            score=score / 10.0,  # Normalize to 0-1 range
+            score=score / 10.0,
             ticker=chunk["ticker"],
             filing_type=chunk["filing_type"],
             filing_date="2024-01-01",
@@ -384,7 +313,6 @@ def build_demo_retrieval_context(
         )
         for score, chunk in top_chunks
     ]
-
     return RetrievalContext(
         query=query,
         chunks=retrieval_chunks,

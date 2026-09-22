@@ -1,13 +1,4 @@
-"""
-Valuation Service
-
-This module contains the business logic for performing DCF valuation.
-It delegates to the existing ``ValuationEngine`` and wraps the results
-in typed response DTOs.
-"""
-
 from __future__ import annotations
-
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.models import FinancialStatement
@@ -15,25 +6,12 @@ from app.financial.valuation import ValuationEngine
 from app.financial.wacc import WACC
 from app.schemas.analysis import ValuationRequest, IntrinsicValueRequest
 from app.schemas.responses import ValuationResultData, IntrinsicValueResponseData, ValuationResponseData
-
 logger = get_logger(__name__)
-
-
 class ValuationService:
-    """
-    Service for performing DCF valuation.
-
-    Attributes:
-        _settings: Application settings instance.
-        _engine: Valuation engine instance.
-    """
-
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._engine = ValuationEngine()
-
     def _build_statement(self, request: ValuationRequest | IntrinsicValueRequest) -> FinancialStatement:
-        """Build a FinancialStatement from request data."""
         return FinancialStatement(
             revenue=request.statement.revenue,
             operating_income=request.statement.operating_income,
@@ -45,17 +23,7 @@ class ValuationService:
             shares_outstanding=request.statement.shares_outstanding,
             free_cash_flow=request.statement.free_cash_flow,
         )
-
     def valuate(self, request: ValuationRequest) -> ValuationResponseData:
-        """
-        Perform a full DCF valuation.
-
-        Args:
-            request: The validated valuation request.
-
-        Returns:
-            A ``ValuationResponseData`` with the valuation result.
-        """
         statement = self._build_statement(request)
         result = self._engine.evaluate(
             statement=statement,
@@ -82,12 +50,10 @@ class ValuationService:
                 cost_of_debt=request.params.cost_of_debt,
             ),
         )
-
     def _compute_discount_rate(
         self,
         request: ValuationRequest | IntrinsicValueRequest,
     ) -> float:
-        """Compute the WACC discount rate used by the DCF."""
         statement = self._build_statement(request)
         equity = statement.total_assets - statement.total_liabilities
         cost_of_equity = WACC.cost_of_equity(
@@ -105,17 +71,7 @@ class ValuationService:
             )
         except ValueError:
             return 0.0
-
     def intrinsic_value(self, request: IntrinsicValueRequest) -> IntrinsicValueResponseData:
-        """
-        Calculate intrinsic value per share.
-
-        Args:
-            request: The validated intrinsic value request.
-
-        Returns:
-            An ``IntrinsicValueResponseData`` with the intrinsic value.
-        """
         statement = self._build_statement(request)
         result = self._engine.evaluate(
             statement=statement,

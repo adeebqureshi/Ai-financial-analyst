@@ -1,42 +1,15 @@
-"""
-ratio_engine.py
-
-Financial ratio calculation engine (canonical location).
-
-This module consolidates the legacy ``app.finance`` ratio engine into the
-canonical ``app.financial`` package. It preserves the exact ``RatioEngine``
-behaviour and the ``FinancialRatios`` value object previously provided by
-``app.finance.ratio_engine``/``app.finance.ratios`` so existing callers
-(such as ``app.agents.QuantAgent``) are unaffected.
-"""
-
 from __future__ import annotations
-
 from dataclasses import dataclass
-
-
 @dataclass(slots=True)
 class FinancialRatios:
-    """Value object holding a set of calculated financial ratios."""
-
     current_ratio: float
-
     debt_to_equity: float
-
     return_on_assets: float
-
     return_on_equity: float
-
     gross_margin: float
-
     operating_margin: float
-
     net_margin: float
-
-
 class RatioEngine:
-    """Financial ratio calculations."""
-
     def calculate(
         self,
         *,
@@ -50,49 +23,41 @@ class RatioEngine:
         operating_income: float,
         net_income: float,
     ) -> FinancialRatios:
-
         current_ratio = (
             current_assets / current_liabilities
             if current_liabilities
             else 0.0
         )
-
         debt_to_equity = (
             total_liabilities / shareholders_equity
             if shareholders_equity
             else 0.0
         )
-
         return_on_assets = (
             net_income / total_assets
             if total_assets
             else 0.0
         )
-
         return_on_equity = (
             net_income / shareholders_equity
             if shareholders_equity
             else 0.0
         )
-
         gross_margin = (
             gross_profit / revenue
             if revenue
             else 0.0
         )
-
         operating_margin = (
             operating_income / revenue
             if revenue
             else 0.0
         )
-
         net_margin = (
             net_income / revenue
             if revenue
             else 0.0
         )
-
         return FinancialRatios(
             current_ratio=current_ratio,
             debt_to_equity=debt_to_equity,

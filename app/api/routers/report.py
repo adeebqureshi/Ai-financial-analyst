@@ -1,37 +1,14 @@
-"""
-Report Router
-
-This module defines the report generation endpoint (``POST /report``).
-
-The frontend only supplies a ticker (and optional query); the full
-``ReportRequest`` is built internally from default analysis inputs,
-mirroring the contract used by ``POST /analyze``.
-"""
-
 from __future__ import annotations
-
 import asyncio
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
-
 from app.api.dependencies.services import get_report_service
 from app.schemas.base import APIResponse
 from app.schemas.responses import ReportData
 from app.services.report_service import ReportService
 from app.utils.tickers import normalize_ticker
-
 router = APIRouter(prefix="/report", tags=["Report"])
-
-
 class ReportTickerRequest(BaseModel):
-    """
-    Frontend payload for ``POST /report``.
-
-    The frontend only supplies a ticker and an optional query; the full
-    analysis inputs are built server-side from real company-specific data.
-    """
-
     ticker: str = Field(
         ...,
         min_length=1,
@@ -44,14 +21,10 @@ class ReportTickerRequest(BaseModel):
         max_length=2000,
         description="Optional report query.",
     )
-
     @field_validator("ticker")
     @classmethod
     def validate_ticker_symbol(cls, v: str) -> str:
-        """Normalize and validate the ticker symbol via the canonical validator."""
         return normalize_ticker(v)
-
-
 @router.post(
     "",
     response_model=APIResponse[ReportData],
@@ -62,22 +35,11 @@ async def report(
     payload: ReportTickerRequest,
     service: ReportService = Depends(get_report_service),
 ) -> APIResponse[ReportData]:
-    """
-    Report endpoint.
-
-    Args:
-        payload: The frontend payload containing the ticker.
-        service: Injected ``ReportService`` instance.
-
-    Returns:
-        An ``APIResponse`` containing the generated report.
-    """
     result = await asyncio.to_thread(
         service.generate_ticker_report,
         ticker=payload.ticker,
         query=payload.query,
     )
-
     return APIResponse.success_response(
         message=f"Report generated for {result.ticker}",
         data=result,

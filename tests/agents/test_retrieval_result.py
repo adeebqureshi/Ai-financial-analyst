@@ -1,8 +1,5 @@
 from app.agents.retrieval_result import RetrievalResult
-
-
 def test_result():
-
     result = RetrievalResult(
         query="Apple",
         documents=[
@@ -10,5 +7,4 @@ def test_result():
             "Doc 2",
         ],
     )
-
     assert result.count == 2

@@ -1,9 +1,6 @@
 from types import SimpleNamespace
-
 from app.agents.tools import ToolRegistry
 from app.financial.models import FinancialStatement
-
-
 def _statement():
     return FinancialStatement(
         revenue=394_328.0,
@@ -16,25 +13,17 @@ def _statement():
         shares_outstanding=15_431.0,
         free_cash_flow=99_584.0,
     )
-
-
 class FakeFinancials:
-    """Mimics FinancialDataService.load() with per-ticker data."""
-
     def __init__(self, by_ticker: dict) -> None:
         self._by_ticker = by_ticker
-
     def load(self, ticker: str):
         ticker = ticker.upper()
         if ticker not in self._by_ticker:
             raise ValueError(f"no data for {ticker}")
         return self._by_ticker[ticker]
-
-
 class FakeMarket:
     def __init__(self, prices: dict) -> None:
         self._prices = prices
-
     def get_market_data(self, ticker: str):
         ticker = ticker.upper()
         return SimpleNamespace(
@@ -55,12 +44,9 @@ class FakeMarket:
             cached=False,
             stale=False,
         )
-
-
 class FakeCompany:
     def __init__(self, names: dict) -> None:
         self._names = names
-
     def get_company(self, ticker: str):
         return SimpleNamespace(
             ticker=ticker.upper(),
@@ -70,12 +56,9 @@ class FakeCompany:
             market_cap=1_000_000_000_000,
             description="A company.",
         )
-
-
 class FakeDocuments:
     def __init__(self) -> None:
         self.queries = []
-
     def retrieve(self, query, limit=5, document_id=None, owner_id=None):
         self.queries.append((query, limit, document_id))
         return SimpleNamespace(
@@ -109,8 +92,6 @@ class FakeDocuments:
             ],
             retrieval_time_ms=5.0,
         )
-
-
 def _company_data(ticker: str, price: float) -> SimpleNamespace:
     return SimpleNamespace(
         ticker=ticker,
@@ -128,8 +109,6 @@ def _company_data(ticker: str, price: float) -> SimpleNamespace:
         beneish_score=-2.4,
         statement=_statement(),
     )
-
-
 def _registry(**overrides) -> ToolRegistry:
     financials = FakeFinancials(
         {
@@ -140,7 +119,6 @@ def _registry(**overrides) -> ToolRegistry:
     market = FakeMarket({"AAPL": 220.0, "MSFT": 430.0})
     company = FakeCompany({"AAPL": "Apple Inc.", "MSFT": "Microsoft Corp."})
     documents = FakeDocuments()
-
     return ToolRegistry(
         financials=financials,
         market=market,
@@ -148,135 +126,74 @@ def _registry(**overrides) -> ToolRegistry:
         documents=documents,
         **overrides,
     )
-
-
 def test_market_data_returns_structured_price():
     registry = _registry()
-
     result = registry.execute("get_market_data", {"ticker": "aapl"})
-
     assert result.status == "done"
-
     assert result.result["ticker"] == "AAPL"
-
     assert result.result["current_price"] == 220.0
-
-
 def test_financials_are_ticker_isolated():
     registry = _registry()
-
     aapl = registry.execute("get_financials", {"ticker": "AAPL"}).result
-
     msft = registry.execute("get_financials", {"ticker": "MSFT"}).result
-
     assert aapl["ticker"] == "AAPL"
-
     assert msft["ticker"] == "MSFT"
-
     assert msft["current_price"] == 430.0
-
-
 def test_valuation_returns_intrinsic_value_and_upside():
     registry = _registry()
-
     result = registry.execute("calculate_valuation", {"ticker": "AAPL"})
-
     assert result.status == "done"
-
     payload = result.result
-
     assert payload["ticker"] == "AAPL"
-
     assert "intrinsic_value" in payload
-
     assert "upside" in payload
-
     assert "current_price" in payload
-
-
 def test_search_documents_preserves_metadata_and_filters_by_ticker():
     registry = _registry()
-
     result = registry.execute(
         "search_documents",
         {"query": "supply chain", "ticker": "AAPL"},
     )
-
     assert result.status == "done"
-
     assert result.result["ticker_filtered"] is True
-
     assert result.result["total"] == 1
-
     chunk = result.result["chunks"][0]
-
     assert chunk["document_id"] == "doc1"
-
     assert chunk["filename"] == "Apple 10-K.pdf"
-
     assert chunk["page"] == 42
-
     assert chunk["score"] == 0.91
-
-
 def test_search_documents_never_leaks_other_company():
     registry = _registry()
-
     result = registry.execute(
         "search_documents",
         {"query": "growth", "ticker": "MSFT"},
     )
-
     filenames = [chunk["filename"] for chunk in result.result["chunks"]]
-
     assert filenames == ["Microsoft 10-K.pdf"]
-
-
 def test_search_documents_uses_wider_candidate_pool_when_ticker_scoped():
     registry = _registry()
-
     registry.execute(
         "search_documents",
         {"query": "growth", "ticker": "MSFT"},
     )
-
     query, limit, document_id = registry._documents.queries[0]
-
     assert query == "growth"
-
-    # ticker scoping pulls a wider pool so the correct company is not
-    # crowded out, then trims back to the requested limit.
     assert limit == 15
-
     assert document_id is None
-
     registry.execute(
         "search_documents",
         {"query": "growth"},
     )
-
     _query, unscoped_limit, _document_id = registry._documents.queries[1]
-
     assert unscoped_limit == 5
-
-
 def test_unknown_tool_returns_error_result():
     registry = _registry()
-
     result = registry.execute("does_not_exist", {})
-
     assert result.status == "error"
-
     assert result.result is None
-
-
 def test_failed_tool_does_not_raise():
     registry = _registry()
-
     result = registry.execute("get_financials", {"ticker": "NOPE"})
-
     assert result.status == "error"
-
     assert result.result is None
-
     assert result.error

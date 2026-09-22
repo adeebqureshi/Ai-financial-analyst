@@ -1,8 +1,5 @@
 from app.data.company import Company
-
-
 def test_company():
-
     company = Company(
         ticker="AAPL",
         name="Apple Inc.",
@@ -10,7 +7,5 @@ def test_company():
         industry="Consumer Electronics",
         exchange="NASDAQ",
     )
-
     assert company.ticker == "AAPL"
-
     assert company.exchange == "NASDAQ"

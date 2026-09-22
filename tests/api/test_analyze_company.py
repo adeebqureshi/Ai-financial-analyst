@@ -1,12 +1,8 @@
 from fastapi.testclient import TestClient
-
 from app.api.dependencies.services import get_analysis_service
 from app.main import app
 from app.schemas.responses import AnalyzeResponseData
-
 client = TestClient(app)
-
-
 def _build_analysis(ticker: str = "AAPL") -> AnalyzeResponseData:
     return AnalyzeResponseData(
         ticker=ticker,
@@ -47,20 +43,15 @@ def _build_analysis(ticker: str = "AAPL") -> AnalyzeResponseData:
         },
         recommendation="BUY",
     )
-
-
 def test_analyze_company_delegates_to_analysis_service():
     analysis = _build_analysis()
     captured = {}
-
     class _FakeAnalysisService:
         def analyze_ticker(self, ticker, query=None):
             captured["ticker"] = ticker
             captured["query"] = query
             return analysis
-
     app.dependency_overrides[get_analysis_service] = lambda: _FakeAnalysisService()
-
     try:
         response = client.post(
             "/analyze-company",
@@ -68,26 +59,16 @@ def test_analyze_company_delegates_to_analysis_service():
         )
     finally:
         app.dependency_overrides.clear()
-
     assert response.status_code == 200
-
     payload = response.json()
-
     assert payload["success"] is True
-
     assert captured["ticker"] == "AAPL"
-
     assert payload["data"]["ticker"] == "AAPL"
-
     assert payload["data"]["company"]["name"] == "Apple"
-
     assert payload["data"]["recommendation"] == "BUY"
-
-
 def test_analyze_company_validates_ticker():
     response = client.post(
         "/analyze-company",
         json={"ticker": "INVALID_TICKER"},
     )
-
     assert response.status_code == 422

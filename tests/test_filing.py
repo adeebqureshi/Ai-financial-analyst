@@ -1,15 +1,10 @@
 from datetime import date
 from pathlib import Path
-
 import pytest
-
 from app.enums.filing_type import FilingType
 from app.enums.processing_status import ProcessingStatus
 from app.models.filing import Filing
-
-
 def test_filing():
-
     filing = Filing(
         ticker="AAPL",
         cik="320193",
@@ -20,17 +15,12 @@ def test_filing():
         source_url="https://www.sec.gov",
         local_path=Path("storage/raw/sec/AAPL/2024/10-K.html"),
     )
-
     assert filing.ticker == "AAPL"
     assert filing.parser_status == ProcessingStatus.PENDING
     assert filing.embedding_status == ProcessingStatus.PENDING
     assert filing.indexing_status == ProcessingStatus.PENDING
-
-
 def test_invalid_cik():
-
     with pytest.raises(ValueError):
-
         Filing(
             ticker="AAPL",
             cik="ABC123",

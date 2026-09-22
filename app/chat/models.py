@@ -1,48 +1,16 @@
-"""
-Chat ORM Models
-===============
-
-SQLAlchemy models backing persistent chat sessions and messages.
-
-Design Decisions:
-    - **Ownership isolation**: Every row carries an ``owner_id`` (the
-      authenticated user id, ``None`` for the anonymous development bucket).
-      All store queries are scoped by owner so one user can never read or
-      mutate another user's conversations.
-    - **Naive-UTC timestamps**: Datetimes are stored in UTC without tzinfo so
-      both SQLite and PostgreSQL behave identically for ordering and
-      retention comparisons.
-    - **Composite uniqueness**: A session is uniquely identified by
-      ``(owner_id, session_id)`` which also provides the database-level guard
-      against concurrent first-writes racing.
-"""
-
 from __future__ import annotations
-
 from datetime import datetime, timezone
-
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.chat.database import Base
-
-
 def _utcnow_naive() -> datetime:
-    """Return the current time in UTC without tzinfo (DB-stable)."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
 def to_aware_utc(value: datetime | None) -> datetime | None:
-    """Return ``value`` tagged as UTC, so API output is timezone-aware."""
     if value is None or value.tzinfo is not None:
         return value
     return value.replace(tzinfo=timezone.utc)
-
-
 class ChatSession(Base):
-    """A single persistent chat conversation owned by one user."""
-
     __tablename__ = "chat_sessions"
     __table_args__ = (
         UniqueConstraint(
@@ -51,13 +19,9 @@ class ChatSession(Base):
             name="uq_chat_session_owner_session",
         ),
     )
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    # ``None`` when authentication is disabled (anonymous development bucket).
     owner_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     session_id: Mapped[str] = mapped_column(String(128), nullable=False)
-
     title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     metadata_json: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON),
@@ -75,34 +39,25 @@ class ChatSession(Base):
         onupdate=_utcnow_naive,
         nullable=False,
     )
-
     messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="ChatMessage.created_at",
     )
-
-
 class ChatMessage(Base):
-    """A single persisted turn (user, assistant, or system) within a session."""
-
     __tablename__ = "chat_messages"
     __table_args__ = (
-        # Deterministic ordering & fast per-session paging.
         Index("ix_chat_messages_session_created", "session_id", "created_at"),
     )
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(
         ForeignKey("chat_sessions.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )
-
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-
     metadata_json: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON),
         default=dict,
@@ -114,5 +69,4 @@ class ChatMessage(Base):
         index=True,
         nullable=False,
     )
-
     session: Mapped[ChatSession] = relationship(back_populates="messages")

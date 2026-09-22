@@ -1,13 +1,8 @@
 from __future__ import annotations
-
 from app.api.app import FinancialAnalystAPI
-
-
 class Application:
-
     def __init__(self) -> None:
         self.api = FinancialAnalystAPI()
-
     def analyze(
         self,
         ticker: str,

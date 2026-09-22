@@ -1,13 +1,8 @@
 from datetime import date
-
 from app.retrieval.metadata_store import MetadataStore
 from app.retrieval.models import RetrievedChunk
-
-
 def test_metadata_store():
-
     store = MetadataStore()
-
     chunk = RetrievedChunk(
         id="1",
         text="Apple revenue",
@@ -18,18 +13,11 @@ def test_metadata_store():
         section="MD&A",
         source="SEC",
     )
-
     store.add(chunk)
-
     result = store.get("1")
-
     assert result.ticker == "AAPL"
-
-
 def test_add_many():
-
     store = MetadataStore()
-
     chunks = [
         RetrievedChunk(
             id="1",
@@ -52,9 +40,6 @@ def test_add_many():
             source="SEC",
         ),
     ]
-
     store.add_many(chunks)
-
     results = store.get_many(["1", "2"])
-
     assert len(results) == 2

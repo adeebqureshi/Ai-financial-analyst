@@ -1,25 +1,10 @@
-"""
-Demo SEC Service
-
-Deterministic SEC filing service for demo mode.
-Provides synthetic SEC filings for demo tickers.
-"""
-
 from __future__ import annotations
-
 from datetime import date
 from typing import Any
-
 from app.demo.fixtures.companies import DEMO_TICKERS, is_demo_ticker
 from app.enums.filing_type import FilingType
 from app.models.filing import Filing
 from app.utils.tickers import normalize_ticker
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Filing Fixtures
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_FILINGS: dict[str, list[dict[str, Any]]] = {
     "AAPL": [
         {
@@ -116,37 +101,13 @@ DEMO_FILINGS: dict[str, list[dict[str, Any]]] = {
         },
     ],
 }
-
-
 class DemoSECService:
-    """
-    Deterministic demo SEC filing service.
-
-    Returns curated synthetic SEC filings for a fixed set of demo tickers.
-    All values are clearly labeled as DEMO / SYNTHETIC DATA.
-    """
-
     def get_company(self, ticker: str) -> dict[str, Any]:
-        """
-        Retrieve a demo company profile.
-
-        Args:
-            ticker: The ticker symbol (must be one of the demo tickers).
-
-        Returns:
-            A demo company dictionary.
-
-        Raises:
-            ValueError: If the ticker is not available in demo mode.
-        """
         ticker = normalize_ticker(ticker)
-
         if not is_demo_ticker(ticker):
             raise ValueError(
                 f"Demo mode only supports: {', '.join(sorted(DEMO_TICKERS))}"
             )
-
-        # Return a minimal company dict compatible with CompanyMapper
         return {
             "ticker": ticker,
             "cik": "0",
@@ -159,46 +120,29 @@ class DemoSECService:
             "website": None,
             "market_cap": None,
         }
-
     def get_latest_filings(
         self,
         ticker: str,
         form: str = "10-K",
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """
-        Retrieve demo SEC filings.
-
-        Args:
-            ticker: The ticker symbol (must be one of the demo tickers).
-            form: The type of filing to retrieve (e.g., "10-K", "10-Q").
-            limit: Maximum number of filings to return.
-
-        Returns:
-            A list of demo filing records.
-        """
         ticker = normalize_ticker(ticker)
-
         if not is_demo_ticker(ticker):
             return []
-
         filings = DEMO_FILINGS.get(ticker, [])
         filtered = [f for f in filings if f["filing_type"] == form]
         return filtered[:limit]
-
     def get_filing_by_accession(
         self,
         ticker: str,
         accession_number: str,
     ) -> dict[str, Any] | None:
-        """Retrieve a specific demo filing by accession number."""
         ticker = normalize_ticker(ticker)
         filings = DEMO_FILINGS.get(ticker, [])
         for filing in filings:
             if filing["accession_number"] == accession_number:
                 return filing
         return None
-
     def get_filings_by_date_range(
         self,
         ticker: str,
@@ -206,10 +150,8 @@ class DemoSECService:
         end_date: date,
         filing_type: FilingType | str | None = None,
     ) -> list[dict[str, Any]]:
-        """Retrieve demo filings within a date range."""
         ticker = normalize_ticker(ticker)
         filings = DEMO_FILINGS.get(ticker, [])
-
         form = filing_type.value if isinstance(filing_type, FilingType) else filing_type
         filtered = []
         for filing in filings:

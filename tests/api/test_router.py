@@ -1,27 +1,18 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 from unittest.mock import patch
-
 from app.api.router import AnalysisRouter
 from app.api.schemas import AnalyzeRequest
-
-
 @patch("app.api.router.ReportGenerator")
 def test_router(mock_generator):
-
     generator = MagicMock()
-
     generator.generate.return_value = "BUY"
-
     mock_generator.return_value = generator
-
     router = AnalysisRouter()
-
     request = AnalyzeRequest(
         ticker="AAPL",
         query="Should I buy Apple?",
     )
-
     result = {
         "company": SimpleNamespace(
             name="Apple",
@@ -42,12 +33,10 @@ def test_router(mock_generator):
             beneish_score=-2.4,
         ),
     }
-
     response = router.analyze(
         request=request,
         result=result,
         context="Revenue increased.",
     )
-
     assert response.ticker == "AAPL"
     assert response.report == "BUY"

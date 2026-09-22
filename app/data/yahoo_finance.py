@@ -1,25 +1,10 @@
-"""
-Yahoo Finance provider (legacy data-layer wrapper).
-
-NOTE: this module is part of the older ``app.data`` layer. Market-data
-features should prefer the ingestion-layer ``MarketService`` (provider chain +
-cache). This wrapper is retained for backward compatibility and sanitizes
-its outputs so missing values are ``None`` rather than fabricated ``0``.
-"""
-
 from __future__ import annotations
-
 import math
-
 import yfinance as yf
-
 from app.data.company import Company
 from app.data.market_data import MarketData
 from app.utils.tickers import normalize_ticker
-
-
 def _finite(value):
-    """Return a finite float, or ``None`` when missing/invalid."""
     if value is None:
         return None
     try:
@@ -27,19 +12,13 @@ def _finite(value):
     except (TypeError, ValueError):
         return None
     return number if math.isfinite(number) else None
-
-
 class YahooFinanceProvider:
-
     def company(
         self,
         ticker: str,
     ) -> Company:
-
         ticker = normalize_ticker(ticker)
-
         info = yf.Ticker(ticker).info
-
         return Company(
             ticker=ticker,
             name=info.get("longName", ticker),
@@ -47,16 +26,12 @@ class YahooFinanceProvider:
             industry=info.get("industry", ""),
             exchange=info.get("exchange", ""),
         )
-
     def market_data(
         self,
         ticker: str,
     ) -> MarketData:
-
         ticker = normalize_ticker(ticker)
-
         info = yf.Ticker(ticker).info
-
         return MarketData(
             price=_finite(info.get("currentPrice")),
             market_cap=_finite(info.get("marketCap")),

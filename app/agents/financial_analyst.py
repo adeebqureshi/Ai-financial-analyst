@@ -1,27 +1,7 @@
-"""
-financial_analyst.py
-
-Financial Analyst Agent.
-
-Two responsibilities:
-
-1. **Legacy quantitative analysis** (``analyze``) — wraps the existing
-   ``FinancialAnalysisEngine``; used by ``FinancialPipeline`` for the
-   ``/analyze`` and ``/report`` endpoints. Unchanged behaviour.
-
-2. **Evidence-grounded synthesis** (``synthesize``) — produces the final
-   research answer for the agentic chat pipeline. The model is only ever given
-   structured tool output (real, retrieved data) and the actual retrieved
-   sources. It is explicitly told to never fabricate numbers, page numbers or
-   documents, and to say when evidence is insufficient.
-"""
-
 from __future__ import annotations
-
 import json
 from collections.abc import AsyncIterator
 from typing import Any
-
 from app.agents.intents import AgentIntent
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
@@ -31,25 +11,19 @@ from app.llm.async_openai_client import AsyncOpenAIClient
 from app.llm.exceptions import LLMError
 from app.llm.models import LLMRequest
 from app.llm.openai_client import OpenAIClient
-
 logger = get_logger(__name__)
-
 INSUFFICIENT_EVIDENCE_MESSAGE = (
     "I couldn't find sufficient evidence to answer that question. "
     "No financial tool returned usable data and no uploaded document "
     "contained the information."
 )
-
 LLM_UNAVAILABLE_MESSAGE = (
     "I could not complete the synthesis because the language model is "
     "currently unavailable (missing or invalid API key, provider error, "
     "timeout, or rate limit). The structured tool results were computed but "
     "could not be summarized."
 )
-
-
 class FinancialAnalystAgent:
-
     def __init__(
         self,
         settings: Settings | None = None,
@@ -57,28 +31,14 @@ class FinancialAnalystAgent:
         async_client: AsyncOpenAIClient | None = None,
     ) -> None:
         settings = settings or get_settings()
-
         self._settings = settings
         self._client = llm_client or OpenAIClient()
         self._async_client = async_client
         self.engine = FinancialAnalysisEngine()
-
     def ensure_async_client(self) -> AsyncOpenAIClient:
-        """
-        Return the async LLM client, building it once on first use.
-
-        The client is built lazily so that synchronous callers (``synthesize``)
-        never construct the async provider unnecessarily.
-        """
         if self._async_client is None:
             self._async_client = AsyncOpenAIClient()
-
         return self._async_client
-
-    # ──────────────────────────────────────────────────────────────────
-    # Legacy quantitative analysis (used by FinancialPipeline)
-    # ──────────────────────────────────────────────────────────────────
-
     def analyze(
         self,
         statement: FinancialStatement,
@@ -95,7 +55,6 @@ class FinancialAnalystAgent:
         terminal_growth: float = 0.03,
         years: int = 5,
     ):
-
         return self.engine.analyze(
             statement=statement,
             current_price=current_price,
@@ -111,11 +70,6 @@ class FinancialAnalystAgent:
             terminal_growth=terminal_growth,
             years=years,
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Evidence-grounded synthesis (agentic chat pipeline)
-    # ──────────────────────────────────────────────────────────────────
-
     def synthesize(
         self,
         query: str,
@@ -124,32 +78,14 @@ class FinancialAnalystAgent:
         sources: list[dict[str, Any]],
         tickers: list[str],
     ) -> tuple[str, str | None]:
-        """
-        Generate the final research answer from collected tool evidence.
-
-        Args:
-            query: The user question.
-            intents: Detected intents (drives the answer structure).
-            evidence: Tool results keyed by tool name (lists of ToolResult
-                dicts). Only real, executed tool output is included.
-            sources: Retrieved document chunks (with document_id / filename /
-                page). Only actually retrieved chunks are passed.
-            tickers: Tickers referenced by the answer.
-
-        Returns:
-            A ``(answer_text, model_name)`` tuple.
-        """
         if not evidence:
             return INSUFFICIENT_EVIDENCE_MESSAGE, None
-
         evidence_block = json.dumps(
             _normalize_evidence(evidence),
             indent=2,
             default=str,
         )
-
         sources_block = _format_sources(sources)
-
         prompt = _build_synthesis_prompt(
             query=query,
             intents=intents,
@@ -158,26 +94,15 @@ class FinancialAnalystAgent:
             sources=sources_block,
             has_sources=bool(sources),
         )
-
         try:
             response = self._client.generate(LLMRequest(prompt=prompt))
         except LLMError:
-            # Missing/invalid key, provider error, timeout or rate limit.
-            # Degrade gracefully instead of crashing the request; the tool
-            # results are still returned as metadata. Nothing sensitive is
-            # logged (the exception text never contains the API key).
             logger.warning(
                 "LLM synthesis failed for query: %s",
                 query[:120],
             )
             return LLM_UNAVAILABLE_MESSAGE, None
-
         return response.text, getattr(response, "model", None)
-
-    # ──────────────────────────────────────────────────────────────────
-    # Streaming evidence-grounded synthesis (agentic chat pipeline)
-    # ──────────────────────────────────────────────────────────────────
-
     async def stream_synthesize(
         self,
         query: str,
@@ -186,36 +111,15 @@ class FinancialAnalystAgent:
         sources: list[dict[str, Any]],
         tickers: list[str],
     ) -> AsyncIterator[str]:
-        """
-        Stream the final research answer token-by-token.
-
-        Shares the exact prompt contract with :meth:`synthesize` so the
-        streamed answer is identical to the non-streamed one. On LLM failure
-        the graceful ``LLM_UNAVAILABLE_MESSAGE`` is yielded and nothing
-        sensitive is logged.
-
-        Args:
-            query: The user question.
-            intents: Detected intents (drives the answer structure).
-            evidence: Tool results keyed by tool name.
-            sources: Retrieved document chunks.
-            tickers: Tickers referenced by the answer.
-
-        Yields:
-            Progressive text deltas of the synthesized answer.
-        """
         if not evidence:
             yield INSUFFICIENT_EVIDENCE_MESSAGE
             return
-
         evidence_block = json.dumps(
             _normalize_evidence(evidence),
             indent=2,
             default=str,
         )
-
         sources_block = _format_sources(sources)
-
         prompt = _build_synthesis_prompt(
             query=query,
             intents=intents,
@@ -224,7 +128,6 @@ class FinancialAnalystAgent:
             sources=sources_block,
             has_sources=bool(sources),
         )
-
         try:
             async for token in self.ensure_async_client().stream(LLMRequest(prompt=prompt)):
                 yield token
@@ -234,17 +137,10 @@ class FinancialAnalystAgent:
                 query[:120],
             )
             yield LLM_UNAVAILABLE_MESSAGE
-
-
 def _normalize_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
-    """
-    Convert collected ``ToolResult`` objects into plain JSON-able structures.
-    """
     normalized: dict[str, Any] = {}
-
     for tool, results in evidence.items():
         items: list[Any] = []
-
         for result in results:
             if isinstance(result, dict):
                 items.append(result)
@@ -256,28 +152,19 @@ def _normalize_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
                     "result": getattr(result, "result", None),
                     "error": getattr(result, "error", None),
                 })
-
         if items:
             normalized[tool] = items
-
     return normalized
-
-
 def _format_sources(sources: list[dict[str, Any]]) -> str:
     lines: list[str] = []
-
     for source in sources:
         filename = source.get("filename") or "Unknown document"
         page = source.get("page")
-
         if page is not None:
             lines.append(f"- {filename} (page {page})")
         else:
             lines.append(f"- {filename}")
-
     return "\n".join(lines)
-
-
 def _build_synthesis_prompt(
     query: str,
     intents: list[AgentIntent],
@@ -287,11 +174,8 @@ def _build_synthesis_prompt(
     has_sources: bool,
 ) -> str:
     intent_names = [intent.value for intent in intents]
-
     sections: list[str] = []
-
     sections.append("**Executive Conclusion** — 2-4 sentence verdict")
-
     if AgentIntent.FINANCIAL_ANALYSIS.value in intent_names or (
         "get_financials" in evidence or "calculate_ratios" in evidence
     ):
@@ -299,30 +183,25 @@ def _build_synthesis_prompt(
             "**Financial Analysis** — revenue, margins, profitability and "
             "key ratios, using only the numbers in the evidence."
         )
-
     if AgentIntent.VALUATION.value in intent_names or "calculate_valuation" in evidence:
         sections.append(
             "**Valuation** — current price, intrinsic value, upside and "
             "what the valuation implies (undervalued/overvalued)."
         )
-
     if "calculate_financial_health" in evidence:
         sections.append(
             "**Financial Health** — health score, rating, Piotroski / Altman "
             "/ Beneish interpretation."
         )
-
     if "calculate_risk" in evidence or AgentIntent.RISK_ANALYSIS.value in intent_names:
         sections.append(
             "**Risk** — risk level and the key risk signals from the evidence."
         )
-
     if has_sources:
         sections.append(
             "**Document Evidence** — summarise what the retrieved document "
             "chunks say, citing each with its filename and page number."
         )
-
     if any(
         intent.value in intent_names
         for intent in (
@@ -336,24 +215,18 @@ def _build_synthesis_prompt(
             "Do not fabricate a recommendation; if the evidence is "
             "insufficient, say so."
         )
-
     if has_sources:
         sections.append(
             "**Sources** — list the document sources actually cited."
         )
-
     section_list = "\n".join(
         f"{index}. {section}" for index, section in enumerate(sections, start=1)
     )
-
     ticker_line = ", ".join(tickers) if tickers else "None detected"
-
     return f"""You are the final research analyst in an evidence-grounded financial agent.
-
 A real tool layer already produced the structured evidence below. The evidence
 comes exclusively from executed tools; the sources come exclusively from
 retrieval. You must answer the question using ONLY this evidence.
-
 RULES:
 - Every number you state MUST come from the evidence JSON. Do not invent or
   approximate any figure, score, price or percentage.
@@ -363,25 +236,12 @@ RULES:
 - Do not reveal internal chain-of-thought, tool planning or reasoning. Only
   present the final analysis.
 - Structure the answer with ONLY the relevant sections from this list:
-
 {section_list}
-
 If the evidence is empty or irrelevant to the question, answer with exactly:
 "{INSUFFICIENT_EVIDENCE_MESSAGE}"
-
 Question: {query}
-
 Tickers referenced: {ticker_line}
-
 --- SOURCES (only cite these) ---
 {sources}
-
 --- EVIDENCE (structured tool output) ---
 {evidence}
-"""
-
-
-__all__ = [
-    "FinancialAnalystAgent",
-    "INSUFFICIENT_EVIDENCE_MESSAGE",
-]

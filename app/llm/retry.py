@@ -1,33 +1,15 @@
-"""
-Retry utilities for LLM providers.
-"""
-
 from __future__ import annotations
-
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
-
 from app.core.logging import get_logger
 from app.llm.exceptions import ProviderError
 from app.llm.exceptions import RateLimitError
 from app.llm.exceptions import TimeoutError
-
 logger = get_logger("app.llm.retry")
-
-# NOTE (observability): retry logs report the attempt number, delay and
-# failure type. The callable, its arguments and any response payload are
-# never logged.
-
 T = TypeVar("T")
-
-
 class RetryPolicy:
-    """
-    Retry policy with exponential backoff.
-    """
-
     def __init__(
         self,
         max_attempts: int = 3,
@@ -37,21 +19,17 @@ class RetryPolicy:
         self.max_attempts = max_attempts
         self.base_delay = base_delay
         self.backoff_factor = backoff_factor
-
     def execute(
         self,
         func: Callable[[], T],
     ) -> T:
         delay = self.base_delay
-
         for attempt in range(self.max_attempts):
             try:
                 return func()
-
             except (TimeoutError, RateLimitError) as exc:
                 if attempt == self.max_attempts - 1:
                     raise
-
                 logger.warning(
                     "Transient failure, retrying: attempt=%d/%d delay=%.1fs "
                     "error_type=%s",
@@ -62,33 +40,20 @@ class RetryPolicy:
                 )
                 time.sleep(delay)
                 delay *= self.backoff_factor
-
             except ProviderError:
                 raise
-
         raise RuntimeError("RetryPolicy reached an unexpected state.")
-
     async def execute_async(
         self,
         func: Callable[[], Awaitable[T]],
     ) -> T:
-        """
-        Execute an async callable with the same retry/backoff semantics as
-        :meth:`execute`, awaiting between attempts instead of blocking.
-
-        Only transient failures (``TimeoutError`` / ``RateLimitError``) are
-        retried; other provider errors are re-raised immediately.
-        """
         delay = self.base_delay
-
         for attempt in range(self.max_attempts):
             try:
                 return await func()
-
             except (TimeoutError, RateLimitError) as exc:
                 if attempt == self.max_attempts - 1:
                     raise
-
                 logger.warning(
                     "Transient failure, retrying: attempt=%d/%d delay=%.1fs "
                     "error_type=%s",
@@ -99,8 +64,6 @@ class RetryPolicy:
                 )
                 await asyncio.sleep(delay)
                 delay *= self.backoff_factor
-
             except ProviderError:
                 raise
-
         raise RuntimeError("RetryPolicy reached an unexpected state.")

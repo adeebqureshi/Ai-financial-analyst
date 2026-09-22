@@ -1,63 +1,15 @@
-"""
-Search Service
-
-This module contains the business logic for performing semantic search over
-the retrieval engine. It delegates to the existing ``DocumentService``
-(which wraps ``RetrievalEngine``) and wraps the results in typed response
-DTOs, preserving document / page citation metadata.
-
-Design Decisions:
-    - **Wraps existing retrieval engine**: Rather than reimplementing the
-      retrieval logic, this service calls ``DocumentService.retrieve()``
-      and transforms the ``RetrievalContext`` into a typed ``SearchResultData``.
-    - **Document scoping**: An optional ``document_id`` restricts the search
-      to a single uploaded document.
-    - **Settings injection**: Consistent with other services, the constructor
-      accepts ``Settings`` for dependency injection and testability.
-"""
-
 from __future__ import annotations
-
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.schemas.analysis import SearchRequest
 from app.schemas.responses import SearchHitData, SearchResultData
 from app.services.document_service import DocumentService
-
 logger = get_logger(__name__)
-
-
 class SearchService:
-    """
-    Service for performing semantic search over the retrieval engine.
-
-    Attributes:
-        _settings: Application settings instance.
-        _documents: Document service providing document-scoped retrieval.
-    """
-
     def __init__(self, settings: Settings) -> None:
-        """
-        Initialize the search service.
-
-        Args:
-            settings: The application settings instance.
-        """
         self._settings = settings
-
         self._documents = DocumentService(settings)
-
     def search(self, request: SearchRequest, owner_id: str | None = None) -> SearchResultData:
-        """
-        Perform a semantic search.
-
-        Args:
-            request: The validated search request.
-            owner_id: Optional owner ID to scope search to user's documents.
-
-        Returns:
-            A ``SearchResultData`` with the retrieval hits.
-        """
         context = self._documents.retrieve(
             query=request.query,
             limit=request.limit,
@@ -65,7 +17,6 @@ class SearchService:
             as_of_date=request.as_of_date,
             owner_id=owner_id,
         )
-
         hits = [
             SearchHitData(
                 id=chunk.id,
@@ -83,7 +34,6 @@ class SearchService:
             )
             for chunk in context.chunks
         ]
-
         return SearchResultData(
             query=request.query,
             hits=hits,

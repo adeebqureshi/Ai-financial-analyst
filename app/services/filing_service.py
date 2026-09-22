@@ -1,80 +1,35 @@
-"""
-Filing Service
-
-This module contains the business logic for retrieving and managing SEC filings.
-It delegates to the existing ``SECService`` for data retrieval and wraps the
-results in typed response DTOs.
-"""
-
 from __future__ import annotations
-
 from datetime import date
 from typing import Any
-
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.enums.filing_type import FilingType
 from app.ingestion.services.sec_service import SECService
 from app.models.filing import Filing
 from app.utils.tickers import normalize_ticker
-
-# Lazy import for demo SEC service
 _demo_sec_service = None
-
-
 def _get_demo_sec_service():
     global _demo_sec_service
     if _demo_sec_service is None:
         from app.demo.services.demo_sec_service import DemoSECService
-
         _demo_sec_service = DemoSECService()
     return _demo_sec_service
-
 logger = get_logger(__name__)
-
-
 class FilingService:
-    """
-    Service for retrieving and managing SEC filings.
-
-    Attributes:
-        _settings: Application settings instance.
-        _sec: SEC EDGAR service for filing data.
-    """
-
     def __init__(self, settings: Settings) -> None:
-        """
-        Initialize the filing service.
-
-        Args:
-            settings: The application settings instance.
-        """
         self._settings = settings
         if settings.is_demo_mode:
             self._sec = _get_demo_sec_service()
         else:
             self._sec = SECService()
-
     def get_latest_filings(
         self,
         ticker: str,
         filing_type: FilingType | str = FilingType.FORM_10K,
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """
-        Retrieve latest SEC filings for a company.
-
-        Args:
-            ticker: The ticker symbol (e.g., "AAPL").
-            filing_type: The type of filing to retrieve (default: 10-K).
-            limit: Maximum number of filings to return.
-
-        Returns:
-            A list of filing records.
-        """
         ticker = normalize_ticker(ticker)
         form = filing_type.value if isinstance(filing_type, FilingType) else filing_type
-
         try:
             filings = self._sec.get_latest_filings(
                 ticker=ticker,
@@ -89,29 +44,17 @@ class FilingService:
                 exc,
             )
             return []
-
     def get_filing_by_accession(
         self,
         ticker: str,
         accession_number: str,
     ) -> dict[str, Any] | None:
-        """
-        Retrieve a specific filing by accession number.
-
-        Args:
-            ticker: The ticker symbol.
-            accession_number: The SEC accession number.
-
-        Returns:
-            The filing record if found, None otherwise.
-        """
         ticker = normalize_ticker(ticker)
         filings = self.get_latest_filings(ticker, limit=100)
         for filing in filings:
             if filing.get("accession_number") == accession_number:
                 return filing
         return None
-
     def get_filings_by_date_range(
         self,
         ticker: str,
@@ -119,21 +62,8 @@ class FilingService:
         end_date: date,
         filing_type: FilingType | str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Retrieve filings within a date range.
-
-        Args:
-            ticker: The ticker symbol.
-            start_date: Start date (inclusive).
-            end_date: End date (inclusive).
-            filing_type: Optional filing type filter.
-
-        Returns:
-            A list of filing records within the date range.
-        """
         filings = self.get_latest_filings(ticker, limit=100)
         form = filing_type.value if isinstance(filing_type, FilingType) else filing_type
-
         filtered = []
         for filing in filings:
             filing_date = filing.get("filing_date")
@@ -143,17 +73,7 @@ class FilingService:
                 if form is None or filing.get("filing_type") == form:
                     filtered.append(filing)
         return filtered
-
     def _normalize_filings(self, filings: Any) -> list[dict[str, Any]]:
-        """
-        Normalize filing data from the SEC client to a consistent format.
-
-        Args:
-            filings: Raw filing data from SEC client.
-
-        Returns:
-            A list of normalized filing dictionaries.
-        """
         normalized = []
         for filing in filings:
             if hasattr(filing, "model_dump"):
@@ -162,7 +82,6 @@ class FilingService:
                 filing_dict = filing.dict()
             else:
                 filing_dict = filing
-
             normalized.append({
                 "accession_number": filing_dict.get("accession_number", ""),
                 "filing_type": filing_dict.get("filing_type", ""),

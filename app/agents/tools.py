@@ -1,34 +1,8 @@
-"""
-tools.py
-
-Clean tool layer for the agentic research pipeline.
-
-Every tool wraps an *existing* service / engine — the same services the REST
-endpoints use. The agent (planner + coordinator) decides which tools to run;
-each tool performs the actual operation and returns structured data. No
-financial calculation lives inside an LLM prompt, and no new service or
-engine is introduced here.
-
-Design Decisions:
-    - **Single registry**: ``ToolRegistry.execute()`` dispatches a ``ToolCall``
-      to the matching handler and always returns a structured ``ToolResult``
-      (never raises into the orchestrator).
-    - **Error isolation**: A failed tool produces a ``status="error"`` result;
-      the coordinator continues with the remaining evidence and reports the
-      gap instead of fabricating a value.
-    - **Ticker isolation**: Every company tool uppercases the requested ticker
-      and uses it to fetch that company's own data. ``search_documents``
-      filters retrieved chunks by the requested ticker so an Apple question
-      never surfaces Microsoft documents.
-"""
-
 from __future__ import annotations
-
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-
 from app.agents.companies import TICKER_HINTS, company_names_for
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
@@ -50,33 +24,15 @@ from app.services.compare_service import CompareService
 from app.services.document_service import DocumentService
 from app.services.report_service import ReportService
 from app.utils.tickers import normalize_ticker
-
 logger = get_logger(__name__)
-
 DEFAULT_RETRIEVAL_LIMIT = 5
-
-
 @dataclass(slots=True)
 class ToolResult:
-    """
-    Structured result of one tool execution.
-
-    Attributes:
-        tool: The tool name.
-        status: ``done`` or ``error``.
-        detail: Short human-readable summary (for the tool-transparency UI).
-        result: Structured tool output (dict) or ``None`` on error.
-        error: Error message when ``status == "error"``.
-    """
-
     tool: str
     status: str
     detail: str
     result: dict[str, Any] | None = None
     error: str | None = None
-
-
-# Tool metadata used for introspection and the UI (name -> description).
 TOOL_DESCRIPTIONS: dict[str, str] = {
     "get_company": "Retrieve the company profile (name, sector, industry, description).",
     "get_market_data": "Retrieve live market data (price, market cap, volume, beta).",
@@ -93,18 +49,12 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "only application-provided data."
     ),
 }
-
 Handler = Callable[[dict[str, Any]], ToolResult]
-
-
 def _accepts_owner_id(handler: Callable[..., Any]) -> bool:
-    """Return True when ``handler`` declares an ``owner_id`` parameter."""
     try:
         return "owner_id" in inspect.signature(handler).parameters
     except (ValueError, TypeError):
         return False
-
-
 def _statement_payload(data: CompanyFinancialData) -> dict[str, float]:
     statement = data.statement
     return {
@@ -118,26 +68,15 @@ def _statement_payload(data: CompanyFinancialData) -> dict[str, float]:
         "shares_outstanding": statement.shares_outstanding,
         "free_cash_flow": statement.free_cash_flow,
     }
-
-
 def _exchange_value(exchange) -> str | None:
     if exchange is None:
         return None
     return getattr(exchange, "value", str(exchange))
-
-
 def _iso(value) -> str | None:
-    """Return an ISO-8601 string for a datetime, or None."""
     if value is None:
         return None
     return value.isoformat() if hasattr(value, "isoformat") else str(value)
-
-
 class ToolRegistry:
-    """
-    Registry + executor for the agent's available tools.
-    """
-
     def __init__(
         self,
         settings: Settings | None = None,
@@ -151,7 +90,6 @@ class ToolRegistry:
         code_agent: FinancialCodeAgent | None = None,
     ) -> None:
         settings = settings or get_settings()
-
         self._financials = financials or FinancialDataService()
         self._market = market or MarketService()
         self._company = company or CompanyService(settings)
@@ -159,10 +97,8 @@ class ToolRegistry:
         self._documents = documents or DocumentService(settings)
         self._report = report or ReportService(settings)
         self._code_agent = code_agent or FinancialCodeAgent(settings)
-
         self._valuation = ValuationEngine()
         self._assumptions = get_financial_assumptions(settings)
-
         self._handlers: dict[str, Handler] = {
             "get_company": self._get_company,
             "get_market_data": self._get_market_data,
@@ -176,37 +112,21 @@ class ToolRegistry:
             "generate_report": self._generate_report,
             "run_calculation": self._run_calculation,
         }
-
-        # Pre-compute which handlers accept ``owner_id`` so ownership-scoped
-        # retrieval (``search_documents``) receives the caller's ``owner_id``
-        # while every other handler is invoked with positional args only —
-        # preventing a TypeError from forwarding a keyword the handler ignores.
         self._owner_scoped: set[str] = {
             name
             for name, handler in self._handlers.items()
             if _accepts_owner_id(handler)
         }
-
     @property
     def available_tools(self) -> list[str]:
-        """Names of every tool this agent can run."""
         return list(self._handlers)
-
-    # ──────────────────────────────────────────────────────────────────
-    # Dispatch
-    # ──────────────────────────────────────────────────────────────────
-
     def execute(
         self,
         tool: str,
         args: dict[str, Any],
         owner_id: str | None = None,
     ) -> ToolResult:
-        """
-        Execute a single tool call, always returning a ``ToolResult``.
-        """
         handler = self._handlers.get(tool)
-
         if handler is None:
             return ToolResult(
                 tool=tool,
@@ -214,7 +134,6 @@ class ToolRegistry:
                 detail=f"Unknown tool '{tool}'.",
                 error="unknown_tool",
             )
-
         try:
             if tool in self._owner_scoped:
                 return handler(args, owner_id=owner_id)
@@ -227,16 +146,9 @@ class ToolRegistry:
                 detail=f"Failed to {tool.replace('_', ' ')}.",
                 error=str(exc),
             )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Company data
-    # ──────────────────────────────────────────────────────────────────
-
     def _get_company(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         data = self._company.get_company(ticker)
-
         return ToolResult(
             tool="get_company",
             status="done",
@@ -250,16 +162,9 @@ class ToolRegistry:
                 "description": data.description,
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Market data
-    # ──────────────────────────────────────────────────────────────────
-
     def _get_market_data(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         market = self._market.get_market_data(ticker)
-
         return ToolResult(
             tool="get_market_data",
             status="done",
@@ -284,16 +189,9 @@ class ToolRegistry:
                 "stale": market.stale,
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Financial statements
-    # ──────────────────────────────────────────────────────────────────
-
     def _get_financials(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         data = self._financials.load(ticker)
-
         return ToolResult(
             tool="get_financials",
             status="done",
@@ -316,18 +214,10 @@ class ToolRegistry:
                 "statement": _statement_payload(data),
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Ratios
-    # ──────────────────────────────────────────────────────────────────
-
     def _calculate_ratios(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         data = self._financials.load(ticker)
-
         statement = data.statement
-
         return ToolResult(
             tool="calculate_ratios",
             status="done",
@@ -341,17 +231,10 @@ class ToolRegistry:
                 "net_margin": FinancialRatios.net_margin(statement),
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Valuation (DCF)
-    # ──────────────────────────────────────────────────────────────────
-
     def _calculate_valuation(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         data = self._financials.load(ticker)
         assumptions = self._assumptions
-
         result = self._valuation.evaluate(
             statement=data.statement,
             current_price=data.current_price or 0.0,
@@ -364,7 +247,6 @@ class ToolRegistry:
             terminal_growth=assumptions.terminal_growth,
             years=assumptions.projection_years,
         )
-
         equity = data.statement.total_assets - data.statement.total_liabilities
         cost_of_equity = WACC.cost_of_equity(
             risk_free_rate=assumptions.risk_free_rate,
@@ -381,7 +263,6 @@ class ToolRegistry:
             )
         except ValueError:
             discount_rate = 0.0
-
         return ToolResult(
             tool="calculate_valuation",
             status="done",
@@ -409,22 +290,14 @@ class ToolRegistry:
                 },
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Financial health
-    # ──────────────────────────────────────────────────────────────────
-
     def _calculate_financial_health(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         data = self._financials.load(ticker)
-
         score = FinancialHealth.score(
             data.piotroski_score,
             data.altman_score,
             data.beneish_score,
         )
-
         return ToolResult(
             tool="calculate_financial_health",
             status="done",
@@ -438,33 +311,23 @@ class ToolRegistry:
                 "beneish_score": data.beneish_score,
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Risk analysis
-    # ──────────────────────────────────────────────────────────────────
-
     def _calculate_risk(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
-
         data = self._financials.load(ticker)
-
         health_score = FinancialHealth.score(
             data.piotroski_score,
             data.altman_score,
             data.beneish_score,
         )
         health_rating = FinancialHealth.rating(health_score)
-
         altman_int = AltmanZScore.interpretation(data.altman_score)
         beneish_int = BeneishMScore.interpretation(data.beneish_score)
-
         if health_score >= 85 and altman_int == "SAFE" and beneish_int == "LOW_RISK":
             risk_level = "LOW"
         elif health_score >= 50:
             risk_level = "MEDIUM"
         else:
             risk_level = "HIGH"
-
         return ToolResult(
             tool="calculate_risk",
             status="done",
@@ -479,16 +342,9 @@ class ToolRegistry:
                 "risk_level": risk_level,
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Company comparison
-    # ──────────────────────────────────────────────────────────────────
-
     def _compare_companies(self, args: dict[str, Any]) -> ToolResult:
         tickers = [normalize_ticker(str(t)) for t in args["tickers"]]
-
         result = self._compare.compare_tickers(tickers)
-
         return ToolResult(
             tool="compare_companies",
             status="done",
@@ -508,34 +364,22 @@ class ToolRegistry:
                 "best": result.best,
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Document retrieval (RAG)
-    # ──────────────────────────────────────────────────────────────────
-
     def _search_documents(self, args: dict[str, Any], owner_id: str | None = None) -> ToolResult:
         query = str(args["query"])
         ticker = normalize_ticker(str(args["ticker"])) if args.get("ticker") else None
         document_id = args.get("document_id")
         limit = int(args.get("limit") or DEFAULT_RETRIEVAL_LIMIT)
-
-        # When the retrieval is scoped to a company we pull a wider candidate
-        # pool and then filter by ticker. This keeps the correct company's
-        # chunks from being crowded out by other filings in the top-N, which
-        # is what grounds an Apple question in Apple's own documents.
         candidate_limit = (
             max(limit * 3, DEFAULT_RETRIEVAL_LIMIT)
             if ticker
             else limit
         )
-
         context = self._documents.retrieve(
             query=query,
             limit=candidate_limit,
             document_id=document_id,
             owner_id=owner_id,
         )
-
         chunks = [
             {
                 "document_id": chunk.document_id,
@@ -549,9 +393,7 @@ class ToolRegistry:
             }
             for chunk in context.chunks
         ]
-
         ticker_filtered = False
-
         if ticker:
             filtered = [
                 chunk
@@ -561,7 +403,6 @@ class ToolRegistry:
             if filtered:
                 chunks = filtered[:limit]
                 ticker_filtered = True
-
         return ToolResult(
             tool="search_documents",
             status="done",
@@ -578,17 +419,10 @@ class ToolRegistry:
                 "total": len(chunks),
             },
         )
-
-    # ──────────────────────────────────────────────────────────────────
-    # Report generation
-    # ──────────────────────────────────────────────────────────────────
-
     def _generate_report(self, args: dict[str, Any]) -> ToolResult:
         ticker = normalize_ticker(str(args["ticker"]))
         query = str(args.get("query") or "")
-
         report = self._report.generate_ticker_report(ticker, query)
-
         return ToolResult(
             tool="generate_report",
             status="done",
@@ -600,35 +434,15 @@ class ToolRegistry:
                 "format": report.format,
             },
         )
-
-
-    # ──────────────────────────────────────────────────────────────────
-    # Sandboxed calculations
-    # ──────────────────────────────────────────────────────────────────
-
     def _run_calculation(self, args: dict[str, Any]) -> ToolResult:
-        """
-        Execute a custom calculation for ``question`` with sandboxed code.
-
-        The calculation context is built from real application data (the
-        company's financial statements and market data) — never from
-        LLM-invented numbers. An explicit ``context`` passed by a caller is
-        merged in, but the authoritative source remains the application's
-        data layer.
-        """
         question = str(args["question"])
-
         ticker = normalize_ticker(str(args["ticker"])) if args.get("ticker") else None
-
         explicit = args.get("context") or {}
         if not isinstance(explicit, dict):
             raise ValueError("run_calculation 'context' must be a mapping")
-
         context = dict(explicit)
-
         if ticker:
             data = self._financials.load(ticker)
-
             context.update({
                 "ticker": data.ticker,
                 "name": data.name,
@@ -642,9 +456,7 @@ class ToolRegistry:
                 "cost_of_debt": self._assumptions.cost_of_debt,
             })
             context.update(_statement_payload(data))
-
         result = self._code_agent.run(question=question, context=context)
-
         if not result.success:
             return ToolResult(
                 tool="run_calculation",
@@ -660,7 +472,6 @@ class ToolRegistry:
                     "code": result.code,
                 },
             )
-
         return ToolResult(
             tool="run_calculation",
             status="done",
@@ -675,31 +486,15 @@ class ToolRegistry:
                 "computed_by": "sandbox",
             },
         )
-
-
 def _chunk_belongs_to_ticker(chunk: dict[str, Any], ticker: str) -> bool:
-    """
-    True when a retrieved chunk belongs to ``ticker``.
-
-    Chunks carry a best-effort ticker detected from their filename (see
-    ``DocumentService._detect_ticker``), which may be a company name such as
-    "Apple" rather than the symbol "AAPL". We therefore match on the metadata
-    ticker, the company name → ticker hints, or a case-insensitive filename
-    mention.
-    """
     chunk_ticker = (chunk.get("ticker") or "").strip()
-
     if chunk_ticker and chunk_ticker.upper() == ticker:
         return True
-
     if chunk_ticker:
         for name, symbol in TICKER_HINTS:
             if chunk_ticker.lower() == name and symbol == ticker:
                 return True
-
     filename = (chunk.get("filename") or "").lower()
-
     if ticker.lower() in filename:
         return True
-
     return any(name in filename for name in company_names_for(ticker))

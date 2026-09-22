@@ -7,7 +7,6 @@ from .models import RetrievedChunk, RetrievalContext
 from .rank_fusion import RankFusion
 from .reranker import Reranker
 from .retrieval_engine import RetrievalEngine
-
 __all__ = [
     "BM25Index",
     "DenseRetriever",

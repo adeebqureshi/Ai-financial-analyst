@@ -1,8 +1,5 @@
 from app.financial.models import FinancialStatement
-
-
 def test_financial_statement():
-
     statement = FinancialStatement(
         revenue=100,
         operating_income=30,
@@ -14,7 +11,5 @@ def test_financial_statement():
         shares_outstanding=10,
         free_cash_flow=20,
     )
-
     assert statement.revenue == 100
-
     assert statement.debt == 50

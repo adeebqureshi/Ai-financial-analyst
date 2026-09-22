@@ -1,14 +1,9 @@
 from unittest.mock import MagicMock, patch
-
 from app.agents.quant import QuantAgent
 from app.financial.data import CompanyFinancialData
 from app.financial.models import FinancialStatement
-
-
 def test_quant():
     agent = QuantAgent()
-
-    # Mock the financial data service to return predictable data
     mock_statement = FinancialStatement(
         revenue=1000.0,
         operating_income=250.0,
@@ -23,7 +18,6 @@ def test_quant():
         current_assets=400.0,
         current_liabilities=200.0,
     )
-
     mock_data = CompanyFinancialData(
         ticker="AAPL",
         statement=mock_statement,
@@ -40,23 +34,14 @@ def test_quant():
         market_cap=2_500_000.0,
         description="Apple Inc. designs, manufactures, and markets smartphones.",
     )
-
     with patch.object(agent.financial_data, "load", return_value=mock_data):
         result = agent.analyze("AAPL")
-
     assert result.company == "AAPL"
     assert result.metric_count == 7
-    # current_ratio = real current_assets / current_liabilities = 400/200 = 2.0
     assert abs(result.metrics["current_ratio"] - 2.0) < 0.001
-    # debt_to_equity = total_liabilities / equity = 600 / (1000-600) = 600/400 = 1.5
     assert abs(result.metrics["debt_to_equity"] - 1.5) < 0.001
-    # return_on_assets = net_income / total_assets = 200/1000 = 0.2
     assert abs(result.metrics["return_on_assets"] - 0.2) < 0.001
-    # return_on_equity = net_income / equity = 200/400 = 0.5
     assert abs(result.metrics["return_on_equity"] - 0.5) < 0.001
-    # gross_margin = gross_profit / revenue = 500/1000 = 0.5
     assert abs(result.metrics["gross_margin"] - 0.5) < 0.001
-    # operating_margin = operating_income / revenue = 250/1000 = 0.25
     assert abs(result.metrics["operating_margin"] - 0.25) < 0.001
-    # net_margin = net_income / revenue = 200/1000 = 0.2
     assert abs(result.metrics["net_margin"] - 0.2) < 0.001

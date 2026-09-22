@@ -1,9 +1,6 @@
 from app.comparison.company_metric import CompanyMetric
 from app.comparison.comparison_result import ComparisonResult
-
-
 def test_result():
-
     result = ComparisonResult(
         metric="Revenue",
         companies=[
@@ -11,5 +8,4 @@ def test_result():
             CompanyMetric("Microsoft", 5),
         ],
     )
-
     assert result.winner.company == "Apple"

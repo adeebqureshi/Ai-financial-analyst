@@ -10,7 +10,6 @@ from .valuation import ValuationEngine
 from .wacc import WACC
 from .analysis import AnalysisResult
 from .analysis import FinancialAnalysisEngine
-
 __all__ = [
     "AltmanZScore",
     "BeneishMScore",

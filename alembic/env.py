@@ -1,57 +1,20 @@
-"""
-Alembic Environment Configuration
-
-Supports dual database migrations for:
-- Authentication database (users table)
-- Chat persistence database (chat_sessions, chat_messages tables)
-
-Each database has its own migration history tracked via version tables:
-- auth_alembic_version for authentication schema
-- chat_alembic_version for chat schema
-
-Usage:
-    # Auth migrations
-    alembic -c alembic.ini -x database=auth upgrade head
-
-    # Chat migrations
-    alembic -c alembic.ini -x database=chat upgrade head
-
-    # Generate new auth migration
-    alembic -c alembic.ini -x database=auth revision --autogenerate -m "description"
-
-    # Generate new chat migration
-    alembic -c alembic.ini -x database=chat revision --autogenerate -m "description"
-"""
-
 from __future__ import annotations
-
 import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
-
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-
-# Add project root to Python path
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
-
 from app.auth.database import Base as AuthBase
 from app.chat.database import Base as ChatBase
-
-# Import models to register them with metadata
-from app.auth import models as auth_models  # noqa: F401
-from app.chat import models as chat_models  # noqa: F401
-
+from app.auth import models as auth_models
+from app.chat import models as chat_models
 config = context.config
-
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-# Get database type from command line: -x database=auth or -x database=chat
 database = context.get_x_argument(as_dictionary=True).get("database", "auth")
-
 if database == "auth":
     target_metadata = AuthBase.metadata
     version_table = "auth_alembic_version"
@@ -62,10 +25,7 @@ elif database == "chat":
     section = "alembic_chat"
 else:
     raise ValueError(f"Unknown database: {database}. Use 'auth' or 'chat'.")
-
-
 def get_database_url() -> str:
-    """Get database URL from environment or config."""
     if database == "auth":
         url = os.getenv("AUTH_DATABASE_URL")
         if not url:
@@ -74,17 +34,13 @@ def get_database_url() -> str:
         url = os.getenv("CHAT_DATABASE_URL")
         if not url:
             url = config.get_section_option(section, "sqlalchemy.url", None)
-
     if not url:
         raise RuntimeError(
             f"Database URL not configured. Set {database.upper()}_DATABASE_URL "
             f"environment variable or configure [{section}] in alembic.ini"
         )
     return url
-
-
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
     url = get_database_url()
     context.configure(
         url=url,
@@ -96,22 +52,16 @@ def run_migrations_offline() -> None:
         compare_server_default=True,
         include_schemas=False,
     )
-
     with context.begin_transaction():
         context.run_migrations()
-
-
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
     configuration = config.get_section(section, {})
     configuration["sqlalchemy.url"] = get_database_url()
-
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
@@ -121,11 +71,8 @@ def run_migrations_online() -> None:
             compare_server_default=True,
             include_schemas=False,
         )
-
         with context.begin_transaction():
             context.run_migrations()
-
-
 if context.is_offline_mode():
     run_migrations_offline()
 else:

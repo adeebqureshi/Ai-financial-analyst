@@ -1,100 +1,34 @@
-"""
-Hardening tests for the subprocess-isolated sandbox (app.sandbox.executor).
-
-These verify the production hardening goals:
-
-- Execution is isolated in a subprocess (out of the FastAPI process).
-- Strict wall-clock timeout: runaway loops are hard-killed.
-- No network access (socket/urllib/http/requests blocked).
-- No environment / secret access in the worker.
-- No filesystem access (open/os/pathlib blocked; worker cwd is empty).
-- Resource limits on memory (best-effort), CPU, file descriptors.
-- No child-process spawning (subprocess/multiprocessing blocked).
-- No interpreter / namespace escapes reach the host.
-"""
-
 from __future__ import annotations
-
 import pytest
-
 from app.sandbox.executor import PythonSandbox
-
 _SECRET_MARKERS = (
     "KEY", "SECRET", "TOKEN", "PASSWORD", "PASSWD",
     "CREDENTIAL", "IDENTITY", "APIKEY",
 )
-
-
 @pytest.fixture(scope="module")
 def sandbox() -> PythonSandbox:
     return PythonSandbox()
-
-
-# ------------------------------------------------------------------------------
-# Process isolation
-# ------------------------------------------------------------------------------
-
-
 def test_execution_runs_in_a_child_process(sandbox):
-    """The untrusted code must not run inside the calling (test) process."""
     assert "sandbox_marker" not in globals()
-
     result = sandbox.run("sandbox_marker = 1\nresult = 1")
-
     assert result.success
-
-    # The in-process namespace is untouched by the worker.
     assert "sandbox_marker" not in globals()
-
-
 def test_host_modules_are_not_mutated_by_worker(sandbox):
-    """A worker cannot mutate host interpreter state."""
     import sys
-
     before = set(sys.modules.keys())
-
     result = sandbox.run("result = 1")
-
     assert result.success
-
     assert set(sys.modules.keys()) == before
-
-
-# ------------------------------------------------------------------------------
-# Strict timeout / runaway termination
-# ------------------------------------------------------------------------------
-
-
 def test_infinite_loop_is_killed_by_parent(sandbox):
     result = sandbox.run("while True:\n    pass", timeout=2)
-
     assert not result.success
     assert "timeout" in result.error.lower()
-
-
 def test_timeout_is_roughly_respected(sandbox):
     import time
-
     start = time.monotonic()
-
     sandbox.run("while True:\n    pass", timeout=2)
-
     elapsed = time.monotonic() - start
-
-    # The kill should happen close to the budget, not hang the suite.
     assert elapsed < 15
-
-
-# ------------------------------------------------------------------------------
-# Network access
-# ------------------------------------------------------------------------------
-
-
-# ------------------------------------------------------------------------------
-# Filesystem access
-# ------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "code",
     [
@@ -109,15 +43,7 @@ def test_timeout_is_roughly_respected(sandbox):
 )
 def test_filesystem_access_is_blocked(sandbox, code):
     result = sandbox.run(code)
-
     assert not result.success
-
-
-# ------------------------------------------------------------------------------
-# Environment / secret access
-# ------------------------------------------------------------------------------
-
-
 def test_secret_env_vars_are_stripped(sandbox):
     sample = {
         "OPENAI_API_KEY": "sk-123",
@@ -127,13 +53,11 @@ def test_secret_env_vars_are_stripped(sandbox):
         "DATABASE_PASSWORD": "pw",
         "PATH": "C:\\Windows",
     }
-
     filtered = {
         k: v
         for k, v in sample.items()
         if not any(m in k.upper() for m in _SECRET_MARKERS)
     }
-
     assert "OPENAI_API_KEY" not in filtered
     assert "AUTH_SECRET_KEY" not in filtered
     assert "FMP_API_KEY" not in filtered
@@ -155,13 +79,7 @@ def test_secret_env_vars_are_stripped(sandbox):
 )
 def test_network_access_is_blocked(sandbox, code):
     result = sandbox.run(code)
-
     assert not result.success
-# ------------------------------------------------------------------------------
-# Child process / interpreter escape
-# ------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "code",
     [
@@ -174,10 +92,7 @@ def test_network_access_is_blocked(sandbox, code):
 )
 def test_child_process_spawning_is_blocked(sandbox, code):
     result = sandbox.run(code)
-
     assert not result.success
-
-
 @pytest.mark.parametrize(
     "code",
     [
@@ -196,32 +111,16 @@ def test_child_process_spawning_is_blocked(sandbox, code):
 )
 def test_interpreter_escape_attempts_are_blocked(sandbox, code):
     result = sandbox.run(code)
-
     assert not result.success
-
-
-# ------------------------------------------------------------------------------
-# Resource limits
-# ------------------------------------------------------------------------------
-
-
 def test_resource_limits_wiring_in_worker():
-    """The worker applies POSIX rlimits when the resource module is available."""
     try:
         import resource
     except ImportError:
         pytest.skip("resource module unavailable on this platform")
-
     from app.sandbox.worker import _apply_resource_limits
-
-    # The limiter must be callable with defaulted budgets without raising.
     _apply_resource_limits(cpu_seconds=None, memory_mb=None)
-
-
 def test_memory_hog_aborts_instead_of_hanging():
-    """A memory-heavy program must not exhaust the host or hang the suite."""
     limited = PythonSandbox(memory_limit_mb=64)
-
     result = limited.run(
         "data = []\n"
         "for _ in range(1_000_000):\n"
@@ -229,7 +128,4 @@ def test_memory_hog_aborts_instead_of_hanging():
         "result = len(data)\n",
         timeout=15,
     )
-
-    # Either the memory limit trips (non-POSIX fallback is the kill-timer), or
-    # execution finishes; it must not crash the host.
     assert result is not None

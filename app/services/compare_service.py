@@ -1,14 +1,4 @@
-"""
-Compare Service
-
-This module contains the business logic for comparing multiple companies.
-It delegates to the existing ``ValuationEngine`` and ``FinancialHealth``
-engines. Each ticker is analyzed with its own real, company-specific
-financial data — one company's statement is never reused for another.
-"""
-
 from __future__ import annotations
-
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.assumptions import get_financial_assumptions
@@ -19,34 +9,14 @@ from app.financial.valuation import ValuationEngine
 from app.schemas.analysis import CompareRequest
 from app.schemas.responses import CompareItemData, CompareResponseData
 from app.utils.tickers import normalize_ticker
-
 logger = get_logger(__name__)
-
-
 class CompareService:
-    """
-    Service for comparing multiple companies.
-    """
-
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._engine = ValuationEngine()
         self._financial_data = FinancialDataService()
         self._assumptions = get_financial_assumptions(settings)
-
     def compare(self, request: CompareRequest) -> CompareResponseData:
-        """
-        Compare multiple tickers using the provided financial statement.
-
-        Kept for backward compatibility with callers that supply an explicit
-        ``CompareRequest``. New callers should use :meth:`compare_tickers`.
-
-        Args:
-            request: The validated compare request.
-
-        Returns:
-            A ``CompareResponseData`` with per-ticker results.
-        """
         statement = FinancialStatement(
             revenue=request.statement.revenue,
             operating_income=request.statement.operating_income,
@@ -58,9 +28,7 @@ class CompareService:
             shares_outstanding=request.statement.shares_outstanding,
             free_cash_flow=request.statement.free_cash_flow,
         )
-
         results: list[CompareItemData] = []
-
         for ticker in request.tickers:
             result = self._engine.evaluate(
                 statement=statement,
@@ -83,39 +51,16 @@ class CompareService:
                     recommendation=result.recommendation,
                 )
             )
-
-        # Determine the best ticker by upside
         best_ticker = max(results, key=lambda item: item.upside).ticker
-
         return CompareResponseData(
             results=results,
             best=best_ticker,
         )
-
     def compare_tickers(self, tickers: list[str]) -> CompareResponseData:
-        """
-        Compare multiple tickers using each company's own real financial data.
-
-        For every ticker the service fetches its actual financial statements,
-        market data, risk scores and growth rate, then runs the valuation and
-        health engines on that company-specific data.
-
-        Args:
-            tickers: List of 2-10 ticker symbols.
-
-        Returns:
-            A ``CompareResponseData`` with per-ticker results.
-
-        Raises:
-            RetrievalError: If a provider cannot supply data for any ticker.
-        """
         results: list[CompareItemData] = []
-
         tickers = [normalize_ticker(t) for t in tickers]
-
         for ticker in tickers:
             data = self._financial_data.load(ticker)
-
             result = self._engine.evaluate(
                 statement=data.statement,
                 current_price=data.current_price or 0.0,
@@ -128,13 +73,11 @@ class CompareService:
                 terminal_growth=self._assumptions.terminal_growth,
                 years=self._assumptions.projection_years,
             )
-
             health_score = FinancialHealth.score(
                 data.piotroski_score,
                 data.altman_score,
                 data.beneish_score,
             )
-
             results.append(
                 CompareItemData(
                     ticker=ticker,
@@ -145,9 +88,7 @@ class CompareService:
                     health_score=health_score,
                 )
             )
-
         best_ticker = max(results, key=lambda item: item.upside).ticker
-
         return CompareResponseData(
             results=results,
             best=best_ticker,

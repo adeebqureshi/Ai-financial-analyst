@@ -1,23 +1,4 @@
-"""
-Analysis Service
-
-This module contains the business logic for performing comprehensive financial
-analysis. It delegates to the existing ``FinancialPipeline`` for multi-agent
-orchestration and wraps the results in typed response DTOs.
-
-Design Decisions:
-    - **Wraps existing pipeline**: Rather than reimplementing the orchestration
-      logic, this service calls ``FinancialPipeline.analyze_company()`` and
-      transforms the result dict into a typed ``AnalyzeResponseData``.
-    - **Settings injection**: Consistent with ``HealthService`` and
-      ``VersionService``, the constructor accepts ``Settings`` for dependency
-      injection and testability.
-    - **No I/O in constructor**: The ``FinancialPipeline`` is lazily created
-      on first call to ``analyze()``, keeping the constructor lightweight.
-"""
-
 from __future__ import annotations
-
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
@@ -39,98 +20,37 @@ from app.schemas.responses import (
     ValuationResultData,
 )
 from app.utils.tickers import normalize_ticker
-
-# Lazy import for demo financial data service
 _demo_financial_data_service = None
-
-
 def _get_demo_financial_data_service():
     global _demo_financial_data_service
     if _demo_financial_data_service is None:
         from app.demo.services.demo_financial_data import DemoFinancialDataService
-
         _demo_financial_data_service = DemoFinancialDataService()
     return _demo_financial_data_service
-
 logger = get_logger(__name__)
-
-
 class AnalysisService:
-    """
-    Service for performing comprehensive financial analysis.
-
-    Attributes:
-        _settings: Application settings instance.
-        _pipeline: Optional cached financial pipeline instance.
-        _engine: Financial analysis engine.
-    """
-
     def __init__(self, settings: Settings) -> None:
-        """
-        Initialize the analysis service.
-
-        Args:
-            settings: The application settings instance.
-        """
         self._settings = settings
         self._pipeline: FinancialPipeline | None = None
         self._engine = FinancialAnalysisEngine()
-        # Use demo financial data service in demo mode
         if settings.is_demo_mode:
             self._financial_data = _get_demo_financial_data_service()
         else:
             self._financial_data = FinancialDataService()
         self._assumptions = get_financial_assumptions(settings)
-
     def _get_pipeline(self) -> FinancialPipeline:
-        """
-        Lazy-initialize and return the financial pipeline.
-
-        Returns:
-            A ``FinancialPipeline`` instance.
-        """
         if self._pipeline is None:
             self._pipeline = FinancialPipeline()
         return self._pipeline
-
     @staticmethod
     def _as_value(value: object) -> str | None:
-        """Return the enum value if the value is an enum, else the raw value."""
         if value is None:
             return None
         return getattr(value, "value", value)
-
     def analyze_ticker(self, ticker: str, query: str | None = None) -> AnalyzeResponseData:
-        """
-        Analyze a company using real, company-specific financial data.
-
-        This is the Phase 2 entry point used by ``POST /analyze``: the
-        frontend only supplies a ticker, so the service fetches the actual
-        financial statements, market data and company profile for that
-        ticker, computes the risk scores from the real data, and runs the
-        full analysis pipeline.
-
-        Args:
-            ticker: The ticker symbol (e.g. ``"AAPL"``).
-            query: Optional natural-language analysis query.
-
-        Returns:
-            An ``AnalyzeResponseData`` with company-specific results.
-
-        Raises:
-            RetrievalError: If the data provider cannot supply the data.
-
-        Note:
-            The analysis uses the configured FinancialAssumptions for
-            risk-free rate, market return, tax rate, cost of debt, terminal
-            growth and projection years. These are documented assumptions,
-            not live market data.
-        """
         ticker = normalize_ticker(ticker)
-
         data = self._financial_data.load(ticker)
         statement = data.statement
-
         request = AnalyzeRequest(
             ticker=ticker,
             query=query or f"Analyze {ticker}",
@@ -160,9 +80,7 @@ class AnalysisService:
             altman_score=data.altman_score,
             beneish_score=data.beneish_score,
         )
-
         result = self.analyze(request)
-
         return result.model_copy(
             update={
                 "company": CompanyData(
@@ -175,20 +93,8 @@ class AnalysisService:
                 ),
             }
         )
-
     def analyze(self, request: AnalyzeRequest) -> AnalyzeResponseData:
-        """
-        Perform a comprehensive financial analysis.
-
-        Args:
-            request: The validated analysis request.
-
-        Returns:
-            An ``AnalyzeResponseData`` with the analysis results.
-        """
         pipeline = self._get_pipeline()
-
-        # Build the financial statement from the request
         statement = FinancialStatement(
             revenue=request.statement.revenue,
             operating_income=request.statement.operating_income,
@@ -200,8 +106,6 @@ class AnalysisService:
             shares_outstanding=request.statement.shares_outstanding,
             free_cash_flow=request.statement.free_cash_flow,
         )
-
-        # Run the full pipeline analysis
         result = pipeline.analyze_company(
             ticker=request.ticker,
             statement=statement,
@@ -215,13 +119,9 @@ class AnalysisService:
             altman_score=request.altman_score,
             beneish_score=request.beneish_score,
         )
-
-        # Extract the analysis result
         analysis = result.get("analysis", {})
         company = result.get("company", {})
         market = result.get("market", {})
-
-        # Compute the WACC discount rate
         equity = statement.total_assets - statement.total_liabilities
         cost_of_equity = WACC.cost_of_equity(
             risk_free_rate=request.valuation.risk_free_rate,
@@ -238,16 +138,12 @@ class AnalysisService:
             )
         except ValueError:
             discount_rate = 0.0
-
-        # Compute health score
         health_score = FinancialHealth.score(
             request.piotroski_score,
             request.altman_score,
             request.beneish_score,
         )
         health_rating = FinancialHealth.rating(health_score)
-
-        # Build the response
         return AnalyzeResponseData(
             ticker=request.ticker,
             query=request.query,

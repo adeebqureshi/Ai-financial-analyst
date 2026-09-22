@@ -1,19 +1,12 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 from unittest.mock import patch
-
 from app.llm.report_generator import ReportGenerator
-
-
 @patch("app.llm.report_generator.OpenAIClient")
 def test_report_generator(mock_client):
-
     client = MagicMock()
-
     client.generate.return_value = "FINAL_REPORT"
-
     mock_client.return_value = client
-
     result = {
         "company": SimpleNamespace(
             name="Apple Inc.",
@@ -34,15 +27,11 @@ def test_report_generator(mock_client):
             beneish_score=-2.4,
         ),
     }
-
     generator = ReportGenerator()
-
     report = generator.generate(
         query="Should I buy Apple?",
         context="Revenue increased.",
         result=result,
     )
-
     assert report == "FINAL_REPORT"
-
     client.generate.assert_called_once()

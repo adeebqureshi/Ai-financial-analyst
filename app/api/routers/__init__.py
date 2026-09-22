@@ -1,35 +1,5 @@
-"""
-API Routers Package
-
-This package contains all FastAPI routers for the AI Financial Analyst API.
-Routers are aggregated into a single ``api_router`` that is included in the
-FastAPI application.
-
-Submodules:
-    - ``root``:     Root endpoint (``GET /``).
-    - ``health``:   Health check endpoint (``GET /health``).
-    - ``version``:  Version info endpoint (``GET /version``).
-    - ``analysis``: Company analysis endpoint (``POST /analyze``).
-    - ``search``:   Semantic search endpoint (``POST /search``).
-    - ``company``:  Company profile endpoint (``GET /company/{ticker}``).
-    - ``valuation``: Valuation endpoints (``POST /valuation``, ``POST /intrinsic-value``).
-    - ``chat``:     Chat endpoint (``POST /chat``).
-    - ``ratios``:   Financial ratios endpoint (``POST /financial-ratios``).
-    - ``risk``:     Risk analysis endpoint (``POST /risk-analysis``).
-    - ``report``:   Report generation endpoint (``POST /report``).
-    - ``compare``:  Company comparison endpoint (``POST /compare``).
-    - ``screen``:   Stock screening endpoint (``POST /screen``).
-
-Design Decision:
-    A single aggregated ``api_router`` is included in ``create_app()``
-    rather than including each router individually. This centralizes
-    router configuration and makes it easy to add new routers.
-"""
-
 from __future__ import annotations
-
 from fastapi import APIRouter, Depends
-
 from app.api.routers.analyze_company import router as analyze_company_router
 from app.api.routers.analysis import router as analysis_router
 from app.api.routers.chat import router as chat_router
@@ -48,20 +18,13 @@ from app.api.routers.valuation import router as valuation_router
 from app.api.routers.version import router as version_router
 from app.auth.dependencies import get_current_user
 from app.auth.router import router as auth_router
-
-# Aggregated API router — included in the FastAPI app
 api_router = APIRouter()
-
 _AUTH_GUARD = [Depends(get_current_user)]
-
-# Public: auth, root, health, version
 api_router.include_router(auth_router)
 api_router.include_router(root_router)
 api_router.include_router(health_router)
 api_router.include_router(readiness_router, tags=["Health"])
 api_router.include_router(version_router)
-
-# Business endpoints require authentication (401 without a valid token).
 api_router.include_router(analyze_company_router, dependencies=_AUTH_GUARD)
 api_router.include_router(analysis_router, dependencies=_AUTH_GUARD)
 api_router.include_router(search_router, dependencies=_AUTH_GUARD)
@@ -74,7 +37,6 @@ api_router.include_router(report_router, dependencies=_AUTH_GUARD)
 api_router.include_router(compare_router, dependencies=_AUTH_GUARD)
 api_router.include_router(screen_router, dependencies=_AUTH_GUARD)
 api_router.include_router(documents_router, dependencies=_AUTH_GUARD)
-
 __all__ = [
     "api_router",
     "auth_router",

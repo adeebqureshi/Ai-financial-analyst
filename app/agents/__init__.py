@@ -1,7 +1,3 @@
-"""
-Multi-agent orchestration package.
-"""
-
 from .auditor import AuditorAgent
 from .coordinator import CoordinatorAgent
 from .financial_analyst import FinancialAnalystAgent
@@ -11,7 +7,6 @@ from .planner import PlannerAgent
 from .research_plan import ResearchPlan, ToolCall
 from .task import Task
 from .tools import ToolRegistry, ToolResult
-
 __all__ = [
     "AgentIntent",
     "AuditorAgent",

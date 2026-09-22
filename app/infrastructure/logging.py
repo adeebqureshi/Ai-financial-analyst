@@ -1,14 +1,6 @@
-"""
-Logging configuration.
-"""
-
 from __future__ import annotations
-
 import logging
-
-
 def configure_logging() -> logging.Logger:
-
     logging.basicConfig(
         level=logging.INFO,
         format=(
@@ -18,7 +10,6 @@ def configure_logging() -> logging.Logger:
             "%(message)s"
         ),
     )
-
     return logging.getLogger(
         "financial_analyst"
     )

@@ -1,12 +1,8 @@
 from app.rag.embedding import Embedding
 from app.rag.reranker import Reranker
 from app.rag.search_result import SearchResult
-
-
 def test_rerank():
-
     reranker = Reranker()
-
     results = [
         SearchResult(
             embedding=Embedding(
@@ -23,12 +19,9 @@ def test_rerank():
             score=0.1,
         ),
     ]
-
     reranked = reranker.rerank(
         "Apple revenue",
         results,
     )
-
     assert reranked[0].embedding.text == "Apple revenue increased"
-
     assert reranked[0].score > reranked[1].score

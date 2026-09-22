@@ -1,28 +1,12 @@
-"""
-Demo Fixtures — Synthetic Company Data
-
-This module contains curated deterministic demo data for recognizable companies.
-All values are SYNTHETIC/DEMO and clearly labeled as such.
-Do not represent fabricated numbers as live market data.
-"""
-
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Final
-
 from app.enums.exchange import Exchange
 from app.financial.models import FinancialStatement
 from app.models.company import Company
 from app.models.market import MarketData
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Company Profiles
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_COMPANIES: Final[dict[str, Company]] = {
     "AAPL": Company(
         ticker="AAPL",
@@ -85,12 +69,6 @@ DEMO_COMPANIES: Final[dict[str, Company]] = {
         market_cap=800_000_000_000.0,
     ),
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Financial Statements (values in $ millions)
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_FINANCIAL_STATEMENTS: Final[dict[str, FinancialStatement]] = {
     "AAPL": FinancialStatement(
         revenue=383_285.0,
@@ -163,12 +141,6 @@ DEMO_FINANCIAL_STATEMENTS: Final[dict[str, FinancialStatement]] = {
         current_liabilities=34_041.0,
     ),
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Market Quotes
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_MARKET_QUOTES: Final[dict[str, MarketData]] = {
     "AAPL": MarketData(
         ticker="AAPL",
@@ -261,12 +233,6 @@ DEMO_MARKET_QUOTES: Final[dict[str, MarketData]] = {
         stale=False,
     ),
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Risk Scores (computed from demo financial data)
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_RISK_SCORES: Final[dict[str, dict[str, float | int]]] = {
     "AAPL": {
         "piotroski_score": 8,
@@ -294,12 +260,6 @@ DEMO_RISK_SCORES: Final[dict[str, dict[str, float | int]]] = {
         "beneish_score": -1.2,
     },
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Growth Rates (historical revenue CAGR estimates)
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_GROWTH_RATES: Final[dict[str, float]] = {
     "AAPL": 0.085,
     "MSFT": 0.12,
@@ -307,12 +267,6 @@ DEMO_GROWTH_RATES: Final[dict[str, float]] = {
     "AMZN": 0.18,
     "TSLA": 0.25,
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Tax Rates (effective tax rates from demo income statements)
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_TAX_RATES: Final[dict[str, float]] = {
     "AAPL": 0.16,
     "MSFT": 0.19,
@@ -320,12 +274,6 @@ DEMO_TAX_RATES: Final[dict[str, float]] = {
     "AMZN": 0.14,
     "TSLA": 0.09,
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Company Descriptions
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_DESCRIPTIONS: Final[dict[str, str]] = {
     "AAPL": (
         "Apple Inc. designs, manufactures, and markets smartphones, personal "
@@ -359,50 +307,20 @@ DEMO_DESCRIPTIONS: Final[dict[str, str]] = {
         "[DEMO / SYNTHETIC DATA]"
     ),
 }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Demo Available Tickers
-# ──────────────────────────────────────────────────────────────────────────────
-
 DEMO_TICKERS: Final[list[str]] = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
-
-
 def is_demo_ticker(ticker: str) -> bool:
-    """Check if a ticker is available in demo mode."""
     return ticker.upper() in DEMO_TICKERS
-
-
 def get_demo_company(ticker: str) -> Company:
-    """Get demo company profile by ticker."""
     return DEMO_COMPANIES[ticker.upper()]
-
-
 def get_demo_financial_statement(ticker: str) -> FinancialStatement:
-    """Get demo financial statement by ticker."""
     return DEMO_FINANCIAL_STATEMENTS[ticker.upper()]
-
-
 def get_demo_market_data(ticker: str) -> MarketData:
-    """Get demo market data by ticker."""
     return DEMO_MARKET_QUOTES[ticker.upper()]
-
-
 def get_demo_risk_scores(ticker: str) -> dict[str, float | int]:
-    """Get demo risk scores by ticker."""
     return DEMO_RISK_SCORES[ticker.upper()]
-
-
 def get_demo_growth_rate(ticker: str) -> float:
-    """Get demo growth rate by ticker."""
     return DEMO_GROWTH_RATES[ticker.upper()]
-
-
 def get_demo_tax_rate(ticker: str) -> float:
-    """Get demo tax rate by ticker."""
     return DEMO_TAX_RATES[ticker.upper()]
-
-
 def get_demo_description(ticker: str) -> str:
-    """Get demo company description by ticker."""
     return DEMO_DESCRIPTIONS[ticker.upper()]

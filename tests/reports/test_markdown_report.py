@@ -1,10 +1,6 @@
 from types import SimpleNamespace
-
 from app.reports.markdown_report import MarkdownReport
-
-
 def test_markdown_report():
-
     result = {
         "company": SimpleNamespace(
             name="Apple Inc.",
@@ -25,9 +21,7 @@ def test_markdown_report():
             beneish_score=-2.3,
         ),
     }
-
     report = MarkdownReport.generate(result)
-
     assert report.title == "AAPL Financial Report"
     assert report.ticker == "AAPL"
     assert "Apple Inc." in report.content

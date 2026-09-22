@@ -1,32 +1,8 @@
-"""
-Evaluation Fixtures — Complete Synthetic Financial Data
-
-This module provides deterministic, complete synthetic financial data for evaluation.
-Unlike demo fixtures (single-period for UI display), these include multi-period data
-needed for proper Piotroski, Altman, and Beneish score computation.
-
-All values are SYNTHETIC and clearly labeled. They are designed so that the
-calculation engines produce known, independently verifiable reference values.
-"""
-
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Final
-
-
 @dataclass(slots=True, frozen=True)
 class MultiPeriodFinancialData:
-    """
-    Complete synthetic financial data for one company across two periods.
-    
-    Period t = current (most recent)
-    Period t-1 = prior (one year ago)
-    
-    All monetary values in $ millions. Shares in millions.
-    """
-
-    # Current period (t)
     revenue_t: float
     operating_income_t: float
     net_income_t: float
@@ -49,8 +25,6 @@ class MultiPeriodFinancialData:
     operating_cash_flow_t: float
     tax_provision_t: float
     pretax_income_t: float
-
-    # Prior period (t-1)
     revenue_p: float
     operating_income_p: float
     net_income_p: float
@@ -71,28 +45,13 @@ class MultiPeriodFinancialData:
     depreciation_p: float
     net_ppe_p: float
     operating_cash_flow_p: float
-
-    # Market data (current)
     market_price: float
     beta: float
-
-    # Expected reference results (computed independently using the calculation engines)
     expected_piotroski: int
     expected_altman: float
     expected_beneish: float
     expected_dcf_intrinsic: float
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Synthetic Evaluation Data — 5 Companies, 2 Periods Each
-# ──────────────────────────────────────────────────────────────────────────────
-
-# These synthetic datasets are constructed so that the calculation engines
-# produce the expected_* values. They are NOT derived from real company data.
-# All values are in $ millions unless noted.
-
 EVAL_AAPL = MultiPeriodFinancialData(
-    # Current period (t) - roughly resembles AAPL 2024
     revenue_t=383_285.0,
     operating_income_t=114_301.0,
     net_income_t=96_995.0,
@@ -115,7 +74,6 @@ EVAL_AAPL = MultiPeriodFinancialData(
     operating_cash_flow_t=115_000.0,
     tax_provision_t=18_500.0,
     pretax_income_t=115_500.0,
-    # Prior period (t-1) - roughly resembles AAPL 2023
     revenue_p=383_927.0,
     operating_income_p=114_301.0,
     net_income_p=96_995.0,
@@ -136,16 +94,13 @@ EVAL_AAPL = MultiPeriodFinancialData(
     depreciation_p=10_800.0,
     net_ppe_p=44_000.0,
     operating_cash_flow_p=114_000.0,
-    # Market
     market_price=180.0,
     beta=1.25,
-    # Expected results (computed by running the engines on this synthetic data)
     expected_piotroski=7,
     expected_altman=8.1227,
     expected_beneish=-2.7020,
     expected_dcf_intrinsic=93.9189,
 )
-
 EVAL_MSFT = MultiPeriodFinancialData(
     revenue_t=211_915.0,
     operating_income_t=88_523.0,
@@ -196,7 +151,6 @@ EVAL_MSFT = MultiPeriodFinancialData(
     expected_beneish=-2.4478,
     expected_dcf_intrinsic=172.8117,
 )
-
 EVAL_GOOGL = MultiPeriodFinancialData(
     revenue_t=307_394.0,
     operating_income_t=84_293.0,
@@ -247,7 +201,6 @@ EVAL_GOOGL = MultiPeriodFinancialData(
     expected_beneish=-2.5293,
     expected_dcf_intrinsic=103.6049,
 )
-
 EVAL_AMZN = MultiPeriodFinancialData(
     revenue_t=574_785.0,
     operating_income_t=36_852.0,
@@ -298,7 +251,6 @@ EVAL_AMZN = MultiPeriodFinancialData(
     expected_beneish=-2.7377,
     expected_dcf_intrinsic=102.8875,
 )
-
 EVAL_TSLA = MultiPeriodFinancialData(
     revenue_t=96_773.0,
     operating_income_t=8_891.0,
@@ -349,9 +301,7 @@ EVAL_TSLA = MultiPeriodFinancialData(
     expected_beneish=-9.4871,
     expected_dcf_intrinsic=38.7622,
 )
-
 EVAL_TICKERS: Final[list[str]] = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
-
 EVAL_DATA: Final[dict[str, MultiPeriodFinancialData]] = {
     "AAPL": EVAL_AAPL,
     "MSFT": EVAL_MSFT,
