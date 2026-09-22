@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from app.api.routes.analyze_company import router as analyze_company_router
+from app.api.routers.analyze_company import router as analyze_company_router
 from app.api.routers.analysis import router as analysis_router
 from app.api.routers.chat import router as chat_router
 from app.api.routers.company import router as company_router
