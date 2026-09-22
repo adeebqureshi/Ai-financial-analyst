@@ -34,9 +34,12 @@ class HealthService:
             "environment": self._settings.environment.value,
         }
         has_openai_key = bool(self._settings.openai_api_key_str)
+        # FreeLLMAPI (OpenAI-compatible) also satisfies the LLM requirement.
+        has_llm_credentials = has_openai_key or self._settings.uses_freellmapi
         details["openai_api_key_set"] = has_openai_key
+        details["freellmapi_configured"] = self._settings.uses_freellmapi
         if self._settings.environment in (Environment.PRODUCTION, Environment.STAGING):
-            if not has_openai_key:
+            if not has_llm_credentials:
                 return ComponentHealth(
                     name="configuration",
                     status=HealthStatus.DEGRADED,

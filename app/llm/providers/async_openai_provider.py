@@ -18,8 +18,9 @@ from app.llm.retry import RetryPolicy
 from app.llm.usage import TokenUsage
 logger = get_logger("app.llm.openai")
 _MISSING_KEY_MESSAGE = (
-    "OPENAI_API_KEY is not set. Set it in the environment (or .env) before "
-    "enabling the real provider, or keep LLM_PROVIDER=mock for offline use."
+    "No LLM API key is configured. Set FREELLMAPI_API_KEY (FreeLLMAPI, "
+    "OpenAI-compatible) or OPENAI_API_KEY before enabling the openai "
+    "provider, or keep LLM_PROVIDER=mock for offline use."
 )
 class AsyncOpenAIProvider(AsyncLLMProvider):
     MODEL = "openai"
@@ -27,16 +28,25 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
         self,
         config: ProviderConfig | None = None,
         api_key: str | None = None,
+        base_url: str | None = None,
         retry_policy: RetryPolicy | None = None,
     ) -> None:
         self.config = config or ProviderConfig()
         self._retry = retry_policy or RetryPolicy()
         self.client: AsyncOpenAI | None = None
+        # FreeLLMAPI is OpenAI-compatible; prefer its credential/base URL,
+        # while remaining backwards compatible with a plain OPENAI_API_KEY.
         if api_key is None:
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = (
+                os.getenv("FREELLMAPI_API_KEY")
+                or os.getenv("OPENAI_API_KEY")
+            )
+        if base_url is None:
+            base_url = os.getenv("FREELLMAPI_BASE_URL")
         if api_key:
             self.client = AsyncOpenAI(
                 api_key=api_key,
+                base_url=base_url or None,
                 timeout=self.config.timeout,
             )
     def _messages(self, request: LLMRequest) -> list[dict[str, str]]:
@@ -49,18 +59,19 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
     def _map_error(exc: Exception) -> None:
         if isinstance(exc, openai.AuthenticationError):
             raise AuthenticationError(
-                "OpenAI authentication failed (invalid or missing API key)."
+                "LLM provider authentication failed "
+                "(invalid or missing API key)."
             ) from exc
         if isinstance(exc, openai.RateLimitError):
-            raise RateLimitError("OpenAI rate limit exceeded.") from exc
+            raise RateLimitError("LLM provider rate limit exceeded.") from exc
         if isinstance(exc, openai.APITimeoutError):
-            raise TimeoutError("OpenAI request timed out.") from exc
+            raise TimeoutError("LLM provider request timed out.") from exc
         if isinstance(exc, openai.APIConnectionError):
-            raise ProviderError("OpenAI connection failed.") from exc
+            raise ProviderError("LLM provider connection failed.") from exc
         if isinstance(exc, openai.APIError):
             status = getattr(exc, "status_code", None)
             detail = f" with status {status}" if status else ""
-            raise ProviderError(f"OpenAI API error{detail}.") from exc
+            raise ProviderError(f"LLM provider API error{detail}.") from exc
         raise exc
     async def generate(
         self,

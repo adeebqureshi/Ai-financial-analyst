@@ -21,6 +21,8 @@ class TestConfigValidation:
         settings = Settings(
             environment=Environment.DEVELOPMENT,
             openai_api_key="",
+            freellmapi_base_url="",
+            freellmapi_api_key="",
             demo_mode=False,
         )
         with pytest.raises(ConfigurationError) as exc_info:
@@ -31,6 +33,8 @@ class TestConfigValidation:
         settings = Settings(
             environment=Environment.PRODUCTION,
             openai_api_key="",
+            freellmapi_base_url="",
+            freellmapi_api_key="",
             demo_mode=False,
         )
         with pytest.raises(ConfigurationError) as exc_info:
@@ -78,6 +82,54 @@ class TestConfigValidation:
             demo_mode=False,
         )
         settings.validate_required_keys()
+class TestModuleLevelSettings:
+    def test_module_level_settings_object_is_exposed(self) -> None:
+        from app.core.config import settings as module_settings
+        from app.core.config import get_settings
+        assert isinstance(module_settings, Settings)
+        assert module_settings.edgar_identity == get_settings().edgar_identity
+    def test_edgar_client_can_import_module_settings(self) -> None:
+        from app.ingestion.clients import edgar_client
+        assert isinstance(edgar_client.settings, Settings)
+class TestFreeLLMAPICompatibility:
+    def test_freellmapi_satisfies_llm_requirement_without_openai_key(self) -> None:
+        settings = Settings(
+            environment=Environment.DEVELOPMENT,
+            llm_provider="openai",
+            openai_api_key="",
+            freellmapi_base_url="http://localhost:3001/v1",
+            freellmapi_api_key="test-freellmapi-key",
+            demo_mode=False,
+        )
+        assert settings.uses_freellmapi is True
+        assert settings.freellmapi_api_key_str == "test-freellmapi-key"
+        assert settings.openai_api_key_str == ""
+        settings.validate_required_keys()
+    def test_freellmapi_satisfies_production_validation_with_fmp_key(self) -> None:
+        settings = Settings(
+            environment=Environment.PRODUCTION,
+            llm_provider="openai",
+            openai_api_key="",
+            freellmapi_base_url="http://localhost:3001/v1",
+            freellmapi_api_key="test-freellmapi-key",
+            fmp_api_key="fmp-test",
+            auth_enabled=False,
+            demo_mode=False,
+        )
+        settings.validate_required_keys()
+    def test_freellmapi_requires_base_url_and_key(self) -> None:
+        settings = Settings(
+            environment=Environment.DEVELOPMENT,
+            llm_provider="openai",
+            openai_api_key="",
+            freellmapi_base_url="",
+            freellmapi_api_key="test-freellmapi-key",
+            demo_mode=False,
+        )
+        assert settings.uses_freellmapi is False
+        with pytest.raises(ConfigurationError) as exc_info:
+            settings.validate_required_keys()
+        assert "OPENAI_API_KEY" in exc_info.value.details["missing_keys"]
 class TestConfigSingleton:
     def test_get_settings_returns_same_instance(self) -> None:
         get_settings.cache_clear()
