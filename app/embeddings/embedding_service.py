@@ -31,3 +31,16 @@ class EmbeddingService:
         except Exception as exc:
             logger.warning("Local batch embedding failed (%s)", exc)
             return [[0.0] * 384 for _ in documents]
+        
+def _fallback_vector(*args, **kwargs):
+    """
+    Returns a fallback zero-vector when embedding generation is unavailable.
+    Accepts arbitrary arguments so it can be safely used as a mock side_effect
+    for both embed_text(text) and embed_documents(texts).
+    """
+    # If the tests pass a list of strings (mocking embed_documents)
+    if args and isinstance(args[0], list):
+        return [[0.0] * 384 for _ in args[0]]
+        
+    # If the tests pass a single string (mocking embed_text)
+    return [0.0] * 384

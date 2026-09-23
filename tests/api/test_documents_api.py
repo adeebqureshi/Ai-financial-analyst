@@ -4,6 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 from app.embeddings.embedding_service import EmbeddingService, _fallback_vector
 from app.main import app
+from app.main import app
+from app.auth.dependencies import get_current_user
+
+class MockUser:
+    id = "test_user_123"
+
+# Force the test client to act as an authenticated user
+app.dependency_overrides[get_current_user] = lambda: MockUser()
 client = TestClient(app)
 def _make_pdf(text: str) -> bytes:
     doc = fitz.open()

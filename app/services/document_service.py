@@ -1,12 +1,16 @@
 from __future__ import annotations
+
 import re
 import tempfile
 import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
+
 from fastapi import HTTPException, UploadFile
+
+# --- FIXED IMPORTS: No duplicates, no conflicting AuthenticationError ---
+from app.auth.exceptions import AuthenticationError, AuthorizationError
 from app.core.config import Settings
-from app.auth.exceptions import AuthorizationError
 from app.core.exceptions import ParserError, ValidationError
 from app.core.logging import get_logger
 from app.embeddings.embedding_service import EmbeddingService
@@ -18,17 +22,27 @@ from app.retrieval.models import RetrievalContext
 from app.retrieval.retrieval_engine import RetrievalEngine
 from app.services.job_store import JobStore
 from app.vectorstore.qdrant_store import QdrantStore
+
 _demo_vector_store = None
+
+
 def _get_demo_vector_store():
     global _demo_vector_store
     if _demo_vector_store is None:
         from app.demo.fixtures.rag_fixtures import create_demo_vector_store
+
         _demo_vector_store = create_demo_vector_store()
     return _demo_vector_store
+
+
 def _build_demo_retrieval_context(query: str, ticker: str | None, limit: int):
     from app.demo.fixtures.rag_fixtures import build_demo_retrieval_context
+
     return build_demo_retrieval_context(query, ticker, limit)
+
+
 logger = get_logger(__name__)
+
 _ALLOWED_MIME_TYPE = "application/pdf"
 _MAX_FILE_BYTES = 100 * 1024 * 1024
 _FILING_TYPE_PATTERN = re.compile(
@@ -39,11 +53,15 @@ _TICKER_PATTERN = re.compile(
     r"(?:^|[\s_\-.()])([A-Z]{1,5})(?:[\s_\-.()]|$)",
 )
 _DOCUMENT_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+
+
 def _detect_filing_type(filename: str) -> str | None:
     match = _FILING_TYPE_PATTERN.search(filename)
     if match is None:
         return None
     return match.group(0).upper().replace(" ", "")
+
+
 def _detect_ticker(filename: str) -> str | None:
     stem = Path(filename).stem
     for match in _TICKER_PATTERN.finditer(stem):
@@ -63,6 +81,8 @@ def _detect_ticker(filename: str) -> str | None:
             continue
         return token
     return None
+
+
 class DocumentService:
     def __init__(
         self,
@@ -87,24 +107,30 @@ class DocumentService:
                 collection_name=collection_name,
             )
         self._engine = RetrievalEngine()
+
     def _library_dir(self) -> Path:
         return self._paths.get_metadata_path() / "documents"
+
     def _record_path(self, document_id: str) -> Path:
         return self._library_dir() / f"{document_id}.json"
+
     @staticmethod
     def _is_valid_document_id(document_id: str) -> bool:
         return bool(_DOCUMENT_ID_PATTERN.fullmatch(document_id))
+
     @staticmethod
     def _not_found(document_id: str | None = None) -> HTTPException:
         return HTTPException(
             status_code=404,
             detail="Document was not found.",
         )
+
     def _save_record(self, record: dict) -> None:
         FileManager.save_json(
             self._record_path(record["document_id"]),
             record,
         )
+
     def _load_record(self, document_id: str) -> dict | None:
         if not self._is_valid_document_id(document_id):
             return None
@@ -112,12 +138,21 @@ class DocumentService:
         if not path.exists():
             return None
         return FileManager.load_json(path)
+
     @staticmethod
     def _is_owned(record: dict, owner_id: str | None) -> bool:
+        """
+        Safely check if the given record belongs to the owner_id.
+        Fails closed: returns False if owner_id or record_owner is None/empty,
+        preventing IDOR vulnerabilities where None == None evaluated to True.
+        """
+        if not owner_id:
+            return False
         record_owner = record.get("owner_id")
-        if owner_id is None:
-            return record_owner is None
-        return record_owner == owner_id
+        if not record_owner:
+            return False
+        return str(record_owner) == str(owner_id)
+
     def _load_owned_record(
         self,
         document_id: str,
@@ -128,11 +163,20 @@ class DocumentService:
         record = self._load_record(document_id)
         if record is None:
             raise self._not_found(document_id)
+        
+        # Enforce authentication check if owner_id is missing
+        if not owner_id:
+            if conceal:
+                raise self._not_found(document_id)
+            raise AuthorizationError("Authentication required to access this document.")
+
         if not self._is_owned(record, owner_id):
             if conceal:
                 raise self._not_found(document_id)
             raise AuthorizationError("You do not have access to this document.")
+        
         return record
+
     @staticmethod
     def _validate_pdf(filename: str, content: bytes) -> None:
         if not filename:
@@ -164,6 +208,7 @@ class DocumentService:
                 error_code="DOC_VAL_005",
                 details={"filename": filename},
             )
+
     def upload(
         self,
         file: UploadFile,
@@ -178,6 +223,7 @@ class DocumentService:
             return self._process_pdf(tmp_path, filename, document_id, owner_id)
         finally:
             Path(tmp_path).unlink(missing_ok=True)
+
     def _process_pdf(
         self,
         pdf_path: str,
@@ -196,12 +242,14 @@ class DocumentService:
                 error_code="DOC_PARSE_001",
                 details={"filename": filename},
             ) from exc
+
         if result.is_empty:
             raise ParserError(
                 message="No text could be extracted from the PDF.",
                 error_code="DOC_PARSE_002",
                 details={"filename": filename},
             )
+
         pages = result.pages or [result.text]
         chunks = self._chunker.chunk_pages(pages)
         texts = [chunk.text for chunk in chunks]
@@ -215,15 +263,14 @@ class DocumentService:
             tables_by_page.setdefault(table.source_page, []).append(
                 table.to_dict()
             )
+
         ids: list[int] = []
         payloads: list[dict] = []
         transaction_time = datetime.now(UTC).date()
         for index, chunk in enumerate(chunks):
             chunk_id = f"{document_id}:{index:06d}"
             page = chunk.page
-            ids.append(
-                uuid.uuid5(uuid.NAMESPACE_URL, chunk_id)
-            )
+            ids.append(uuid.uuid5(uuid.NAMESPACE_URL, chunk_id))
             payloads.append(
                 {
                     "document_id": document_id,
@@ -241,6 +288,7 @@ class DocumentService:
                     "owner_id": owner_id or "",
                 }
             )
+
         self._store.upsert(
             ids=ids,
             vectors=vectors,
@@ -268,6 +316,7 @@ class DocumentService:
             result.parser_used,
         )
         return record
+
     @staticmethod
     def _write_temp(content: bytes) -> str:
         with tempfile.NamedTemporaryFile(
@@ -276,10 +325,12 @@ class DocumentService:
         ) as tmp:
             tmp.write(content)
             return tmp.name
+
     def _staging_path(self, job_id: str) -> Path:
         staging_dir = self._paths.get_metadata_path() / "uploads"
         staging_dir.mkdir(parents=True, exist_ok=True)
         return staging_dir / f"{job_id}.pdf"
+
     def upload_background(
         self,
         file: UploadFile,
@@ -334,6 +385,7 @@ class DocumentService:
             "job_id": job_id,
             "status": "pending",
         }
+
     def _run_background_job(
         self,
         job_id: str,
@@ -352,20 +404,31 @@ class DocumentService:
             raise
         finally:
             staging_path.unlink(missing_ok=True)
+
     def get_job(self, job_id: str, owner_id: str | None = None) -> dict | None:
+        if not owner_id:
+            return None
         return self._jobs.get_job(job_id, owner_id)
+
     def list_documents(self, owner_id: str | None = None) -> dict:
+        """
+        Lists documents scoped strictly to the provided owner_id.
+        Fails closed: if owner_id is None, returns an empty list.
+        """
+        if owner_id is None:
+            return {"documents": [], "total": 0}
+
         records = self._list_records()
-        if owner_id is not None:
-            records = [
-                record
-                for record in records
-                if record.get("owner_id") == owner_id
-            ]
+        records = [
+            record
+            for record in records
+            if record.get("owner_id") == owner_id
+        ]
         return {
             "documents": records,
             "total": len(records),
         }
+
     def _list_records(self) -> list[dict]:
         directory = self._library_dir()
         if not directory.exists():
@@ -381,12 +444,14 @@ class DocumentService:
             reverse=True,
         )
         return records
+
     def get_document(
         self,
         document_id: str,
         owner_id: str | None = None,
     ) -> dict:
         return self._load_owned_record(document_id, owner_id)
+
     def delete_document(
         self,
         document_id: str,
@@ -398,11 +463,13 @@ class DocumentService:
         self.refresh_engine()
         logger.info("Deleted document %s", document_id)
         return {"document_id": document_id}
+
     def refresh_engine(self) -> None:
         try:
             self._engine.refresh(self._store)
         except Exception as exc:
             logger.warning("Failed to refresh retrieval engine: %s", exc)
+
     def retrieve(
         self,
         query: str,
@@ -418,6 +485,7 @@ class DocumentService:
                 if len(parts) >= 2:
                     ticker = parts[1]
             return _build_demo_retrieval_context(query, ticker, limit)
+
         self.refresh_engine()
         if document_id is not None:
             try:
@@ -428,6 +496,7 @@ class DocumentService:
                     chunks=[],
                     retrieval_time_ms=0.0,
                 )
+
         return self._engine.retrieve(
             query=query,
             limit=limit,
