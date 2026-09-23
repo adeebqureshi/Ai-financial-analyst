@@ -13,7 +13,7 @@ from qdrant_client.models import (
 )
 from app.vectorstore.base_vector_store import BaseVectorStore
 _DEFAULT_COLLECTION = "financial_documents"
-_DEFAULT_VECTOR_SIZE = 1536
+_DEFAULT_VECTOR_SIZE = 384
 _client: QdrantClient | None = None
 def _get_shared_client(
     url: str | None,

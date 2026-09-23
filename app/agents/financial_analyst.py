@@ -155,14 +155,21 @@ class FinancialAnalystAgent:
 
         try:
             response = self._client.generate(LLMRequest(prompt=prompt))
-        except LLMError:
-            # Missing/invalid key, provider error, timeout or rate limit.
-            # Degrade gracefully instead of crashing the request; the tool
-            # results are still returned as metadata. Nothing sensitive is
-            # logged (the exception text never contains the API key).
-            logger.warning(
-                "LLM synthesis failed for query: %s",
+        except LLMError as exc:
+            import traceback
+            logger.error(
+                "LLM synthesis FULL ERROR for query %s: %s\n%s",
                 query[:120],
+                exc,
+                traceback.format_exc(),
+            )
+            return LLM_UNAVAILABLE_MESSAGE, None
+        except Exception as exc:
+            import traceback
+            logger.error(
+                "LLM synthesis UNEXPECTED ERROR: %s\n%s",
+                exc,
+                traceback.format_exc(),
             )
             return LLM_UNAVAILABLE_MESSAGE, None
 
@@ -222,10 +229,24 @@ class FinancialAnalystAgent:
         try:
             async for token in self.ensure_async_client().stream(LLMRequest(prompt=prompt)):
                 yield token
-        except LLMError:
-            logger.warning(
-                "Streaming LLM synthesis failed for query: %s",
+        except LLMError as exc:
+            import traceback
+
+            logger.error(
+                "Streaming LLM synthesis LLMError for query %s: %s\n%s",
                 query[:120],
+                exc,
+                traceback.format_exc(),
+            )
+            yield LLM_UNAVAILABLE_MESSAGE
+        except Exception as exc:
+            import traceback
+
+            logger.error(
+                "Streaming LLM synthesis UNEXPECTED ERROR for query %s: %s\n%s",
+                query[:120],
+                exc,
+                traceback.format_exc(),
             )
             yield LLM_UNAVAILABLE_MESSAGE
 

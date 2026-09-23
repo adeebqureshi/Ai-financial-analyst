@@ -1,4 +1,7 @@
-from __future__ import annotations
+#!/usr/bin/env python
+"""Script to update retry.py with EmptyContentError support."""
+
+content = """from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
@@ -15,7 +18,7 @@ T = TypeVar("T")
 
 
 class EmptyContentError(ProviderError):
-    """LLM provider returned empty content."""
+    \"\"\"LLM provider returned empty content.\"\"\"
 
 
 class RetryPolicy:
@@ -78,3 +81,9 @@ class RetryPolicy:
             except (ProviderError, EmptyContentError):
                 raise
         raise RuntimeError("RetryPolicy reached an unexpected state.")
+"""
+
+with open("C:/Users/ASUS/Desktop/ai-financial-analyst/app/llm/retry.py", "w") as f:
+    f.write(content)
+
+print("retry.py updated successfully")

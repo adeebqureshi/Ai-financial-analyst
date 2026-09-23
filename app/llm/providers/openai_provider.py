@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Iterator
 
@@ -17,6 +18,8 @@ from app.llm.provider_config import ProviderConfig
 from app.llm.providers.base import BaseLLMProvider
 from app.llm.retry import RetryPolicy
 from app.llm.usage import TokenUsage
+
+logger = logging.getLogger(__name__)
 
 
 _MISSING_KEY_MESSAGE = (
@@ -39,11 +42,6 @@ class OpenAIProvider(BaseLLMProvider):
         self.retry = RetryPolicy()
         self.client = None
 
-        # FreeLLMAPI exposes an OpenAI-compatible API, so it is preferred as
-        # the credential source while remaining compatible with a plain
-        # OPENAI_API_KEY. `base_url` is injected by the LLM clients from
-        # `Settings`; the environment lookup keeps the provider usable when
-        # it is constructed directly.
         if api_key is None:
             api_key = (
                 os.getenv("FREELLMAPI_API_KEY")
@@ -69,11 +67,11 @@ class OpenAIProvider(BaseLLMProvider):
 
         def call() -> LLMResponse:
             try:
-                response = self.client.responses.create(
+                response = self.client.chat.completions.create(
                     model=self.config.model,
-                    input=request.prompt,
+                    messages=[{"role": "user", "content": request.prompt}],
                     temperature=self.config.temperature,
-                    max_output_tokens=self.config.max_tokens,
+                    max_tokens=self.config.max_tokens,
                 )
 
             except openai.AuthenticationError as exc:
@@ -104,11 +102,19 @@ class OpenAIProvider(BaseLLMProvider):
                     f"LLM provider API error{detail}."
                 ) from exc
 
-            output = response.output_text
+            output = response.choices[0].message.content
+
+            # Handle None or empty content from LLM provider (e.g., Gemini)
+            if not output:
+                logger.warning(
+                    "LLM provider returned empty content for prompt (first 100 chars): %s...",
+                    request.prompt[:100],
+                )
+                raise ProviderError("LLM provider returned empty content.")
 
             return LLMResponse(
                 text=output,
-                model=self.MODEL,
+                model=getattr(response, "model", None) or self.MODEL,
                 usage=TokenUsage(
                     prompt_tokens=len(request.prompt.split()),
                     completion_tokens=len(output.split()),

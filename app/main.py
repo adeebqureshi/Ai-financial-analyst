@@ -178,6 +178,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _run_startup_infrastructure_checks(settings, app_logger)
         _run_database_migrations(settings, app_logger)
         _run_chat_retention_cleanup(settings, app_logger)
+
+        # Pre-warm embedding model so first request isn't slow
+        try:
+            import asyncio
+            import concurrent.futures
+            from app.embeddings.embedding_service import _get_model
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                await loop.run_in_executor(pool, _get_model)
+            app_logger.info("Embedding model pre-warmed successfully")
+        except Exception as exc:
+            app_logger.warning("Embedding model pre-warm skipped: %s", exc)
+
         yield
         app_logger.info("Shutting down %s", APP_NAME)
         _run_shutdown_disposal(settings, app_logger)
@@ -228,3 +241,4 @@ def main() -> None:
     )
 if __name__ == "__main__":
     main()
+    
