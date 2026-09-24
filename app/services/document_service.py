@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import tempfile
+import threading
 import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -42,6 +43,11 @@ def _build_demo_retrieval_context(query: str, ticker: str | None, limit: int):
 
 
 logger = get_logger(__name__)
+
+# Serializes ownership check + delete so concurrent requests cannot both pass
+# the check before either one removes the record (check-then-act race).
+# Class-level because a new DocumentService instance is built per request.
+_delete_lock = threading.Lock()
 
 _ALLOWED_MIME_TYPE = "application/pdf"
 _MAX_FILE_BYTES = 100 * 1024 * 1024
@@ -137,21 +143,26 @@ class DocumentService:
         path = self._record_path(document_id)
         if not path.exists():
             return None
-        return FileManager.load_json(path)
+        try:
+            return FileManager.load_json(path)
+        except FileNotFoundError:
+            # Deleted between exists() and open() by a concurrent request.
+            return None
 
     @staticmethod
     def _is_owned(record: dict, owner_id: str | None) -> bool:
         """
-        Safely check if the given record belongs to the owner_id.
-        Fails closed: returns False if owner_id or record_owner is None/empty,
-        preventing IDOR vulnerabilities where None == None evaluated to True.
+        Check record ownership within a single anonymous/authenticated namespace.
+
+        Anonymous records (owner None) are visible only to anonymous callers;
+        authenticated records only to the matching user. Cross-namespace
+        access (including authenticated users reaching legacy unowned
+        records) is denied, preventing IDOR.
         """
-        if not owner_id:
-            return False
         record_owner = record.get("owner_id")
-        if not record_owner:
-            return False
-        return str(record_owner) == str(owner_id)
+        return str(record_owner or "") == str(owner_id or "") and str(owner_id or "") != "" or (
+            record_owner is None and owner_id is None
+        )
 
     def _load_owned_record(
         self,
@@ -163,18 +174,14 @@ class DocumentService:
         record = self._load_record(document_id)
         if record is None:
             raise self._not_found(document_id)
-        
-        # Enforce authentication check if owner_id is missing
-        if not owner_id:
-            if conceal:
-                raise self._not_found(document_id)
-            raise AuthorizationError("Authentication required to access this document.")
 
         if not self._is_owned(record, owner_id):
             if conceal:
                 raise self._not_found(document_id)
+            if not owner_id:
+                raise AuthorizationError("Authentication required to access this document.")
             raise AuthorizationError("You do not have access to this document.")
-        
+
         return record
 
     @staticmethod
@@ -406,23 +413,24 @@ class DocumentService:
             staging_path.unlink(missing_ok=True)
 
     def get_job(self, job_id: str, owner_id: str | None = None) -> dict | None:
-        if not owner_id:
-            return None
+        # JobStore enforces ownership itself: a job is only visible when its
+        # stored owner_id matches the caller (None == anonymous namespace),
+        # so cross-user access returns None and surfaces as a 404.
         return self._jobs.get_job(job_id, owner_id)
 
     def list_documents(self, owner_id: str | None = None) -> dict:
         """
-        Lists documents scoped strictly to the provided owner_id.
-        Fails closed: if owner_id is None, returns an empty list.
-        """
-        if owner_id is None:
-            return {"documents": [], "total": 0}
+        Lists documents scoped strictly to the provided owner namespace.
 
+        Anonymous callers (owner None) see only anonymous records;
+        authenticated callers see only their own records.
+        """
         records = self._list_records()
+        namespace = str(owner_id or "")
         records = [
             record
             for record in records
-            if record.get("owner_id") == owner_id
+            if str(record.get("owner_id") or "") == namespace
         ]
         return {
             "documents": records,
@@ -457,10 +465,11 @@ class DocumentService:
         document_id: str,
         owner_id: str | None = None,
     ) -> dict:
-        self._load_owned_record(document_id, owner_id)
-        self._store.delete_by_document_id(document_id)
-        FileManager.delete(self._record_path(document_id))
-        self.refresh_engine()
+        with _delete_lock:
+            self._load_owned_record(document_id, owner_id)
+            self._store.delete_by_document_id(document_id)
+            FileManager.delete(self._record_path(document_id))
+            self.refresh_engine()
         logger.info("Deleted document %s", document_id)
         return {"document_id": document_id}
 

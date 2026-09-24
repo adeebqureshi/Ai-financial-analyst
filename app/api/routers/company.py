@@ -22,6 +22,8 @@ async def get_company(
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid ticker symbol.")
     result = await asyncio.to_thread(service.get_company, symbol)
+    if result.name == symbol and result.sector is None and result.industry is None:
+        raise HTTPException(status_code=404, detail=f"Company '{symbol}' was not found.")
     return APIResponse.success_response(
         message=f"Company profile retrieved for {symbol}",
         data=result,

@@ -125,6 +125,12 @@ class CoordinatorAgent:
             document_id=document_id,
             session_id=session_id,
         )
+        # The planner emits a "generate_report" tool for report queries, but
+        # that tool calls ReportService.generate_ticker_report which calls
+        # run_report again -> infinite recursion (RecursionError -> HTTP 500).
+        # A report run must execute only the underlying data tools and let
+        # ReportWriterAgent do the synthesis.
+        plan.tools = [call for call in plan.tools if call.tool != "generate_report"]
         evidence, steps, tools_used, sources = self._execute(plan)
         report_content, model = self.report_writer.write(
             query=plan.query,

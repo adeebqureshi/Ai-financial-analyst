@@ -64,11 +64,19 @@ async function request<T>(
   endpoint: string,
   init?: RequestInit
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (typeof window !== "undefined") {
+    const token = window.localStorage.getItem("access_token");
+    if (token && !headers["Authorization"]) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
   const response = await fetch(getAPI() + endpoint, {
-    headers: {
-      "Content-Type": "application/json",
-    },
     ...init,
+    headers,
   });
 
   if (!response.ok) {
@@ -81,13 +89,15 @@ async function request<T>(
       message =
         parsed?.message ??
         parsed?.detail ??
+        (Array.isArray(parsed?.errors) && parsed.errors[0]?.message) ??
         message;
     } catch {
       if (text) message = text;
     }
 
-    console.error("Status:", response.status);
-    console.error("Response:", text);
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.localStorage.removeItem("access_token");
+    }
 
     throw new ApiError(message, response.status, endpoint);
   }
@@ -199,11 +209,16 @@ async function requestChatStream(
   handlers: ChatStreamHandlers,
   signal?: AbortSignal
 ): Promise<void> {
+  const streamHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (typeof window !== "undefined") {
+    const token = window.localStorage.getItem("access_token");
+    if (token) streamHeaders["Authorization"] = `Bearer ${token}`;
+  }
   const response = await fetch(getAPI() + "/chat/stream", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: streamHeaders,
     body: JSON.stringify(body),
     cache: "no-store",
     signal,
@@ -402,8 +417,14 @@ export const api = {
 
     form.append("file", file);
 
+    const uploadHeaders: Record<string, string> = {};
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("access_token");
+      if (token) uploadHeaders["Authorization"] = `Bearer ${token}`;
+    }
     return fetch(getAPI() + "/documents/upload", {
       method: "POST",
+      headers: uploadHeaders,
       body: form,
     }).then(async (response) => {
       if (!response.ok) {

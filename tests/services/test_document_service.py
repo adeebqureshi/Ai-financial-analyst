@@ -33,15 +33,15 @@ def _hermetic_embeddings(monkeypatch):
         _fake_embed_text,
     )
 def _make_service(monkeypatch, tmp_path) -> DocumentService:
-    settings = get_settings()
-    service = DocumentService(
-        settings,
-        collection_name=f"test_docs_{uuid.uuid4().hex[:8]}",
-    )
     monkeypatch.setattr(
         DocumentService,
         "_library_dir",
         lambda self: tmp_path / "library",
+    )
+    settings = get_settings()
+    service = DocumentService(
+        settings,
+        collection_name=f"test_docs_{uuid.uuid4().hex[:8]}",
     )
     return service
 def _upload(service: DocumentService, filename: str, content: bytes):

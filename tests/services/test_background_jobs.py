@@ -94,10 +94,6 @@ def test_get_job_hides_foreign_and_malformed_ids(tmp_path):
     assert store.get_job("", "owner-1") is None
     assert store.get_job(job["job_id"], "owner-1") is not None
 def _make_background_service(monkeypatch, tmp_path) -> DocumentService:
-    service = DocumentService(
-        get_settings(),
-        collection_name=f"test_docs_{uuid.uuid4().hex[:8]}",
-    )
     monkeypatch.setattr(
         DocumentService,
         "_library_dir",
@@ -107,6 +103,10 @@ def _make_background_service(monkeypatch, tmp_path) -> DocumentService:
         DocumentService,
         "_staging_path",
         lambda self, job_id: tmp_path / "uploads" / f"{job_id}.pdf",
+    )
+    service = DocumentService(
+        get_settings(),
+        collection_name=f"test_docs_{uuid.uuid4().hex[:8]}",
     )
     monkeypatch.setattr(
         service,

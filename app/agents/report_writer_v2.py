@@ -71,6 +71,24 @@ class ReportWriterAgent:
             return tr.get("result")
         return None
 
+    @staticmethod
+    def _money(value: Any) -> str:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return "N/A"
+        return f"${value:.2f}"
+
+    @staticmethod
+    def _pct(value: Any, digits: int = 1) -> str:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return "N/A"
+        return f"{value:.{digits}f}%"
+
+    @staticmethod
+    def _num(value: Any, digits: int = 2) -> str:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return "N/A"
+        return f"{value:.{digits}f}"
+
     def write(
         self,
         query: str,
@@ -299,9 +317,10 @@ class ReportWriterAgent:
                 lines.append("")
 
             lines.append("**Key Metrics:**")
-            lines.append(f"- Growth Rate: {r.get('growth_rate', 0)*100:.1f}%")
-            lines.append(f"- Beta: {r.get('beta', 'N/A')}")
-            lines.append(f"- Tax Rate: {r.get('tax_rate', 0)*100:.1f}%")
+            lines.append(f"- Growth Rate: {self._pct((r.get('growth_rate') or 0) * 100)}")
+            beta = r.get('beta', 'N/A')
+            lines.append(f"- Beta: {beta if isinstance(beta, (int, float)) else 'N/A'}")
+            lines.append(f"- Tax Rate: {self._pct((r.get('tax_rate') or 0) * 100)}")
             lines.append("")
         return "\n".join(lines)
 
@@ -318,15 +337,17 @@ class ReportWriterAgent:
             lines.append("")
             lines.append("| Metric | Value |")
             lines.append("|--------|-------|")
-            lines.append(f"| Current Price | ${r.get('current_price', 0):.2f} |")
-            lines.append(f"| Intrinsic Value | ${r.get('intrinsic_value', 0):.2f} |")
-            lines.append(f"| Upside/Downside | {r.get('upside', 0):.1f}% |")
+            lines.append(f"| Current Price | {self._money(r.get('current_price'))} |")
+            lines.append(f"| Intrinsic Value | {self._money(r.get('intrinsic_value'))} |")
+            lines.append(f"| Upside/Downside | {self._pct(r.get('upside'), 1)} |")
             lines.append(f"| Recommendation | {r.get('recommendation', 'N/A')} |")
-            lines.append(f"| Discount Rate (WACC) | {r.get('discount_rate', 0)*100:.2f}% |")
+            dr = r.get('discount_rate')
+            lines.append(f"| Discount Rate (WACC) | {self._pct((dr or 0) * 100)} |")
             lines.append("")
 
             # Interpretation
-            upside = r.get("upside", 0)
+            upside = r.get("upside")
+            upside = upside if isinstance(upside, (int, float)) and not isinstance(upside, bool) else 0
             if upside > 20:
                 lines.append("**Assessment:** Significantly undervalued — strong margin of safety.")
             elif upside > 10:
@@ -356,12 +377,13 @@ class ReportWriterAgent:
             lines.append(f"| Composite Score | {r.get('score', 'N/A')}/100 |")
             lines.append(f"| Rating | {r.get('rating', 'N/A')} |")
             lines.append(f"| Piotroski F-Score | {r.get('piotroski_score', 'N/A')}/9 |")
-            lines.append(f"| Altman Z-Score | {r.get('altman_score', 'N/A'):.2f} |")
-            lines.append(f"| Beneish M-Score | {r.get('beneish_score', 'N/A'):.2f} |")
+            lines.append(f"| Altman Z-Score | {self._num(r.get('altman_score'))} |")
+            lines.append(f"| Beneish M-Score | {self._num(r.get('beneish_score'))} |")
             lines.append("")
 
             # Interpretations
-            score = r.get("score", 0)
+            _score = r.get("score", 0)
+            score = _score if isinstance(_score, (int, float)) and not isinstance(_score, bool) else 0
             if score >= 85:
                 lines.append("**Assessment:** Excellent financial health — strong balance sheet and profitability.")
             elif score >= 70:
@@ -373,7 +395,8 @@ class ReportWriterAgent:
             lines.append("")
 
             # Piotroski interpretation
-            piotroski = r.get("piotroski_score", 0)
+            _piotroski = r.get("piotroski_score", 0)
+            piotroski = _piotroski if isinstance(_piotroski, (int, float)) and not isinstance(_piotroski, bool) else 0
             if piotroski >= 7:
                 lines.append(f"**Piotroski ({piotroski}/9):** Strong — high quality earnings and improving fundamentals.")
             elif piotroski >= 5:
@@ -382,20 +405,22 @@ class ReportWriterAgent:
                 lines.append(f"**Piotroski ({piotroski}/9):** Weak — deteriorating fundamentals.")
 
             # Altman interpretation
-            altman = r.get("altman_score", 0)
+            _altman = r.get("altman_score", 0)
+            altman = _altman if isinstance(_altman, (int, float)) and not isinstance(_altman, bool) else 0
             if altman > 2.99:
-                lines.append(f"**Altman Z ({altman:.2f}):** Safe zone — low bankruptcy risk.")
+                lines.append(f"**Altman Z ({self._num(altman)}):** Safe zone — low bankruptcy risk.")
             elif altman > 1.81:
-                lines.append(f"**Altman Z ({altman:.2f}):** Grey zone — moderate bankruptcy risk.")
+                lines.append(f"**Altman Z ({self._num(altman)}):** Grey zone — moderate bankruptcy risk.")
             else:
-                lines.append(f"**Altman Z ({altman:.2f}):** Distress zone — high bankruptcy risk.")
+                lines.append(f"**Altman Z ({self._num(altman)}):** Distress zone — high bankruptcy risk.")
 
             # Beneish interpretation
-            beneish = r.get("beneish_score", 0)
+            _beneish = r.get("beneish_score", 0)
+            beneish = _beneish if isinstance(_beneish, (int, float)) and not isinstance(_beneish, bool) else 0
             if beneish < -2.22:
-                lines.append(f"**Beneish M ({beneish:.2f}):** Low manipulation risk.")
+                lines.append(f"**Beneish M ({self._num(beneish)}):** Low manipulation risk.")
             else:
-                lines.append(f"**Beneish M ({beneish:.2f}):** Potential earnings manipulation — investigate further.")
+                lines.append(f"**Beneish M ({self._num(beneish)}):** Potential earnings manipulation — investigate further.")
             lines.append("")
         return "\n".join(lines)
 
@@ -414,14 +439,14 @@ class ReportWriterAgent:
             lines.append(f"**Health Score:** {r.get('health_score', 'N/A')}/100 ({r.get('health_rating', 'N/A')})")
             lines.append("")
 
-            piotroski = r.get("piotroski", {})
+            piotroski = r.get("piotroski", {}) or {}
             lines.append(f"**Piotroski F-Score:** {piotroski.get('score', 'N/A')}/9 — {piotroski.get('max', 9)} max")
 
-            altman = r.get("altman", {})
-            lines.append(f"**Altman Z-Score:** {altman.get('score', 'N/A'):.2f} — {altman.get('interpretation', 'N/A')}")
+            altman = r.get("altman", {}) or {}
+            lines.append(f"**Altman Z-Score:** {self._num(altman.get('score'))} — {altman.get('interpretation', 'N/A')}")
 
-            beneish = r.get("beneish", {})
-            lines.append(f"**Beneish M-Score:** {beneish.get('score', 'N/A'):.2f} — {beneish.get('interpretation', 'N/A')}")
+            beneish = r.get("beneish", {}) or {}
+            lines.append(f"**Beneish M-Score:** {self._num(beneish.get('score'))} — {beneish.get('interpretation', 'N/A')}")
             lines.append("")
 
             # Risk summary

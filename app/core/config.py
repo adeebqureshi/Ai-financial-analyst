@@ -24,6 +24,7 @@ from app.core.constants import (
     API_RETRY_BACKOFF,
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
+    DEFAULT_EMBEDDING_DIMENSION,
     DEFAULT_EMBEDDING_MODEL,
     DEFAULT_LLM_MAX_TOKENS,
     DEFAULT_LLM_MODEL,
@@ -337,6 +338,16 @@ class Settings(BaseSettings):
     embedding_model: str = Field(
         default=DEFAULT_EMBEDDING_MODEL,
         description="Embedding model name.",
+    )
+
+    embedding_dimension: int = Field(
+        default=DEFAULT_EMBEDDING_DIMENSION,
+        ge=1,
+        description=(
+            "Expected embedding vector dimension. Must match the "
+            "SentenceTransformer model output and the Qdrant collection "
+            "vector size (EMBEDDING_DIMENSION)."
+        ),
     )
 
     vector_top_k: int = Field(

@@ -44,6 +44,7 @@ export function CompanyHeader({ company, recommendation }: Props) {
 
             <h1
               id="company-heading"
+              data-testid="company-name"
               className="mt-4 text-display break-words text-foreground"
             >
               {displayName}

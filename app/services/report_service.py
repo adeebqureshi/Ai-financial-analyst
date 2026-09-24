@@ -8,9 +8,12 @@ logger = get_logger(__name__)
 def _get_coordinator(settings: Settings) -> "CoordinatorAgent":
     from app.agents.coordinator import CoordinatorAgent
     from app.agents.financial_analyst import FinancialAnalystAgent
-    llm_client = OpenAIClient()
+    from app.agents.report_writer_v2 import ReportWriterAgent
+
+    llm_client = OpenAIClient(settings=settings)
     analyst = FinancialAnalystAgent(settings, llm_client=llm_client)
-    return CoordinatorAgent(settings=settings, analyst=analyst)
+    report_writer = ReportWriterAgent(llm_client=llm_client)
+    return CoordinatorAgent(settings=settings, analyst=analyst, report_writer=report_writer)
 class ReportService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings

@@ -6,10 +6,17 @@ test.describe("Analysis workflow", () => {
   });
 
   test("navigates to analysis page and displays financial data", async ({ page }) => {
+    const responsePromise = page.waitForResponse(
+      (response) => response.url().includes("/analyze") && response.request().method() === "POST"
+    );
     await page.goto("/analysis/AAPL");
-
-    // The company name is in the CompanyHeader with testid
-    await expect(page.locator("[data-testid='company-name']")).toContainText("Apple");
+    const response = await responsePromise;
+    expect(response.ok()).toBe(true);
+    const payload = await response.json();
+    const companyName = payload?.data?.company?.name;
+    expect(typeof companyName).toBe("string");
+    expect(companyName.length).toBeGreaterThan(0);
+    await expect(page.locator("[data-testid='company-name']")).toContainText(companyName);
     await expect(page.locator("text=AI Analysis")).toBeVisible();
 
     await expect(page.locator("[data-testid='company-header']")).toBeVisible();

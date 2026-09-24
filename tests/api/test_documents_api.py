@@ -4,15 +4,21 @@ import pytest
 from fastapi.testclient import TestClient
 from app.embeddings.embedding_service import EmbeddingService, _fallback_vector
 from app.main import app
-from app.main import app
 from app.auth.dependencies import get_current_user
+
 
 class MockUser:
     id = "test_user_123"
 
-# Force the test client to act as an authenticated user
-app.dependency_overrides[get_current_user] = lambda: MockUser()
-client = TestClient(app)
+
+@pytest.fixture()
+def authed_client():
+    app.dependency_overrides[get_current_user] = lambda: MockUser()
+    try:
+        with TestClient(app) as tc:
+            yield tc
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 def _make_pdf(text: str) -> bytes:
     doc = fitz.open()
     page = doc.new_page()
@@ -37,7 +43,7 @@ def _hermetic_embeddings(monkeypatch):
         "embed_text",
         _fake_embed_text,
     )
-def _upload_pdf(text: str) -> str:
+def _upload_pdf(client, text: str) -> str:
     response = client.post(
         "/documents/upload",
         files={
@@ -52,8 +58,10 @@ def _upload_pdf(text: str) -> str:
     payload = response.json()
     assert payload["success"] is True
     return payload["data"]["document_id"]
-def test_document_lifecycle_and_rag_chat():
+def test_document_lifecycle_and_rag_chat(authed_client):
+    client = authed_client
     document_id = _upload_pdf(
+        client,
         "Apple reported record revenue this year. "
         "Management discussed growing AI infrastructure spending."
     )
@@ -111,8 +119,8 @@ def test_document_lifecycle_and_rag_chat():
         },
     ).json()
     assert chat_after["data"]["sources"] == []
-def test_upload_rejects_non_pdf():
-    response = client.post(
+def test_upload_rejects_non_pdf(authed_client):
+    response = authed_client.post(
         "/documents/upload",
         files={
             "file": (

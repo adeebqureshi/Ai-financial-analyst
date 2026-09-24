@@ -12,9 +12,33 @@ from qdrant_client.models import (
     VectorParams,
 )
 from app.vectorstore.base_vector_store import BaseVectorStore
+
 _DEFAULT_COLLECTION = "financial_documents"
 _DEFAULT_VECTOR_SIZE = 384
 _client: QdrantClient | None = None
+
+
+def _settings_dim() -> int | None:
+    try:
+        from app.core.config import get_settings
+
+        dim = int(getattr(get_settings(), "embedding_dimension", 0) or 0)
+        return dim or None
+    except Exception:
+        return None
+
+
+def _reset_shared_client_for_tests() -> None:
+    """Reset the in-memory Qdrant singleton (test isolation only)."""
+    global _client
+    try:
+        if _client is not None:
+            _client.close()
+    except Exception:
+        pass
+    _client = None
+
+
 def _get_shared_client(
     url: str | None,
     api_key: str | None,
@@ -25,6 +49,8 @@ def _get_shared_client(
     if _client is None:
         _client = QdrantClient(":memory:")
     return _client
+
+
 class QdrantStore(BaseVectorStore):
     def __init__(
         self,
@@ -38,13 +64,17 @@ class QdrantStore(BaseVectorStore):
         )
         self.vector_size = (
             vector_size
+            or _settings_dim()
             or int(os.getenv("EMBEDDING_DIMENSION", _DEFAULT_VECTOR_SIZE))
         )
-        self.client = _get_shared_client(
-            url or os.getenv("QDRANT_URL"),
-            api_key or os.getenv("QDRANT_API_KEY"),
-        )
+        self._url = url or os.getenv("QDRANT_URL")
+        self._api_key = api_key or os.getenv("QDRANT_API_KEY")
         self._ensure_collection()
+
+    @property
+    def client(self) -> QdrantClient:
+        return _get_shared_client(self._url, self._api_key)
+
     def _ensure_collection(self) -> None:
         collections = {
             c.name
@@ -70,6 +100,7 @@ class QdrantStore(BaseVectorStore):
                 f"Collection '{self.collection_name}' exists with vector size "
                 f"{stored_size} but {self.vector_size} is required."
             )
+
     @staticmethod
     def _document_filter(document_id: str) -> Filter:
         return Filter(
@@ -80,6 +111,7 @@ class QdrantStore(BaseVectorStore):
                 )
             ]
         )
+
     @staticmethod
     def _owner_filter(owner_id: str | None) -> Filter | None:
         if owner_id is None:
@@ -92,6 +124,7 @@ class QdrantStore(BaseVectorStore):
                 )
             ]
         )
+
     @staticmethod
     def _combined_filter(document_id: str | None, owner_id: str | None) -> Filter | None:
         filters = []
@@ -112,6 +145,7 @@ class QdrantStore(BaseVectorStore):
         if not filters:
             return None
         return Filter(must=filters)
+
     def upsert(
         self,
         ids: list[int | str],
@@ -135,6 +169,7 @@ class QdrantStore(BaseVectorStore):
             collection_name=self.collection_name,
             points=points,
         )
+
     def search(
         self,
         vector: list[float],
@@ -149,6 +184,7 @@ class QdrantStore(BaseVectorStore):
             limit=limit,
             query_filter=query_filter,
         ).points
+
     def delete(
         self,
         ids: list[int | str],
@@ -157,6 +193,7 @@ class QdrantStore(BaseVectorStore):
             collection_name=self.collection_name,
             points_selector=PointIdsList(points=list(ids)),
         )
+
     def delete_by_document_id(
         self,
         document_id: str,
@@ -167,6 +204,7 @@ class QdrantStore(BaseVectorStore):
                 filter=self._document_filter(document_id),
             ),
         )
+
     def get_all(
         self,
         limit: int = 10_000,
@@ -179,6 +217,7 @@ class QdrantStore(BaseVectorStore):
             scroll_filter=query_filter,
         )
         return points
+
     def count(self) -> int:
         return self.client.count(
             collection_name=self.collection_name,

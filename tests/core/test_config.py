@@ -20,6 +20,7 @@ class TestConfigValidation:
     def test_validate_required_keys_dev_missing_openai_raises(self) -> None:
         settings = Settings(
             environment=Environment.DEVELOPMENT,
+            llm_provider="openai",
             openai_api_key="",
             freellmapi_base_url="",
             freellmapi_api_key="",
@@ -32,6 +33,7 @@ class TestConfigValidation:
     def test_validate_required_keys_prod_missing_openai_raises(self) -> None:
         settings = Settings(
             environment=Environment.PRODUCTION,
+            llm_provider="openai",
             openai_api_key="",
             freellmapi_base_url="",
             freellmapi_api_key="",
