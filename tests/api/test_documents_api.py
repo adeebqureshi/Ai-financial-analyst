@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 from app.embeddings.embedding_service import EmbeddingService, _fallback_vector
 from app.main import app
 from app.auth.dependencies import get_current_user
+from app.api.dependencies.services import get_search_service
+from app.core.exceptions import RetrievalError
 
 
 class MockUser:
@@ -119,6 +121,46 @@ def test_document_lifecycle_and_rag_chat(authed_client):
         },
     ).json()
     assert chat_after["data"]["sources"] == []
+@pytest.mark.parametrize(
+    ("message", "error_code"),
+    [
+        (
+            "Document search is temporarily unavailable.",
+            "VECTOR_STORE_UNAVAILABLE",
+        ),
+        (
+            "Document search returned an invalid response.",
+            "VECTOR_STORE_INVALID_RESPONSE",
+        ),
+    ],
+)
+def test_search_maps_qdrant_failures_to_safe_502(
+    authed_client,
+    message,
+    error_code,
+):
+    class FailingSearchService:
+        def search(self, request, owner_id=None):
+            raise RetrievalError(message, error_code=error_code)
+
+    app.dependency_overrides[get_search_service] = lambda: FailingSearchService()
+    try:
+        response = authed_client.post(
+            "/search",
+            json={"query": "revenue", "limit": 3},
+        )
+    finally:
+        app.dependency_overrides.pop(get_search_service, None)
+
+    assert response.status_code == 502
+    payload = response.json()
+    assert payload["success"] is False
+    assert payload["message"] == message
+    assert payload["errors"][0]["code"] == error_code
+    assert "qdrant" not in response.text.lower()
+    assert "traceback" not in response.text.lower()
+
+
 def test_upload_rejects_non_pdf(authed_client):
     response = authed_client.post(
         "/documents/upload",

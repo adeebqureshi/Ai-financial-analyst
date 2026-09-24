@@ -19,6 +19,7 @@ function getApiBaseUrl(): string {
   if (typeof window === "undefined") {
     return process.env.API_URL ?? "http://127.0.0.1:8000";
   }
+
   return process.env.NEXT_PUBLIC_API_URL ?? "/api/backend";
 }
 
@@ -56,28 +57,114 @@ export class ApiError extends Error {
   isRetryable(): boolean {
     if (this.isAuthError()) return false;
     if (this.isClientError()) return false;
+
     return true;
+  }
+}
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const LONG_REQUEST_TIMEOUT_MS = 120_000;
+
+function getTimeoutMs(timeoutMs?: number): number {
+  return timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+}
+
+async function parseSuccess<T>(
+  response: Response,
+  endpoint: string
+): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    throw new ApiError(
+      "The server returned an invalid response.",
+      response.status,
+      endpoint,
+      error instanceof Error ? error : undefined
+    );
   }
 }
 
 async function request<T>(
   endpoint: string,
-  init?: RequestInit
+  init?: RequestInit,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
 ): Promise<T> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(init?.body instanceof FormData
+      ? {}
+      : { "Content-Type": "application/json" }),
     ...(init?.headers as Record<string, string> | undefined),
   };
+
+  // Get existing token or obtain a development token.
   if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("access_token");
+    let token = window.localStorage.getItem("access_token");
+
+    if (!token) {
+      try {
+        const authResponse = await fetch("/api/auth/token", {
+          method: "POST",
+          cache: "no-store",
+        });
+
+        if (authResponse.ok) {
+          const authData = await authResponse.json();
+          token = authData.access_token;
+
+          if (token) {
+            window.localStorage.setItem("access_token", token);
+          }
+        }
+      } catch {
+        // Let the protected API request fail normally if authentication
+        // cannot be obtained.
+      }
+    }
+
     if (token && !headers["Authorization"]) {
       headers["Authorization"] = `Bearer ${token}`;
     }
   }
-  const response = await fetch(getAPI() + endpoint, {
-    ...init,
-    headers,
-  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    getTimeoutMs(timeoutMs)
+  );
+
+  let response: Response;
+
+  try {
+    response = await fetch(getAPI() + endpoint, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const isAbort =
+      error instanceof DOMException
+        ? error.name === "AbortError"
+        : error instanceof Error && error.name === "AbortError";
+
+    if (isAbort) {
+      throw new ApiError(
+        "The request timed out. Please try again.",
+        504,
+        endpoint,
+        error instanceof Error ? error : undefined
+      );
+    }
+
+    throw new ApiError(
+      "Unable to reach the server. Check your connection and try again.",
+      0,
+      endpoint,
+      error instanceof Error ? error : undefined
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!response.ok) {
     const text = await response.text();
@@ -86,15 +173,20 @@ async function request<T>(
 
     try {
       const parsed = JSON.parse(text);
+
       message =
         parsed?.message ??
         parsed?.detail ??
         (Array.isArray(parsed?.errors) && parsed.errors[0]?.message) ??
         message;
     } catch {
-      if (text) message = text;
+      if (text) {
+        message = text;
+      }
     }
 
+    // Remove an expired/invalid token.
+    // Do NOT retry the protected request without Authorization.
     if (response.status === 401 && typeof window !== "undefined") {
       window.localStorage.removeItem("access_token");
     }
@@ -102,7 +194,7 @@ async function request<T>(
     throw new ApiError(message, response.status, endpoint);
   }
 
-  return response.json() as Promise<T>;
+  return parseSuccess<T>(response, endpoint);
 }
 
 export interface ChatStreamPlanData {
@@ -180,18 +272,26 @@ function handleStreamFrame(
     case "plan":
       handlers.onPlan?.(payload as ChatStreamPlanData);
       break;
+
     case "token": {
       const delta = (payload as { delta?: string })?.delta ?? "";
-      if (delta) handlers.onDelta?.(delta);
+
+      if (delta) {
+        handlers.onDelta?.(delta);
+      }
+
       break;
     }
+
     case "done":
       handlers.onDone?.(payload as ChatStreamDoneData);
       break;
+
     case "error": {
       const message =
         (payload as { message?: string })?.message ??
         "The chat stream failed unexpectedly.";
+
       handlers.onError?.(message);
       break;
     }
@@ -199,10 +299,10 @@ function handleStreamFrame(
 }
 
 /**
- * Consume the Server-Sent Events stream from ``POST /chat/stream``.
+ * Consume the Server-Sent Events stream from `POST /chat/stream`.
  *
- * Calls ``onDelta`` for every streamed token so the UI can render progressive
- * output, then ``onDone`` with the complete result.
+ * Calls onDelta for every streamed token so the UI can render progressive
+ * output, then onDone with the complete result.
  */
 async function requestChatStream(
   body: unknown,
@@ -212,10 +312,15 @@ async function requestChatStream(
   const streamHeaders: Record<string, string> = {
     "Content-Type": "application/json",
   };
+
   if (typeof window !== "undefined") {
     const token = window.localStorage.getItem("access_token");
-    if (token) streamHeaders["Authorization"] = `Bearer ${token}`;
+
+    if (token) {
+      streamHeaders["Authorization"] = `Bearer ${token}`;
+    }
   }
+
   const response = await fetch(getAPI() + "/chat/stream", {
     method: "POST",
     headers: streamHeaders,
@@ -233,7 +338,9 @@ async function requestChatStream(
       const parsed = JSON.parse(text);
       message = parsed?.message ?? parsed?.detail ?? message;
     } catch {
-      if (text) message = text;
+      if (text) {
+        message = text;
+      }
     }
 
     handlers.onError?.(message);
@@ -241,7 +348,9 @@ async function requestChatStream(
   }
 
   if (!response.body) {
-    handlers.onError?.("Streaming is not supported by this browser.");
+    handlers.onError?.(
+      "Streaming is not supported by this browser."
+    );
     return;
   }
 
@@ -252,7 +361,9 @@ async function requestChatStream(
   for (;;) {
     const { done, value } = await reader.read();
 
-    if (done) break;
+    if (done) {
+      break;
+    }
 
     buffer += decoder.decode(value, { stream: true });
 
@@ -261,7 +372,9 @@ async function requestChatStream(
     while (boundary !== -1) {
       const frame = buffer.slice(0, boundary);
       buffer = buffer.slice(boundary + 2);
+
       handleStreamFrame(frame, handlers);
+
       boundary = buffer.indexOf("\n\n");
     }
   }
@@ -385,9 +498,12 @@ export const api = {
   deleteChatSession(
     sessionId: string
   ): Promise<ApiResponse<{ deleted: boolean }>> {
-    return request(`/chat/sessions/${encodeURIComponent(sessionId)}`, {
-      method: "DELETE",
-    });
+    return request(
+      `/chat/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        method: "DELETE",
+      }
+    );
   },
 
   search(
@@ -414,32 +530,13 @@ export const api = {
     file: File
   ): Promise<ApiResponse<DocumentData>> {
     const form = new FormData();
-
     form.append("file", file);
 
-    const uploadHeaders: Record<string, string> = {};
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("access_token");
-      if (token) uploadHeaders["Authorization"] = `Bearer ${token}`;
-    }
-    return fetch(getAPI() + "/documents/upload", {
-      method: "POST",
-      headers: uploadHeaders,
-      body: form,
-    }).then(async (response) => {
-      if (!response.ok) {
-        const parsed = await response.json().catch(() => null);
-        const message =
-          parsed?.message ??
-          parsed?.detail ??
-          `Upload failed with status ${response.status}`;
-        throw new ApiError(message, response.status, "/documents/upload");
-      }
-
-      return response.json() as Promise<
-        ApiResponse<DocumentData>
-      >;
-    });
+    return request<ApiResponse<DocumentData>>(
+      "/documents/upload",
+      { method: "POST", body: form },
+      LONG_REQUEST_TIMEOUT_MS
+    );
   },
 
   listDocuments(): Promise<

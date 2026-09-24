@@ -11,11 +11,16 @@ from qdrant_client.models import (
     PointStruct,
     VectorParams,
 )
+import math
+
+from app.core.exceptions import RetrievalError
+from app.core.logging import get_logger
 from app.vectorstore.base_vector_store import BaseVectorStore
 
 _DEFAULT_COLLECTION = "financial_documents"
 _DEFAULT_VECTOR_SIZE = 384
 _client: QdrantClient | None = None
+logger = get_logger(__name__)
 
 
 def _settings_dim() -> int | None:
@@ -69,13 +74,58 @@ class QdrantStore(BaseVectorStore):
         )
         self._url = url or os.getenv("QDRANT_URL")
         self._api_key = api_key or os.getenv("QDRANT_API_KEY")
-        self._ensure_collection()
+        self._client_override = None
+        try:
+            self._ensure_collection()
+        except RetrievalError:
+            raise
+        except Exception as exc:
+            logger.warning("Qdrant initialization failed: %s", exc)
+            raise RetrievalError(
+                "Document storage is temporarily unavailable.",
+                error_code="VECTOR_STORE_UNAVAILABLE",
+            ) from exc
 
     @property
     def client(self) -> QdrantClient:
+        if self._client_override is not None:
+            return self._client_override
         return _get_shared_client(self._url, self._api_key)
 
+    def _call(self, operation: str, function, *args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except RetrievalError:
+            raise
+        except (ConnectionError, TimeoutError, OSError) as exc:
+            logger.warning("Qdrant %s failed: %s", operation, exc)
+            raise RetrievalError(
+                "Document search is temporarily unavailable.",
+                error_code="VECTOR_STORE_UNAVAILABLE",
+            ) from exc
+        except Exception as exc:
+            message = str(exc).lower()
+            if any(term in message for term in ("connection", "timeout", "unavailable", "refused")):
+                logger.warning("Qdrant %s failed: %s", operation, exc)
+                raise RetrievalError(
+                    "Document search is temporarily unavailable.",
+                    error_code="VECTOR_STORE_UNAVAILABLE",
+                ) from exc
+            raise
+
     def _ensure_collection(self) -> None:
+        try:
+            return self._collection_check()
+        except RetrievalError:
+            raise
+        except Exception as exc:
+            logger.warning("Qdrant collection check failed: %s", exc)
+            raise RetrievalError(
+                "Document storage is temporarily unavailable.",
+                error_code="VECTOR_STORE_UNAVAILABLE",
+            ) from exc
+
+    def _collection_check(self) -> None:
         collections = {
             c.name
             for c in self.client.get_collections().collections
@@ -165,10 +215,27 @@ class QdrantStore(BaseVectorStore):
                     payload=payload,
                 )
             )
-        self.client.upsert(
+        self._call(
+            "upsert",
+            self.client.upsert,
             collection_name=self.collection_name,
             points=points,
         )
+
+    @staticmethod
+    def _valid_point(point) -> bool:
+        point_id = getattr(point, "id", None)
+        if not isinstance(point_id, (int, str)) or isinstance(point_id, bool):
+            return False
+        payload = getattr(point, "payload", None)
+        if not isinstance(payload, dict):
+            return False
+        if "text" in payload and not isinstance(payload["text"], str):
+            return False
+        if "chunk_id" in payload and not isinstance(payload["chunk_id"], str):
+            return False
+        score = getattr(point, "score", None)
+        return score is None or (isinstance(score, (int, float)) and math.isfinite(score))
 
     def search(
         self,
@@ -178,18 +245,29 @@ class QdrantStore(BaseVectorStore):
         owner_id: str | None = None,
     ):
         query_filter = self._combined_filter(document_id, owner_id)
-        return self.client.query_points(
+        result = self._call(
+            "search",
+            self.client.query_points,
             collection_name=self.collection_name,
             query=vector,
             limit=limit,
             query_filter=query_filter,
-        ).points
+        )
+        points = getattr(result, "points", None)
+        if not isinstance(points, list):
+            raise RetrievalError(
+                "Document search returned an invalid response.",
+                error_code="VECTOR_STORE_INVALID_RESPONSE",
+            )
+        return [point for point in points if self._valid_point(point)]
 
     def delete(
         self,
         ids: list[int | str],
     ) -> None:
-        self.client.delete(
+        self._call(
+            "delete",
+            self.client.delete,
             collection_name=self.collection_name,
             points_selector=PointIdsList(points=list(ids)),
         )
@@ -198,7 +276,9 @@ class QdrantStore(BaseVectorStore):
         self,
         document_id: str,
     ) -> None:
-        self.client.delete(
+        self._call(
+            "delete_by_document_id",
+            self.client.delete,
             collection_name=self.collection_name,
             points_selector=FilterSelector(
                 filter=self._document_filter(document_id),
@@ -211,7 +291,9 @@ class QdrantStore(BaseVectorStore):
         owner_id: str | None = None,
     ):
         query_filter = self._owner_filter(owner_id)
-        points, _ = self.client.scroll(
+        points, _ = self._call(
+            "get_all",
+            self.client.scroll,
             collection_name=self.collection_name,
             limit=limit,
             scroll_filter=query_filter,
@@ -219,6 +301,9 @@ class QdrantStore(BaseVectorStore):
         return points
 
     def count(self) -> int:
-        return self.client.count(
+        result = self._call(
+            "count",
+            self.client.count,
             collection_name=self.collection_name,
-        ).count
+        )
+        return result.count

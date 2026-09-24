@@ -1,4 +1,8 @@
 import uuid
+
+import pytest
+
+from app.core.exceptions import RetrievalError
 from app.vectorstore.qdrant_store import QdrantStore
 def test_upsert_and_search():
     store = QdrantStore(
@@ -44,3 +48,36 @@ def test_document_filter_and_delete():
     remaining = store.get_all()
     assert len(remaining) == 1
     assert remaining[0].payload["document_id"] == "b"
+
+
+class _Point:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+def test_search_filters_malformed_points(monkeypatch):
+    store = QdrantStore(collection_name=f"test_qdrant_{uuid.uuid4().hex[:8]}", vector_size=3)
+    valid = _Point(id=1, score=0.8, payload={"text": "valid", "chunk_id": "a:0"})
+    client = type("Client", (), {"query_points": lambda self, **kwargs: type("Result", (), {"points": [valid, _Point(id=2, payload=None), _Point(id=3, score="bad", payload={}), object()]})()})()
+    store._client_override = client
+    assert store.search([0.1, 0.2, 0.3]) == [valid]
+
+
+@pytest.mark.parametrize("error", [ConnectionError("qdrant down"), TimeoutError("qdrant timeout")])
+def test_qdrant_connection_failures_are_dependency_errors(error):
+    store = QdrantStore(collection_name=f"test_qdrant_{uuid.uuid4().hex[:8]}", vector_size=3)
+    client = type(
+        "Client",
+        (),
+        {
+            "query_points": lambda self, **kwargs: (_ for _ in ()).throw(error),
+        },
+    )()
+    store._client_override = client
+
+    with pytest.raises(RetrievalError) as raised:
+        store.search([0.1, 0.2, 0.3])
+
+    assert raised.value.error_code == "VECTOR_STORE_UNAVAILABLE"
+    assert "qdrant" not in raised.value.message.lower()

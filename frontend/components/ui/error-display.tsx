@@ -19,9 +19,9 @@ function getErrorInfo(error: unknown) {
     if (error.isAuthError()) {
       return {
         icon: Lock,
-        title: "Authentication Required",
-        message: "Your session has expired. Please sign in again.",
-        isRetryable: false,
+        title: "Not Authenticated",
+        message: "Please refresh the page to continue.",
+        isRetryable: true,
       };
     }
     if (error.isNotFound()) {
@@ -154,7 +154,10 @@ export function ErrorInline({
       )}
       role="alert"
     >
-      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <Icon
+        className="size-4 shrink-0"
+        aria-hidden="true"
+      />
       <span className="min-w-0">{message}</span>
       {isRetryable && onRetry && (
         <Button

@@ -88,6 +88,76 @@ describe("services/api.ts", () => {
     });
   });
 
+
+  describe("runtime failure handling", () => {
+    it("converts successful invalid JSON and an empty 204 to a safe retryable ApiError", async () => {
+      for (const response of [
+        { ok: true, status: 200, json: () => Promise.reject(new SyntaxError("Unexpected token <")) },
+        { ok: true, status: 204, json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")) },
+      ]) {
+        mockFetch.mockResolvedValueOnce(response);
+        const error: unknown = await api.health().catch((value) => value);
+        expect(error).toBeInstanceOf(ApiError);
+        if (!(error instanceof ApiError)) throw new Error("Expected ApiError");
+        expect(error.message).toBe("The server returned an invalid response.");
+        expect(error.isRetryable()).toBe(true);
+      }
+    });
+
+    it("normalizes network failures and succeeds on a later explicit attempt", async () => {
+      for (const original of [new TypeError("Failed to fetch"), new TypeError("connection reset")]) {
+        mockFetch.mockRejectedValueOnce(original);
+        const error: unknown = await api.health().catch((value) => value);
+        expect(error).toBeInstanceOf(ApiError);
+        if (!(error instanceof ApiError)) throw new Error("Expected ApiError");
+        expect(error.message).toBe("Unable to reach the server. Check your connection and try again.");
+        expect(error.isRetryable()).toBe(true);
+        expect(error.originalError).toBe(original);
+      }
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
+      await expect(api.health()).resolves.toEqual({ ok: true });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("aborts a never-resolving request and permits a successful retry", async () => {
+      vi.useFakeTimers();
+      mockFetch.mockImplementationOnce((_url, init) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }));
+      const pending = api.health().catch((value) => value as ApiError);
+      await vi.advanceTimersByTimeAsync(30_000);
+      const error: unknown = await pending;
+      expect(error).toBeInstanceOf(ApiError);
+      if (!(error instanceof ApiError)) throw new Error("Expected ApiError");
+      expect(error.status).toBe(504);
+      expect(error.message).toBe("The request timed out. Please try again.");
+      expect(error.isRetryable()).toBe(true);
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
+      await expect(api.health()).resolves.toEqual({ ok: true });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      vi.useRealTimers();
+    });
+
+    it("accepts a response completed before the timeout", async () => {
+      vi.useFakeTimers();
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
+      await expect(api.health()).resolves.toEqual({ ok: true });
+      await vi.runAllTimersAsync();
+      vi.useRealTimers();
+    });
+
+    it("parses a valid stale-token retry through the same success parser", async () => {
+      window.localStorage.setItem("access_token", "stale");
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve('{"message":"expired"}') })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
+      await expect(api.health()).resolves.toEqual({ ok: true });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][1].headers.Authorization).toBeUndefined();
+      window.localStorage.removeItem("access_token");
+    });
+  });
+
   describe("api object methods", () => {
     it("health calls correct endpoint", async () => {
       mockFetch.mockResolvedValueOnce({
