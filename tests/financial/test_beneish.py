@@ -1,5 +1,8 @@
 import pytest
+
 from app.financial.beneish import BeneishMScore
+
+
 def test_beneish_score():
     score = BeneishMScore.calculate(
         dsri=1.10,
@@ -12,7 +15,11 @@ def test_beneish_score():
         tata=0.03,
     )
     assert score == pytest.approx(-2.15888, abs=1e-5)
+
+
 def test_low_risk():
     assert BeneishMScore.interpretation(-2.5) == "LOW_RISK"
+
+
 def test_high_risk():
     assert BeneishMScore.interpretation(-1.5) == "HIGH_RISK"

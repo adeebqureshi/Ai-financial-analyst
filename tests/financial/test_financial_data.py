@@ -1,7 +1,9 @@
 import pandas as pd
 import pytest
+
 from app.core.exceptions import RetrievalError
 from app.financial.data import FinancialDataService
+
 _MILLION = 1_000_000.0
 INCOME = pd.DataFrame(
     {
@@ -40,6 +42,8 @@ CASHFLOW = pd.DataFrame(
     },
     index=["Free Cash Flow", "Operating Cash Flow"],
 )
+
+
 def test_build_statement_populates_current_assets_and_liabilities():
     service = FinancialDataService()
     stmt = service._build_statement("TEST", INCOME, BALANCE, CASHFLOW, {})
@@ -51,6 +55,8 @@ def test_build_statement_populates_current_assets_and_liabilities():
     assert stmt.shares_outstanding == 100.0 / _MILLION
     ratio = stmt.current_assets / stmt.current_liabilities
     assert ratio == pytest.approx(3.0, abs=1e-6)
+
+
 def test_build_statement_raises_when_free_cash_flow_undeterminable():
     service = FinancialDataService()
     bad_cashflow = pd.DataFrame(

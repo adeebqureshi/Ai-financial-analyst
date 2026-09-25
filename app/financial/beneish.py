@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+
 class BeneishMScore:
     @staticmethod
     def calculate(
@@ -22,6 +24,7 @@ class BeneishMScore:
             + 4.679 * tata
             - 0.327 * lvgi
         )
+
     @staticmethod
     def interpretation(
         score: float,

@@ -57,8 +57,9 @@ class RateLimiterBackend(ABC):
     def health_check(self) -> bool:
         raise NotImplementedError
 
+    @abstractmethod
     def clear_all(self) -> None:
-        pass
+        raise NotImplementedError
 
 
 class LocalMemoryBackend(RateLimiterBackend):
@@ -420,7 +421,10 @@ class HybridRateLimiter:
             if current_minute > config.requests_per_minute:
                 retry_after = 60 - (int(current_time) % 60)
             else:
-                retry_after = 3600 - (int(current_time) % 3600)
+                # A denial on the hourly bucket must advertise an hour-scale
+                # retry interval, not the remaining seconds in the current
+                # hour. This also avoids a misleading near-boundary value.
+                retry_after = 3600
 
         return RateLimitResult(
             allowed=allowed,

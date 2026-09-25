@@ -1,4 +1,6 @@
 from app.financial.models import FinancialStatement
+
+
 def test_financial_statement():
     statement = FinancialStatement(
         revenue=100,

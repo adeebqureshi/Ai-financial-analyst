@@ -1,5 +1,7 @@
 from app.financial.models import FinancialStatement
 from app.financial.valuation import ValuationEngine
+
+
 def _base_statement(**overrides) -> FinancialStatement:
     values = dict(
         revenue=1000,
@@ -14,6 +16,8 @@ def _base_statement(**overrides) -> FinancialStatement:
     )
     values.update(overrides)
     return FinancialStatement(**values)
+
+
 def test_valuation_engine():
     statement = _base_statement()
     engine = ValuationEngine()
@@ -28,6 +32,8 @@ def test_valuation_engine():
     )
     assert result.intrinsic_value > 0
     assert isinstance(result.recommendation, str)
+
+
 def test_valuation_subtracts_net_debt():
     engine = ValuationEngine()
     params = dict(
@@ -41,6 +47,4 @@ def test_valuation_subtracts_net_debt():
     no_cash = engine.evaluate(statement=_base_statement(cash=0.0), **params)
     with_cash = engine.evaluate(statement=_base_statement(cash=500.0), **params)
     expected_increase = 500.0 / 100.0
-    assert abs(
-        (with_cash.intrinsic_value - no_cash.intrinsic_value) - expected_increase
-    ) < 1e-6
+    assert abs((with_cash.intrinsic_value - no_cash.intrinsic_value) - expected_increase) < 1e-6

@@ -11,27 +11,20 @@ class WACC:
         tax_rate: float,
     ) -> float | None:
         if equity < 0:
-            raise ValueError(
-                "Total capital must be positive"
-            )
+            raise ValueError("Total capital must be positive")
 
         total_capital = equity + debt
 
-        if total_capital <= 0:
-            raise ValueError(
-                "Total capital must be positive"
-            )
+        if total_capital == 0:
+            return None
+        if total_capital < 0:
+            raise ValueError("Total capital must be positive")
 
         try:
             equity_weight = equity / total_capital
             debt_weight = debt / total_capital
 
-            return (
-                equity_weight * cost_of_equity
-                + debt_weight
-                * cost_of_debt
-                * (1 - tax_rate)
-            )
+            return equity_weight * cost_of_equity + debt_weight * cost_of_debt * (1 - tax_rate)
 
         except ZeroDivisionError:
             return None
@@ -43,10 +36,7 @@ class WACC:
         market_return: float,
     ) -> float | None:
         try:
-            return (
-                risk_free_rate
-                + beta * (market_return - risk_free_rate)
-            )
+            return risk_free_rate + beta * (market_return - risk_free_rate)
         except ZeroDivisionError:
             return None
 

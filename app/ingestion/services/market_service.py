@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import time
 
 from app.core.config import Settings, get_settings
@@ -32,11 +31,17 @@ _demo_provider_cls: type[MarketDataProvider] | None = None
 
 
 def _is_production() -> bool:
-    return os.getenv("ENV", "").strip().lower() == "production"
+    """Return whether the current runtime environment is production."""
+    return get_settings().is_production
 
 
-def _get_demo_provider_cls() -> type[MarketDataProvider]:
-    if _is_production():
+def _get_demo_provider_cls(settings: Settings | None = None) -> type[MarketDataProvider]:
+    active_settings = settings or get_settings()
+    if not active_settings.is_demo_mode:
+        raise RuntimeError(
+            "Demo market provider requires DEMO_MODE=true."
+        )
+    if active_settings.is_production:
         raise RuntimeError(
             "Demo market provider is forbidden when ENV=production."
         )
@@ -51,13 +56,18 @@ def _get_demo_provider_cls() -> type[MarketDataProvider]:
     return _demo_provider_cls
 
 
-def _register_demo_provider() -> None:
-    if _is_production():
+def _register_demo_provider(settings: Settings | None = None) -> None:
+    active_settings = settings or get_settings()
+    if not active_settings.is_demo_mode:
+        raise RuntimeError(
+            "Demo market provider registration requires DEMO_MODE=true."
+        )
+    if active_settings.is_production:
         raise RuntimeError(
             "Demo market provider cannot be registered when ENV=production."
         )
 
-    _REGISTRY["demo"] = _get_demo_provider_cls()
+    _REGISTRY["demo"] = _get_demo_provider_cls(active_settings)
 
 
 class MarketService:
@@ -76,7 +86,7 @@ class MarketService:
 
         # Production can NEVER use the demo provider,
         # regardless of is_demo_mode or any other configuration.
-        if _is_production():
+        if settings.is_production:
             names: list[str] = [
                 settings.market_primary_provider.strip().lower()
             ]
@@ -92,7 +102,7 @@ class MarketService:
             names = [name for name in names if name != "demo"]
 
         elif settings.is_demo_mode:
-            _register_demo_provider()
+            _register_demo_provider(settings)
             names = ["demo"]
 
         else:
@@ -107,6 +117,15 @@ class MarketService:
                     if name and name not in names:
                         names.append(name)
 
+            # Demo is an explicit, isolated mode.  It is never a valid
+            # production provider name, including in fallback configuration.
+            names = [name for name in names if name != "demo"]
+
+        if not names:
+            raise ProviderUnavailableError(
+                "No market providers are configured for runtime mode."
+            )
+
         providers: list[MarketDataProvider] = []
 
         for name in names:
@@ -120,7 +139,7 @@ class MarketService:
                 continue
 
             # Final defense-in-depth check.
-            if _is_production() and provider_cls.name == "demo":
+            if settings.is_production and provider_cls.name == "demo":
                 logger.error(
                     "Blocked demo market provider in production."
                 )
@@ -215,19 +234,24 @@ class MarketService:
         started = time.perf_counter()
 
         cached = self._cache.get(ticker)
+        settings = self._settings
+
 
         if cached is not None:
-            logger.info(
-                "Market quote cache hit: provider=%s ticker=%s backend=%s",
-                cached.provider,
-                ticker,
-                self._cache.backend_name(),
-            )
+            if not settings.is_demo_mode and cached.provider == "demo":
+                self._cache.delete(ticker)
+            else:
+                logger.info(
+                    "Market quote cache hit: provider=%s ticker=%s backend=%s",
+                    cached.provider,
+                    ticker,
+                    self._cache.backend_name(),
+                )
 
-            return self._to_market_data(
-                cached,
-                cached=True,
-            )
+                return self._to_market_data(
+                    cached,
+                    cached=True,
+                )
 
         providers = self._provider_chain()
 
@@ -253,7 +277,7 @@ class MarketService:
 
         stale = self._cache.get_stale(ticker)
 
-        if stale is not None:
+        if stale is not None and (settings.is_demo_mode or stale.provider != "demo"):
             logger.warning(
                 "Serving stale market quote: provider=%s ticker=%s",
                 stale.provider,

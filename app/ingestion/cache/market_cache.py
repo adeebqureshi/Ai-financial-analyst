@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import json
 import threading
 import time
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from app.core.logging import get_logger
 from app.ingestion.providers.base import Quote
 from app.utils.tickers import normalize_ticker
+
 logger = get_logger(__name__)
 _KEY_PREFIX = "market:quote:v1"
 class MarketQuoteCache:
@@ -37,8 +40,9 @@ class MarketQuoteCache:
             if self._redis_ready:
                 return self._redis
             try:
-                from app.infrastructure.redis_cache import build_redis_url
                 import redis
+
+                from app.infrastructure.redis_cache import build_redis_url
                 client = redis.Redis.from_url(
                     build_redis_url(),
                     decode_responses=True,
@@ -106,7 +110,7 @@ class MarketQuoteCache:
                 week_52_low=data.get("week_52_low"),
                 fetched_at=datetime.fromisoformat(
                     data.get("fetched_at")
-                    or datetime.now(timezone.utc).isoformat()
+                    or datetime.now(UTC).isoformat()
                 ),
             )
         except (KeyError, TypeError, ValueError):
@@ -198,6 +202,22 @@ class MarketQuoteCache:
             self._entries.move_to_end(key)
             while len(self._entries) > self._max_entries:
                 self._entries.popitem(last=False)
+    def delete(self, ticker: str) -> None:
+        """Remove a cached quote from both cache backends."""
+        key = self._key(ticker)
+        redis = self._redis_client()
+        if redis is not None:
+            try:
+                redis.delete(key, f"{key}:ts")
+                return
+            except Exception as exc:
+                logger.warning(
+                    "Market quote cache delete failed (%s); degrading",
+                    exc.__class__.__name__,
+                )
+        with self._lock:
+            self._entries.pop(key, None)
+
     def backend_name(self) -> str:
         return "redis" if self._redis_client() is not None else "memory"
     def clear(self) -> None:

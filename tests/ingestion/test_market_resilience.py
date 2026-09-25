@@ -1,5 +1,8 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
+from unittest.mock import patch
+
 from app.ingestion.providers.base import (
     MarketDataProvider,
     ProviderError,
@@ -9,6 +12,8 @@ from app.ingestion.providers.base import (
 )
 from app.ingestion.providers.fmp_provider import FmpProvider
 from app.ingestion.services.market_service import MarketService
+
+
 class _FakePrimary(MarketDataProvider):
     name = "fake_primary"
     def __init__(self, price: float | None = 150.0) -> None:
@@ -22,7 +27,7 @@ class _FakePrimary(MarketDataProvider):
             ticker=ticker.upper(),
             provider=self.name,
             price=self._price,
-            quote_time=datetime.now(timezone.utc),
+            quote_time=datetime.now(UTC),
         )
 class _FlakyThenOk(MarketDataProvider):
     name = "flaky"
@@ -37,7 +42,7 @@ class _FlakyThenOk(MarketDataProvider):
             ticker=ticker.upper(),
             provider=self.name,
             price=self._price,
-            quote_time=datetime.now(timezone.utc),
+            quote_time=datetime.now(UTC),
         )
 class _RateLimited(MarketDataProvider):
     name = "limited"
@@ -136,16 +141,190 @@ def test_total_failure_raises_without_fabrication() -> None:
             service.get_market_data("ZZZZ")
     finally:
         _restore_registry(original)
+def test_demo_mode_false_cannot_import_or_select_demo_provider() -> None:
+    import builtins
+
+    import pytest
+
+    from app.ingestion.services import market_service as ms_module
+
+    real_import = builtins.__import__
+    demo_imports: list[str] = []
+
+    def tracking_import(name, *args, **kwargs):
+        if "demo_market_provider" in name:
+            demo_imports.append(name)
+        return real_import(name, *args, **kwargs)
+
+    settings = _settings(
+        demo_mode=False,
+        market_primary_provider="demo",
+        market_fallback_providers="demo",
+    )
+    original = _patch_registry({"demo": _FakePrimary})
+    try:
+        with patch(
+            "builtins.__import__", side_effect=tracking_import
+        ):
+            with pytest.raises(ProviderUnavailableError, match="No market providers"):
+                MarketService(settings)._provider_chain()
+            with pytest.raises(RuntimeError, match="DEMO_MODE=true"):
+                ms_module._get_demo_provider_cls(settings)
+            with pytest.raises(RuntimeError, match="DEMO_MODE=true"):
+                ms_module._register_demo_provider(settings)
+        assert "demo" not in demo_imports
+    finally:
+        _restore_registry(original)
+
+
+def test_demo_mode_false_uses_real_provider() -> None:
+    service = MarketService(_settings(demo_mode=False))
+    original = _patch_registry({"fake_primary": _FakePrimary})
+    try:
+        data = service.get_market_data("AAPL")
+        assert data.provider == "fake_primary"
+    finally:
+        _restore_registry(original)
+
+
+def test_demo_mode_false_real_failure_has_no_demo_fallback() -> None:
+    import pytest
+
+    from app.ingestion.services import market_service as ms_module
+
+    service = MarketService(
+        _settings(
+            demo_mode=False,
+            market_fallback_providers="demo",
+            market_provider_max_attempts=1,
+        )
+    )
+    original_registry = _patch_registry(
+        {"fake_primary": lambda: _FakePrimary(price=None)}
+    )
+    original_demo_registry = ms_module._REGISTRY.get("demo")
+    try:
+        with pytest.raises(ProviderUnavailableError):
+            service.get_market_data("ZZZZ")
+        assert "demo" not in ms_module._REGISTRY
+    finally:
+        if original_demo_registry is not None:
+            ms_module._REGISTRY["demo"] = original_demo_registry
+        _restore_registry(original_registry)
+
+
+def test_demo_mode_true_uses_explicit_demo_provider() -> None:
+    settings = _settings(demo_mode=True, environment="test")
+    service = MarketService(settings)
+    try:
+        providers = service._provider_chain()
+        assert [provider.name for provider in providers] == ["demo"]
+    finally:
+        from app.ingestion.services import market_service as ms_module
+
+        ms_module._REGISTRY.pop("demo", None)
+
+
+
+class TestProductionDataSourceEnforcement:
+    """Issue #5: production mode must never serve demo/mock/sample data."""
+
+    def test_production_mode_uses_only_real_providers(self) -> None:
+        service = MarketService(_settings(demo_mode=False))
+        original = _patch_registry(
+            {"fake_primary": _FakePrimary, "demo": _FakePrimary}
+        )
+        try:
+            names = [provider.name for provider in service._provider_chain()]
+            assert "demo" not in names
+            data = service.get_market_data("AAPL")
+            assert data.provider == "fake_primary"
+        finally:
+            _restore_registry(original)
+
+    def test_real_provider_failure_never_falls_back_to_demo(self) -> None:
+        import pytest
+
+        service = MarketService(
+            _settings(
+                demo_mode=False,
+                market_fallback_providers="demo",
+                market_provider_max_attempts=1,
+            )
+        )
+        original = _patch_registry(
+            {"fake_primary": lambda: _FakePrimary(price=None), "demo": _FakePrimary}
+        )
+        try:
+            with pytest.raises(ProviderUnavailableError):
+                service.get_market_data("ZZZZ")
+        finally:
+            _restore_registry(original)
+
+    def test_cached_demo_quote_is_rejected_in_production(self) -> None:
+        service = MarketService(_settings(demo_mode=False))
+        original = _patch_registry({"fake_primary": _FakePrimary})
+        try:
+            service._cache.set(
+                Quote(
+                    ticker="AAPL",
+                    provider="demo",
+                    price=1.0,
+                    quote_time=datetime.now(UTC),
+                )
+            )
+            data = service.get_market_data("AAPL")
+            assert data.provider == "fake_primary"
+            assert data.current_price == 150.0
+        finally:
+            _restore_registry(original)
+
+    def test_stale_demo_quote_is_rejected_in_production(self) -> None:
+        import pytest
+
+        service = MarketService(
+            _settings(demo_mode=False, market_provider_max_attempts=1)
+        )
+        original = _patch_registry(
+            {"fake_primary": lambda: _FakePrimary(price=None)}
+        )
+        try:
+            service._cache.set(
+                Quote(
+                    ticker="ZZZZ",
+                    provider="demo",
+                    price=1.0,
+                    quote_time=datetime.now(UTC),
+                )
+            )
+            with pytest.raises(ProviderUnavailableError):
+                service.get_market_data("ZZZZ")
+        finally:
+            _restore_registry(original)
+
+    def test_demo_mode_serves_demo_data_through_explicit_path(self) -> None:
+        service = MarketService(_settings(demo_mode=True, environment="test"))
+        try:
+            providers = service._provider_chain()
+            assert [provider.name for provider in providers] == ["demo"]
+            data = service.get_market_data("AAPL")
+            assert data.provider == "demo"
+        finally:
+            from app.ingestion.services import market_service as ms_module
+
+            ms_module._REGISTRY.pop("demo", None)
+            service._cache.clear()
+
+
 class TestFmpProviderParsing:
     def _make(self, response):
-        from unittest.mock import patch
         provider = FmpProvider(_settings())
         provider._api_key = "test-key"
         return provider, response
     def test_parses_list_response(self) -> None:
-        from unittest.mock import MagicMock, patch
-        from io import BytesIO
         import json
+        from io import BytesIO
+        from unittest.mock import MagicMock, patch
         aapl = {
             "symbol": "AAPL",
             "price": 178.72,
@@ -186,9 +365,9 @@ class TestFmpProviderParsing:
             return
         raise AssertionError("Missing API key should raise ProviderUnavailableError")
     def test_error_message_raises_provider_error(self) -> None:
-        from unittest.mock import MagicMock, patch
-        from io import BytesIO
         import json
+        from io import BytesIO
+        from unittest.mock import MagicMock, patch
         raw = BytesIO(
             json.dumps({"Error Message": "Invalid API key"}).encode()
         )

@@ -1,4 +1,6 @@
 from app.financial.health import FinancialHealth
+
+
 def test_excellent():
     score = FinancialHealth.score(
         piotroski=9,
@@ -7,6 +9,8 @@ def test_excellent():
     )
     assert score == 100
     assert FinancialHealth.rating(score) == "EXCELLENT"
+
+
 def test_good():
     score = FinancialHealth.score(
         piotroski=6,
@@ -15,6 +19,8 @@ def test_good():
     )
     assert score == 75
     assert FinancialHealth.rating(score) == "GOOD"
+
+
 def test_fair():
     score = FinancialHealth.score(
         piotroski=4,

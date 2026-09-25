@@ -1,15 +1,19 @@
 from __future__ import annotations
+
 from app.agents.analysis_result import AnalysisResult
 from app.financial.data import FinancialDataService
 from app.financial.ratio_engine import RatioEngine
+
+
 class QuantAgent:
     def __init__(self) -> None:
         self.ratio_engine = RatioEngine()
         self.financial_data = FinancialDataService()
+
     def analyze(
         self,
         company: str,
-    ) -> AnalysisResult:
+    ) -> AnalysisResult | None:
         ticker = company.upper()
         data = self.financial_data.load(ticker)
         statement = data.statement
@@ -25,6 +29,8 @@ class QuantAgent:
             operating_income=statement.operating_income,
             net_income=statement.net_income,
         )
+        if ratios is None:
+            return None
         metrics = {
             "current_ratio": ratios.current_ratio,
             "debt_to_equity": ratios.debt_to_equity,

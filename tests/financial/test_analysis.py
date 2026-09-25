@@ -1,5 +1,7 @@
 from app.financial.analysis import FinancialAnalysisEngine
 from app.financial.models import FinancialStatement
+
+
 def test_analysis_engine():
     statement = FinancialStatement(
         revenue=1000,

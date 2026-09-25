@@ -1,4 +1,5 @@
 from .altman import AltmanZScore
+from .analysis import AnalysisResult, FinancialAnalysisEngine
 from .beneish import BeneishMScore
 from .dcf import DCFValuation
 from .growth import GrowthMetrics
@@ -8,8 +9,7 @@ from .piotroski import Piotroski
 from .ratios import FinancialRatios
 from .valuation import ValuationEngine
 from .wacc import WACC
-from .analysis import AnalysisResult
-from .analysis import FinancialAnalysisEngine
+
 __all__ = [
     "AltmanZScore",
     "BeneishMScore",
@@ -23,5 +23,5 @@ __all__ = [
     "ValuationResult",
     "WACC",
     "AnalysisResult",
-"FinancialAnalysisEngine",
+    "FinancialAnalysisEngine",
 ]

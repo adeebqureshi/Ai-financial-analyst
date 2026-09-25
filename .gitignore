@@ -49,6 +49,13 @@ storage/logs/
 *.db-wal
 *.db-shm
 data/
+# ...but the application package under app/ must stay tracked, otherwise
+# security-critical code such as app/data/sec_http.py (the centralized SEC
+# HTTP gateway) would never be committed.
+!app/data/
+!app/data/**
+__pycache__/
+*.py[cod]
 
 # Playwright
 playwright-report/

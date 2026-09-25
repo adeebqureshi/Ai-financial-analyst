@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
+
 from app.financial.health import FinancialHealth
 from app.financial.models import FinancialStatement
-from app.financial.piotroski import Piotroski
-from app.financial.altman import AltmanZScore
-from app.financial.beneish import BeneishMScore
 from app.financial.valuation import ValuationEngine
+
+
 @dataclass(slots=True)
 class AnalysisResult:
     intrinsic_value: float
@@ -16,9 +17,12 @@ class AnalysisResult:
     beneish_score: float
     health_score: int
     health_rating: str
+
+
 class FinancialAnalysisEngine:
     def __init__(self):
         self.valuation = ValuationEngine()
+
     def analyze(
         self,
         statement: FinancialStatement,
@@ -34,7 +38,7 @@ class FinancialAnalysisEngine:
         piotroski_score: int = 0,
         altman_score: float = 0.0,
         beneish_score: float = 0.0,
-    ) -> AnalysisResult:
+    ) -> AnalysisResult | None:
         valuation = self.valuation.evaluate(
             statement=statement,
             current_price=current_price,
@@ -47,6 +51,9 @@ class FinancialAnalysisEngine:
             terminal_growth=terminal_growth,
             years=years,
         )
+        if valuation is None:
+            return None
+
         health = FinancialHealth.score(
             piotroski_score,
             altman_score,
@@ -60,7 +67,5 @@ class FinancialAnalysisEngine:
             altman_score=altman_score,
             beneish_score=beneish_score,
             health_score=health,
-            health_rating=FinancialHealth.rating(
-                health
-            ),
+            health_rating=FinancialHealth.rating(health),
         )

@@ -1,5 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
+
+
 @dataclass(slots=True)
 class FinancialStatement:
     revenue: float
@@ -14,6 +17,8 @@ class FinancialStatement:
     gross_profit: float = 0.0
     current_assets: float = 0.0
     current_liabilities: float = 0.0
+
+
 @dataclass(slots=True)
 class ValuationResult:
     intrinsic_value: float

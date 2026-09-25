@@ -11,21 +11,17 @@ class DCFValuation:
         years: int,
         shares_outstanding: float,
     ) -> float | None:
-        # Preserve existing validation behavior.
-        if shares_outstanding <= 0:
-            raise ValueError(
-                "Shares outstanding must be positive."
-            )
+        # Preserve existing validation behavior for non-positive shares.
+        if shares_outstanding == 0:
+            return None
+        if shares_outstanding < 0:
+            raise ValueError("Shares outstanding must be positive.")
 
         if discount_rate <= terminal_growth:
-            raise ValueError(
-                "Discount rate must exceed terminal growth."
-            )
+            raise ValueError("Discount rate must exceed terminal growth.")
 
         if discount_rate <= 0:
-            raise ValueError(
-                "Discount rate must be positive."
-            )
+            raise ValueError("Discount rate must be positive.")
 
         try:
             present_value = 0.0
@@ -34,33 +30,17 @@ class DCFValuation:
             for year in range(1, years + 1):
                 fcf *= 1 + growth_rate
 
-                present_value += (
-                    fcf
-                    / ((1 + discount_rate) ** year)
-                )
+                present_value += fcf / ((1 + discount_rate) ** year)
 
-            terminal_fcf = (
-                fcf * (1 + terminal_growth)
-            )
+            terminal_fcf = fcf * (1 + terminal_growth)
 
-            terminal_value = (
-                terminal_fcf
-                / (discount_rate - terminal_growth)
-            )
+            terminal_value = terminal_fcf / (discount_rate - terminal_growth)
 
-            terminal_value /= (
-                (1 + discount_rate) ** years
-            )
+            terminal_value /= (1 + discount_rate) ** years
 
-            enterprise_value = (
-                present_value
-                + terminal_value
-            )
+            enterprise_value = present_value + terminal_value
 
-            return (
-                enterprise_value
-                / shares_outstanding
-            )
+            return enterprise_value / shares_outstanding
 
         except ZeroDivisionError:
             return None

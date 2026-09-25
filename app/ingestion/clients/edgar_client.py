@@ -7,18 +7,25 @@ from typing import Any
 from edgar import Company
 
 from app.core.config import settings
-from app.data.sec_edgar import SECRateLimiter
+from app.data.sec_http import (
+    SECRequestGateway,
+    get_sec_gateway,
+    install_edgar_sec_enforcement,
+)
 from app.utils.tickers import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
 
 class EdgarClient:
-    """
-    Client for interacting with SEC EDGAR through edgartools.
+    """Client for interacting with SEC EDGAR through edgartools.
 
-    All operations that can trigger SEC EDGAR network requests are
-    protected by the distributed Redis-backed SEC rate limiter.
+    edgartools performs its own HTTP I/O with its own transport and internal
+    retries. Instead of relying on a "acquire before the call" convention, this
+    client binds edgartools' HTTP transport - and its two raw httpx helpers -
+    to the centralized SEC gateway limiter. Every EDGAR request, including
+    edgartools' internal retries, is therefore admitted by the same
+    distributed Redis-enforced rate limiter as every other SEC client.
     """
 
     def __init__(self) -> None:
@@ -29,24 +36,30 @@ class EdgarClient:
 
         os.environ["EDGAR_IDENTITY"] = settings.edgar_identity
 
-        # Shared Redis-backed token bucket.
-        #
-        # The limiter is intentionally created once per EdgarClient and
-        # uses a Redis key shared by all application workers.
-        self._sec_rate_limiter = SECRateLimiter()
+        # Fail closed: building the gateway requires a reachable Redis.
+        self._sec_gateway: SECRequestGateway = get_sec_gateway()
 
-        logger.info("EdgarClient initialized.")
+        # The one shared distributed limiter (same Redis key as every other
+        # SEC client in this repository). Exposed for backwards compatibility.
+        self._sec_rate_limiter = self._sec_gateway.limiter
+
+        if not install_edgar_sec_enforcement(self._sec_gateway):
+            raise RuntimeError(
+                "Could not bind edgartools to the centralized SEC gateway; "
+                "refusing to make unthrottled SEC requests."
+            )
+
+        logger.info("EdgarClient initialized with centralized SEC enforcement.")
 
     def get_company(
         self,
         ticker: str,
     ) -> Company:
-        """
-        Create an edgartools Company instance for a ticker.
+        """Create an edgartools Company instance for a ticker.
 
-        Company construction itself is kept separate from the rate-limited
-        EDGAR operations. The actual filing retrieval is protected in
-        get_filings().
+        Constructing an edgartools ``Company`` can trigger an EDGAR network
+        request, which is why the edgartools transport is bound to the
+        centralized gateway before any EDGAR call happens.
         """
 
         logger.info("Fetching company: %s", ticker)
@@ -59,11 +72,10 @@ class EdgarClient:
         form: str = "10-K",
         limit: int = 5,
     ) -> Any:
-        """
-        Fetch SEC filings for a company.
+        """Fetch SEC filings for a company.
 
-        The SEC rate limiter is acquired immediately before the EDGAR
-        filing request.
+        ``company.get_filings()`` performs an EDGAR request; it goes through
+        the centralized gateway limiter bound in ``__init__``.
         """
 
         logger.info(
@@ -73,9 +85,6 @@ class EdgarClient:
         )
 
         company = self.get_company(ticker)
-
-        # company.get_filings() can perform an SEC EDGAR network request.
-        self._sec_rate_limiter.acquire()
 
         filings = company.get_filings(
             form=form,
@@ -87,19 +96,15 @@ class EdgarClient:
         self,
         filing,
     ) -> str:
-        """
-        Download the HTML contents of a filing.
+        """Download the HTML contents of a filing.
 
-        The SEC rate limiter is acquired immediately before the network
-        operation.
+        ``filing.html()`` performs EDGAR requests; they go through the
+        centralized gateway limiter bound in ``__init__``.
         """
 
         logger.info(
             "Downloading filing %s",
             filing.accession_number,
         )
-
-        # filing.html() can perform an SEC EDGAR network request.
-        self._sec_rate_limiter.acquire()
 
         return filing.html()

@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from app.financial.altman import AltmanZScore
 from app.financial.beneish import BeneishMScore
+
+
 class FinancialHealth:
     @staticmethod
     def score(
@@ -28,6 +31,7 @@ class FinancialHealth:
         else:
             score += 5
         return score
+
     @staticmethod
     def rating(
         score: int,
