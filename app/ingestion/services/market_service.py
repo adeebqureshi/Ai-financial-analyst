@@ -1,5 +1,8 @@
 from __future__ import annotations
+
+import os
 import time
+
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.enums.exchange import Exchange
@@ -14,100 +17,205 @@ from app.ingestion.providers.fmp_provider import FmpProvider
 from app.ingestion.providers.yahoo_provider import YahooProvider
 from app.models.market import MarketData
 from app.utils.tickers import normalize_ticker
+
 logger = get_logger(__name__)
+
 _RATE_LIMIT_BACKOFF_SECONDS = 2.0
 _MAX_BACKOFF_SECONDS = 4.0
+
 _REGISTRY: dict[str, type[MarketDataProvider]] = {
     YahooProvider.name: YahooProvider,
     FmpProvider.name: FmpProvider,
 }
+
 _demo_provider_cls: type[MarketDataProvider] | None = None
+
+
+def _is_production() -> bool:
+    return os.getenv("ENV", "").strip().lower() == "production"
+
+
 def _get_demo_provider_cls() -> type[MarketDataProvider]:
+    if _is_production():
+        raise RuntimeError(
+            "Demo market provider is forbidden when ENV=production."
+        )
+
     global _demo_provider_cls
+
     if _demo_provider_cls is None:
         from app.demo.providers.demo_market_provider import DemoMarketProvider
+
         _demo_provider_cls = DemoMarketProvider
+
     return _demo_provider_cls
+
+
 def _register_demo_provider() -> None:
+    if _is_production():
+        raise RuntimeError(
+            "Demo market provider cannot be registered when ENV=production."
+        )
+
     _REGISTRY["demo"] = _get_demo_provider_cls()
+
+
 class MarketService:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
+
         self._cache = MarketQuoteCache(
             ttl_seconds=self._settings.market_quote_ttl_seconds,
             stale_seconds=self._settings.market_cache_stale_seconds,
             max_entries=self._settings.market_cache_max_entries,
             backend=self._settings.market_cache_backend,
         )
+
     def _provider_chain(self) -> list[MarketDataProvider]:
         settings = self._settings
-        if settings.is_demo_mode:
-            _register_demo_provider()
-            names: list[str] = ["demo"]
-        else:
-            names: list[str] = [settings.market_primary_provider.strip().lower()]
+
+        # Production can NEVER use the demo provider,
+        # regardless of is_demo_mode or any other configuration.
+        if _is_production():
+            names: list[str] = [
+                settings.market_primary_provider.strip().lower()
+            ]
+
             if settings.market_fallback_enabled:
                 for name in settings.market_fallback_providers.split(","):
                     name = name.strip().lower()
+
+                    if name and name != "demo" and name not in names:
+                        names.append(name)
+
+            # Explicitly remove demo even if configured as the primary provider.
+            names = [name for name in names if name != "demo"]
+
+        elif settings.is_demo_mode:
+            _register_demo_provider()
+            names = ["demo"]
+
+        else:
+            names = [
+                settings.market_primary_provider.strip().lower()
+            ]
+
+            if settings.market_fallback_enabled:
+                for name in settings.market_fallback_providers.split(","):
+                    name = name.strip().lower()
+
                     if name and name not in names:
                         names.append(name)
+
         providers: list[MarketDataProvider] = []
+
         for name in names:
             provider_cls = _REGISTRY.get(name)
+
             if provider_cls is None:
-                logger.warning("Unknown market provider '%s' skipped", name)
+                logger.warning(
+                    "Unknown market provider '%s' skipped",
+                    name,
+                )
                 continue
+
+            # Final defense-in-depth check.
+            if _is_production() and provider_cls.name == "demo":
+                logger.error(
+                    "Blocked demo market provider in production."
+                )
+                continue
+
             providers.append(provider_cls())
+
         return providers
+
     def _attempt_provider(
         self,
         provider: MarketDataProvider,
         ticker: str,
     ) -> MarketData:
-        attempts = max(int(self._settings.market_provider_max_attempts), 1)
-        timeout = float(self._settings.market_provider_timeout_seconds)
+        attempts = max(
+            int(self._settings.market_provider_max_attempts),
+            1,
+        )
+
+        timeout = float(
+            self._settings.market_provider_timeout_seconds
+        )
+
         last_error: Exception | None = None
+
         for attempt in range(1, attempts + 1):
             try:
-                quote = provider.fetch_quote(ticker, timeout_seconds=timeout)
+                quote = provider.fetch_quote(
+                    ticker,
+                    timeout_seconds=timeout,
+                )
+
                 self._cache.set(quote)
+
                 logger.info(
                     "Market quote fetched: provider=%s ticker=%s cache=%s",
                     provider.name,
                     ticker,
                     self._cache.backend_name(),
                 )
+
                 return self._to_market_data(quote)
+
             except ProviderRateLimitError as exc:
                 last_error = exc
+
                 logger.warning(
-                    "Provider rate limited: provider=%s ticker=%s attempt=%d/%d",
+                    "Provider rate limited: provider=%s ticker=%s "
+                    "attempt=%d/%d",
                     provider.name,
                     ticker,
                     attempt,
                     attempts,
                 )
+
                 if attempt < attempts:
-                    time.sleep(min(_RATE_LIMIT_BACKOFF_SECONDS, _MAX_BACKOFF_SECONDS))
+                    time.sleep(
+                        min(
+                            _RATE_LIMIT_BACKOFF_SECONDS,
+                            _MAX_BACKOFF_SECONDS,
+                        )
+                    )
+
             except ProviderError as exc:
                 last_error = exc
+
                 logger.warning(
-                    "Provider error: provider=%s ticker=%s attempt=%d/%d error=%s",
+                    "Provider error: provider=%s ticker=%s "
+                    "attempt=%d/%d error=%s",
                     provider.name,
                     ticker,
                     attempt,
                     attempts,
                     exc,
                 )
+
                 if attempt < attempts:
-                    time.sleep(min(0.5 * attempt, _MAX_BACKOFF_SECONDS))
+                    time.sleep(
+                        min(
+                            0.5 * attempt,
+                            _MAX_BACKOFF_SECONDS,
+                        )
+                    )
+
         raise ProviderUnavailableError(
             f"Provider '{provider.name}' failed for {ticker}: {last_error}"
         ) from last_error
+
     def get_market_data(self, ticker: str) -> MarketData:
         ticker = normalize_ticker(ticker)
+
         started = time.perf_counter()
+
         cached = self._cache.get(ticker)
+
         if cached is not None:
             logger.info(
                 "Market quote cache hit: provider=%s ticker=%s backend=%s",
@@ -115,37 +223,60 @@ class MarketService:
                 ticker,
                 self._cache.backend_name(),
             )
-            return self._to_market_data(cached, cached=True)
+
+            return self._to_market_data(
+                cached,
+                cached=True,
+            )
+
         providers = self._provider_chain()
+
         last_error: Exception | None = None
+
         for provider in providers:
             try:
-                return self._attempt_provider(provider, ticker)
+                return self._attempt_provider(
+                    provider,
+                    ticker,
+                )
+
             except ProviderError as exc:
                 last_error = exc
+
                 logger.warning(
-                    "Provider chain advancing: provider=%s ticker=%s reason=%s",
+                    "Provider chain advancing: provider=%s "
+                    "ticker=%s reason=%s",
                     provider.name,
                     ticker,
                     exc,
                 )
+
         stale = self._cache.get_stale(ticker)
+
         if stale is not None:
             logger.warning(
                 "Serving stale market quote: provider=%s ticker=%s",
                 stale.provider,
                 ticker,
             )
-            return self._to_market_data(stale, cached=True, stale=True)
+
+            return self._to_market_data(
+                stale,
+                cached=True,
+                stale=True,
+            )
+
         logger.warning(
             "Market data unavailable: ticker=%s duration_ms=%.0f error=%s",
             ticker,
             (time.perf_counter() - started) * 1000,
             last_error,
         )
+
         raise ProviderUnavailableError(
             f"No market data available for {ticker}: {last_error}"
         ) from last_error
+
     @staticmethod
     def _to_market_data(
         quote,
@@ -153,13 +284,17 @@ class MarketService:
         cached: bool = False,
         stale: bool = False,
     ) -> MarketData:
-        exchange_name = str(quote.exchange or "").upper()
+        exchange_name = str(
+            quote.exchange or ""
+        ).upper()
+
         if "NYSE" in exchange_name:
             exchange = Exchange.NYSE
         elif "NASDAQ" in exchange_name:
             exchange = Exchange.NASDAQ
         else:
             exchange = Exchange.OTHER
+
         return MarketData(
             ticker=quote.ticker.upper(),
             exchange=exchange,

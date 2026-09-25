@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+
 class WACC:
     @staticmethod
     def calculate(
@@ -7,31 +9,53 @@ class WACC:
         cost_of_equity: float,
         cost_of_debt: float,
         tax_rate: float,
-    ) -> float:
+    ) -> float | None:
+        if equity < 0:
+            raise ValueError(
+                "Total capital must be positive"
+            )
+
         total_capital = equity + debt
+
         if total_capital <= 0:
             raise ValueError(
-                "Total capital must be positive."
+                "Total capital must be positive"
             )
-        equity_weight = equity / total_capital
-        debt_weight = debt / total_capital
-        return (
-            equity_weight * cost_of_equity
-            + debt_weight * cost_of_debt * (1 - tax_rate)
-        )
+
+        try:
+            equity_weight = equity / total_capital
+            debt_weight = debt / total_capital
+
+            return (
+                equity_weight * cost_of_equity
+                + debt_weight
+                * cost_of_debt
+                * (1 - tax_rate)
+            )
+
+        except ZeroDivisionError:
+            return None
+
     @staticmethod
     def cost_of_equity(
         risk_free_rate: float,
         beta: float,
         market_return: float,
-    ) -> float:
-        return (
-            risk_free_rate
-            + beta * (market_return - risk_free_rate)
-        )
+    ) -> float | None:
+        try:
+            return (
+                risk_free_rate
+                + beta * (market_return - risk_free_rate)
+            )
+        except ZeroDivisionError:
+            return None
+
     @staticmethod
     def after_tax_cost_of_debt(
         cost_of_debt: float,
         tax_rate: float,
-    ) -> float:
-        return cost_of_debt * (1 - tax_rate)
+    ) -> float | None:
+        try:
+            return cost_of_debt * (1 - tax_rate)
+        except ZeroDivisionError:
+            return None

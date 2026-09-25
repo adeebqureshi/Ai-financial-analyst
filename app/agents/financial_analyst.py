@@ -5,15 +5,12 @@ Financial Analyst Agent.
 
 Two responsibilities:
 
-1. **Legacy quantitative analysis** (``analyze``) — wraps the existing
+1. Legacy quantitative analysis (``analyze``) — wraps the existing
    ``FinancialAnalysisEngine``; used by ``FinancialPipeline`` for the
-   ``/analyze`` and ``/report`` endpoints. Unchanged behaviour.
+   ``/analyze`` and ``/report`` endpoints.
 
-2. **Evidence-grounded synthesis** (``synthesize``) — produces the final
-   research answer for the agentic chat pipeline. The model is only ever given
-   structured tool output (real, retrieved data) and the actual retrieved
-   sources. It is explicitly told to never fabricate numbers, page numbers or
-   documents, and to say when evidence is insufficient.
+2. Evidence-grounded synthesis (``synthesize``) — produces the final
+   research answer for the agentic chat pipeline.
 """
 
 from __future__ import annotations
@@ -46,6 +43,9 @@ LLM_UNAVAILABLE_MESSAGE = (
     "timeout, or rate limit). The structured tool results were computed but "
     "could not be summarized."
 )
+
+# Hard safety boundary for retrieved RAG context.
+MAX_RAG_CONTEXT_TOKENS = 100_000
 
 
 class FinancialAnalystAgent:
@@ -92,7 +92,6 @@ class FinancialAnalystAgent:
         altman_score: float,
         beneish_score: float,
     ):
-
         return self.engine.analyze(
             statement=statement,
             current_price=current_price,
@@ -121,17 +120,8 @@ class FinancialAnalystAgent:
         """
         Generate the final research answer from collected tool evidence.
 
-        Args:
-            query: The user question.
-            intents: Detected intents (drives the answer structure).
-            evidence: Tool results keyed by tool name (lists of ToolResult
-                dicts). Only real, executed tool output is included.
-            sources: Retrieved document chunks (with document_id / filename /
-                page). Only actually retrieved chunks are passed.
-            tickers: Tickers referenced by the answer.
-
-        Returns:
-            A ``(answer_text, model_name)`` tuple.
+        Retrieved RAG context is hard-limited to 100,000 tokens before it is
+        placed into the synthesis prompt.
         """
         if not evidence:
             return INSUFFICIENT_EVIDENCE_MESSAGE, None
@@ -142,7 +132,9 @@ class FinancialAnalystAgent:
             default=str,
         )
 
-        sources_block = _format_sources(sources)
+        sources_block = _format_sources(
+            _truncate_sources(sources)
+        )
 
         prompt = _build_synthesis_prompt(
             query=query,
@@ -154,9 +146,12 @@ class FinancialAnalystAgent:
         )
 
         try:
-            response = self._client.generate(LLMRequest(prompt=prompt))
+            response = self._client.generate(
+                LLMRequest(prompt=prompt),
+            )
         except LLMError as exc:
             import traceback
+
             logger.error(
                 "LLM synthesis FULL ERROR for query %s: %s\n%s",
                 query[:120],
@@ -164,8 +159,10 @@ class FinancialAnalystAgent:
                 traceback.format_exc(),
             )
             return LLM_UNAVAILABLE_MESSAGE, None
+
         except Exception as exc:
             import traceback
+
             logger.error(
                 "LLM synthesis UNEXPECTED ERROR: %s\n%s",
                 exc,
@@ -176,7 +173,7 @@ class FinancialAnalystAgent:
         return response.text, getattr(response, "model", None)
 
     # ──────────────────────────────────────────────────────────────────
-    # Streaming evidence-grounded synthesis (agentic chat pipeline)
+    # Streaming evidence-grounded synthesis
     # ──────────────────────────────────────────────────────────────────
 
     async def stream_synthesize(
@@ -190,20 +187,8 @@ class FinancialAnalystAgent:
         """
         Stream the final research answer token-by-token.
 
-        Shares the exact prompt contract with :meth:`synthesize` so the
-        streamed answer is identical to the non-streamed one. On LLM failure
-        the graceful ``LLM_UNAVAILABLE_MESSAGE`` is yielded and nothing
-        sensitive is logged.
-
-        Args:
-            query: The user question.
-            intents: Detected intents (drives the answer structure).
-            evidence: Tool results keyed by tool name.
-            sources: Retrieved document chunks.
-            tickers: Tickers referenced by the answer.
-
-        Yields:
-            Progressive text deltas of the synthesized answer.
+        Retrieved RAG context is hard-limited to 100,000 tokens before it is
+        placed into the synthesis prompt.
         """
         if not evidence:
             yield INSUFFICIENT_EVIDENCE_MESSAGE
@@ -215,7 +200,9 @@ class FinancialAnalystAgent:
             default=str,
         )
 
-        sources_block = _format_sources(sources)
+        sources_block = _format_sources(
+            _truncate_sources(sources)
+        )
 
         prompt = _build_synthesis_prompt(
             query=query,
@@ -227,8 +214,11 @@ class FinancialAnalystAgent:
         )
 
         try:
-            async for token in self.ensure_async_client().stream(LLMRequest(prompt=prompt)):
+            async for token in self.ensure_async_client().stream(
+                LLMRequest(prompt=prompt)
+            ):
                 yield token
+
         except LLMError as exc:
             import traceback
 
@@ -239,6 +229,7 @@ class FinancialAnalystAgent:
                 traceback.format_exc(),
             )
             yield LLM_UNAVAILABLE_MESSAGE
+
         except Exception as exc:
             import traceback
 
@@ -251,9 +242,11 @@ class FinancialAnalystAgent:
             yield LLM_UNAVAILABLE_MESSAGE
 
 
-def _normalize_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
+def _normalize_evidence(
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
     """
-    Convert collected ``ToolResult`` objects into plain JSON-able structures.
+    Convert collected ToolResult objects into plain JSON-able structures.
     """
     normalized: dict[str, Any] = {}
 
@@ -264,13 +257,15 @@ def _normalize_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
             if isinstance(result, dict):
                 items.append(result)
             else:
-                items.append({
-                    "tool": getattr(result, "tool", tool),
-                    "status": getattr(result, "status", "error"),
-                    "detail": getattr(result, "detail", ""),
-                    "result": getattr(result, "result", None),
-                    "error": getattr(result, "error", None),
-                })
+                items.append(
+                    {
+                        "tool": getattr(result, "tool", tool),
+                        "status": getattr(result, "status", "error"),
+                        "detail": getattr(result, "detail", ""),
+                        "result": getattr(result, "result", None),
+                        "error": getattr(result, "error", None),
+                    }
+                )
 
         if items:
             normalized[tool] = items
@@ -278,17 +273,168 @@ def _normalize_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _format_sources(sources: list[dict[str, Any]]) -> str:
+def _source_text(source: dict[str, Any]) -> str:
+    """
+    Extract the actual retrieved text from a source.
+
+    Supports the common field names used by retrieval pipelines.
+    """
+    for key in (
+        "text",
+        "content",
+        "chunk",
+        "page_content",
+        "document",
+    ):
+        value = source.get(key)
+
+        if value is not None:
+            return str(value)
+
+    return ""
+
+
+def _estimate_tokens(text: str) -> int:
+    """
+    Estimate tokens using the project's tokenizer when available.
+
+    Falls back to whitespace counting so the hard boundary still works even
+    if the tokenizer module cannot be imported.
+    """
+    if not text:
+        return 0
+
+    try:
+        from app.llm.tokenizer import Tokenizer
+
+        return Tokenizer.count(text)
+    except Exception:
+        return len(text.split())
+
+
+def _truncate_text_to_tokens(
+    text: str,
+    max_tokens: int,
+) -> str:
+    """
+    Hard-limit text to the requested token budget.
+
+    The project's Tokenizer currently counts whitespace-separated tokens, so
+    truncation is performed using the same representation.
+    """
+    if max_tokens <= 0:
+        return ""
+
+    if _estimate_tokens(text) <= max_tokens:
+        return text
+
+    words = text.split()
+
+    return " ".join(words[:max_tokens])
+
+
+def _truncate_sources(
+    sources: list[dict[str, Any]],
+    max_tokens: int = MAX_RAG_CONTEXT_TOKENS,
+) -> list[dict[str, Any]]:
+    """
+    Apply a hard 100,000-token limit to retrieved RAG context.
+
+    Sources are preserved in retrieval order. Complete sources are retained
+    whenever possible. If the final source exceeds the remaining budget, only
+    its text is truncated.
+
+    Metadata such as filename and page is retained so citations remain
+    meaningful.
+    """
+    if max_tokens <= 0 or not sources:
+        return []
+
+    truncated: list[dict[str, Any]] = []
+    remaining = max_tokens
+
+    for source in sources:
+        if remaining <= 0:
+            break
+
+        copied = dict(source)
+        text = _source_text(copied)
+
+        if not text:
+            # Metadata-only source consumes no RAG token budget.
+            truncated.append(copied)
+            continue
+
+        text_tokens = _estimate_tokens(text)
+
+        if text_tokens <= remaining:
+            truncated.append(copied)
+            remaining -= text_tokens
+            continue
+
+        copied_text = _truncate_text_to_tokens(
+            text,
+            remaining,
+        )
+
+        if copied_text:
+            copied["text"] = copied_text
+
+            # Remove alternate content fields so the same text cannot
+            # accidentally be included twice downstream.
+            for key in (
+                "content",
+                "chunk",
+                "page_content",
+                "document",
+            ):
+                if key != "text":
+                    copied.pop(key, None)
+
+            truncated.append(copied)
+
+        remaining = 0
+
+    original_tokens = sum(
+        _estimate_tokens(_source_text(source))
+        for source in sources
+    )
+
+    used_tokens = max_tokens - remaining
+
+    if original_tokens > max_tokens:
+        logger.warning(
+            "RAG context truncated: original_tokens=%d "
+            "limit=%d retained_tokens=%d sources=%d retained_sources=%d",
+            original_tokens,
+            max_tokens,
+            used_tokens,
+            len(sources),
+            len(truncated),
+        )
+
+    return truncated
+
+
+def _format_sources(
+    sources: list[dict[str, Any]],
+) -> str:
     lines: list[str] = []
 
     for source in sources:
         filename = source.get("filename") or "Unknown document"
         page = source.get("page")
+        text = _source_text(source)
 
         if page is not None:
-            lines.append(f"- {filename} (page {page})")
+            header = f"- {filename} (page {page})"
         else:
-            lines.append(f"- {filename}")
+            header = f"- {filename}"
+
+        if text:
+            lines.append(f"{header}\n{text}")
+        else:
+            lines.append(header)
 
     return "\n".join(lines)
 
@@ -305,17 +451,24 @@ def _build_synthesis_prompt(
 
     sections: list[str] = []
 
-    sections.append("**Executive Conclusion** — 2-4 sentence verdict")
+    sections.append(
+        "**Executive Conclusion** — 2-4 sentence verdict"
+    )
 
-    if AgentIntent.FINANCIAL_ANALYSIS.value in intent_names or (
-        "get_financials" in evidence or "calculate_ratios" in evidence
+    if (
+        AgentIntent.FINANCIAL_ANALYSIS.value in intent_names
+        or "get_financials" in evidence
+        or "calculate_ratios" in evidence
     ):
         sections.append(
             "**Financial Analysis** — revenue, margins, profitability and "
             "key ratios, using only the numbers in the evidence."
         )
 
-    if AgentIntent.VALUATION.value in intent_names or "calculate_valuation" in evidence:
+    if (
+        AgentIntent.VALUATION.value in intent_names
+        or "calculate_valuation" in evidence
+    ):
         sections.append(
             "**Valuation** — current price, intrinsic value, upside and "
             "what the valuation implies (undervalued/overvalued)."
@@ -327,7 +480,10 @@ def _build_synthesis_prompt(
             "/ Beneish interpretation."
         )
 
-    if "calculate_risk" in evidence or AgentIntent.RISK_ANALYSIS.value in intent_names:
+    if (
+        "calculate_risk" in evidence
+        or AgentIntent.RISK_ANALYSIS.value in intent_names
+    ):
         sections.append(
             "**Risk** — risk level and the key risk signals from the evidence."
         )
@@ -358,10 +514,18 @@ def _build_synthesis_prompt(
         )
 
     section_list = "\n".join(
-        f"{index}. {section}" for index, section in enumerate(sections, start=1)
+        f"{index}. {section}"
+        for index, section in enumerate(
+            sections,
+            start=1,
+        )
     )
 
-    ticker_line = ", ".join(tickers) if tickers else "None detected"
+    ticker_line = (
+        ", ".join(tickers)
+        if tickers
+        else "None detected"
+    )
 
     return f"""You are the final research analyst in an evidence-grounded financial agent.
 
@@ -399,4 +563,5 @@ Tickers referenced: {ticker_line}
 __all__ = [
     "FinancialAnalystAgent",
     "INSUFFICIENT_EVIDENCE_MESSAGE",
+    "MAX_RAG_CONTEXT_TOKENS",
 ]

@@ -21,6 +21,8 @@ INSUFFICIENT_EVIDENCE_MESSAGE = (
     "contained the information."
 )
 
+MAX_RAG_CONTEXT_TOKENS = 100_000
+
 LLM_UNAVAILABLE_MESSAGE = (
     "I could not complete the report synthesis because the language model is "
     "currently unavailable (missing or invalid API key, provider error, "
@@ -461,7 +463,7 @@ class ReportWriterAgent:
         return "\n".join(lines)
 
     def _format_rag_evidence(self, search_results: list[Any], sources: list[dict]) -> str:
-        lines = []
+        """Format retrieved chunks without exceeding the hard RAG context limit."""
         chunks_by_doc: dict[str, list[dict]] = {}
 
         for tr in search_results:
@@ -472,29 +474,49 @@ class ReportWriterAgent:
                 continue
             for chunk in r.get("chunks", []):
                 doc_id = chunk.get("document_id", "unknown")
-                if doc_id not in chunks_by_doc:
-                    chunks_by_doc[doc_id] = []
-                chunks_by_doc[doc_id].append(chunk)
+                chunks_by_doc.setdefault(doc_id, []).append(chunk)
 
         if not chunks_by_doc:
             return ""
 
-        lines.append("**Retrieved Document Evidence:**")
-        lines.append("")
+        lines = ["**Retrieved Document Evidence:**", ""]
+        used_tokens = len(" ".join(lines).split())
 
-        for doc_id, chunks in chunks_by_doc.items():
-            filename = chunks[0].get("filename", "Unknown Document") if chunks else "Unknown Document"
-            lines.append(f"#### {filename}")
-            lines.append("")
+        for chunks in chunks_by_doc.values():
+            if used_tokens >= MAX_RAG_CONTEXT_TOKENS:
+                break
 
-            for chunk in chunks[:3]:  # Limit to top 3 chunks per document
+            filename = (
+                chunks[0].get("filename", "Unknown Document")
+                if chunks
+                else "Unknown Document"
+            )
+            header = f"#### {filename}"
+            header_tokens = len(header.split())
+            if used_tokens + header_tokens <= MAX_RAG_CONTEXT_TOKENS:
+                lines.extend([header, ""])
+                used_tokens += header_tokens + 1
+
+            # Keep the existing top-3-per-document relevance policy, but enforce
+            # a global hard limit across every retrieved document.
+            for chunk in chunks[:3]:
+                if used_tokens >= MAX_RAG_CONTEXT_TOKENS:
+                    break
+
                 page = chunk.get("page")
-                text = chunk.get("text", "")[:500]  # Truncate for report
-                if page:
-                    lines.append(f"> **Page {page}:** {text}...")
-                else:
-                    lines.append(f"> {text}...")
-                lines.append("")
+                text = str(chunk.get("text", ""))[:500]
+                prefix = f"> **Page {page}:** " if page else "> "
+                candidate = f"{prefix}{text}..."
+                candidate_words = candidate.split()
+                remaining = MAX_RAG_CONTEXT_TOKENS - used_tokens
+
+                if len(candidate_words) > remaining:
+                    candidate = " ".join(candidate_words[:remaining])
+                    if not candidate:
+                        break
+
+                lines.extend([candidate, ""])
+                used_tokens += len(candidate.split()) + 1
 
         return "\n".join(lines)
 

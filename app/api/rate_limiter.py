@@ -9,7 +9,6 @@ from typing import Any
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 
-
 logger = get_logger("app.api.rate_limiter")
 
 
@@ -44,26 +43,21 @@ class RateLimiterBackend(ABC):
 
     @abstractmethod
     def increment(self, key: str, window_seconds: int) -> int:
-        """Increment counter for key within window and return new count."""
         raise NotImplementedError
 
     @abstractmethod
     def get(self, key: str) -> int:
-        """Get current count for key."""
         raise NotImplementedError
 
     @abstractmethod
     def reset(self, key: str) -> None:
-        """Reset counter for key."""
         raise NotImplementedError
 
     @abstractmethod
     def health_check(self) -> bool:
-        """Check whether backend is healthy."""
         raise NotImplementedError
 
     def clear_all(self) -> None:
-        """Clear all counters. Optional backend operation."""
         pass
 
 
@@ -379,7 +373,6 @@ class HybridRateLimiter:
             )
 
         backend = self._get_backend()
-
         current_time = _clock()
 
         minute_key = (
@@ -446,7 +439,6 @@ class HybridRateLimiter:
         """Reset the current minute/hour limits for an identifier."""
 
         backend = self._get_backend()
-
         current_time = _clock()
 
         minute_key = (
@@ -511,19 +503,33 @@ def get_endpoint_config(
 
 
 _rate_limiter: HybridRateLimiter | None = None
+_rate_limiter_settings: Settings | None = None
 _rate_limiter_lock = threading.Lock()
 
 
 def get_rate_limiter(
     settings: Settings | None = None,
 ) -> HybridRateLimiter:
-    """Return the singleton rate limiter."""
+    """
+    Return the singleton rate limiter.
+
+    Recreate the singleton when a different Settings instance is supplied.
+    This is important for tests and dependency overrides that provide
+    temporary rate-limit configuration.
+    """
 
     global _rate_limiter
+    global _rate_limiter_settings
+
+    resolved_settings = settings or get_settings()
 
     with _rate_limiter_lock:
-        if _rate_limiter is None:
-            _rate_limiter = HybridRateLimiter(settings)
+        if (
+            _rate_limiter is None
+            or _rate_limiter_settings is not resolved_settings
+        ):
+            _rate_limiter = HybridRateLimiter(resolved_settings)
+            _rate_limiter_settings = resolved_settings
 
         return _rate_limiter
 
@@ -532,6 +538,7 @@ def reset_rate_limiter() -> None:
     """Reset the singleton rate limiter and clear its state."""
 
     global _rate_limiter
+    global _rate_limiter_settings
 
     with _rate_limiter_lock:
         if _rate_limiter is not None:
@@ -542,6 +549,7 @@ def reset_rate_limiter() -> None:
                 pass
 
         _rate_limiter = None
+        _rate_limiter_settings = None
 
 
 def clear_all_rate_limits() -> None:
