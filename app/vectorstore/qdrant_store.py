@@ -163,21 +163,23 @@ class QdrantStore(BaseVectorStore):
         )
 
     @staticmethod
-    def _owner_filter(owner_id: str | None) -> Filter | None:
-        if owner_id is None:
-            return None
-        return Filter(
-            must=[
-                FieldCondition(
-                    key="owner_id",
-                    match=MatchValue(value=owner_id),
-                )
-            ]
+    def _tenant_filter(tenant_id: str) -> FieldCondition:
+        if not isinstance(tenant_id, str) or not tenant_id:
+            raise RetrievalError(
+                "Tenant context is required for document retrieval.",
+                error_code="TENANT_REQUIRED",
+            )
+        return FieldCondition(
+            key="tenant_id",
+            match=MatchValue(value=tenant_id),
         )
 
     @staticmethod
-    def _combined_filter(document_id: str | None, owner_id: str | None) -> Filter | None:
-        filters = []
+    def _combined_filter(
+        document_id: str | None,
+        tenant_id: str,
+    ) -> Filter:
+        filters = [QdrantStore._tenant_filter(tenant_id)]
         if document_id:
             filters.append(
                 FieldCondition(
@@ -185,15 +187,6 @@ class QdrantStore(BaseVectorStore):
                     match=MatchValue(value=document_id),
                 )
             )
-        if owner_id is not None:
-            filters.append(
-                FieldCondition(
-                    key="owner_id",
-                    match=MatchValue(value=owner_id),
-                )
-            )
-        if not filters:
-            return None
         return Filter(must=filters)
 
     def upsert(
@@ -275,13 +268,14 @@ class QdrantStore(BaseVectorStore):
     def delete_by_document_id(
         self,
         document_id: str,
+        owner_id: str | None = None,
     ) -> None:
         self._call(
             "delete_by_document_id",
             self.client.delete,
             collection_name=self.collection_name,
             points_selector=FilterSelector(
-                filter=self._document_filter(document_id),
+                filter=self._combined_filter(document_id, owner_id),
             ),
         )
 
@@ -290,13 +284,12 @@ class QdrantStore(BaseVectorStore):
         limit: int = 10_000,
         owner_id: str | None = None,
     ):
-        query_filter = self._owner_filter(owner_id)
         points, _ = self._call(
             "get_all",
             self.client.scroll,
             collection_name=self.collection_name,
             limit=limit,
-            scroll_filter=query_filter,
+            scroll_filter=self._combined_filter(None, owner_id),
         )
         return points
 

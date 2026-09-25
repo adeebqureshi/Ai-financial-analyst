@@ -1,16 +1,22 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
+
+
 @dataclass(slots=True)
 class WorkflowState:
     query: str
     data: dict[str, object] = field(default_factory=dict)
     completed: list[str] = field(default_factory=list)
+    depth: int = 0
+
     def set(
         self,
         key: str,
         value: object,
     ) -> None:
         self.data[key] = value
+
     def get(
         self,
         key: str,
@@ -20,6 +26,7 @@ class WorkflowState:
             key,
             default,
         )
+
     def finish(
         self,
         node: str,

@@ -68,10 +68,15 @@ async def report(
         )
         return JSONResponse(status_code=502, content=response.model_dump(mode="json"))
         
-    except Exception as exc:  # noqa: BLE001 - convert unknowns to safe payload
-        logger.exception("Report generation failed for %s: %s", payload.ticker, exc)
+    except Exception:
+        logger.exception("Unexpected report generation failure for %s", payload.ticker)
         response = APIResponse.error_response(
-            message=f"Report generation failed for {payload.ticker}: {exc}",
-            errors=[ErrorDetail(message=str(exc) or exc.__class__.__name__, code="REPORT_FAILED")],
+            message="An unexpected internal error occurred.",
+            errors=[
+                ErrorDetail(
+                    message="An unexpected internal error occurred.",
+                    code="INTERNAL_SERVER_ERROR",
+                )
+            ],
         )
         return JSONResponse(status_code=500, content=response.model_dump(mode="json"))

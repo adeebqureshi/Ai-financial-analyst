@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+
+import { Component, type ErrorInfo, type ReactNode, useRef, useState } from "react";
 import { Check, Copy, FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,47 @@ type Props = {
   report: string;
 };
 
-/**
- * Rendered investment report.
- *
- * Uses the shared {@link Markdown} renderer so generated reports match the chat
- * transcript exactly (the previous `prose` classes had no effect because the
- * Tailwind typography plugin is not installed).
- */
-export function ReportViewer({ report }: Props) {
+type ReportErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class ReportErrorBoundary extends Component<
+  { children: ReactNode },
+  ReportErrorBoundaryState
+> {
+  state: ReportErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ReportErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[report-viewer] report rendering failed", error, errorInfo);
+  }
+
+  private retry = () => {
+    this.setState({ hasError: false });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card role="alert">
+          <CardBody className="space-y-4">
+            <p>Unable to display this report.</p>
+            <Button type="button" variant="secondary" onClick={this.retry}>
+              Try again
+            </Button>
+          </CardBody>
+        </Card>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function ReportViewerContent({ report }: Props) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<number | null>(null);
 
@@ -68,5 +102,13 @@ export function ReportViewer({ report }: Props) {
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+export function ReportViewer({ report }: Props) {
+  return (
+    <ReportErrorBoundary>
+      <ReportViewerContent report={report} />
+    </ReportErrorBoundary>
   );
 }

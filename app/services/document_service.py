@@ -292,7 +292,8 @@ class DocumentService:
                     "parser_used": result.parser_used,
                     "tables": tables_by_page.get(page, []),
                     "transaction_time": transaction_time.isoformat(),
-                    "owner_id": owner_id or "",
+                    "owner_id": owner_id or "anonymous",
+                    "tenant_id": owner_id or "anonymous",
                 }
             )
 
@@ -313,7 +314,7 @@ class DocumentService:
             "owner_id": owner_id,
         }
         self._save_record(record)
-        self.refresh_engine()
+        self.refresh_engine(owner_id or "anonymous")
         logger.info(
             "Indexed document %s (%d pages, %d chunks, %d tables, %s)",
             document_id,
@@ -467,15 +468,18 @@ class DocumentService:
     ) -> dict:
         with _delete_lock:
             self._load_owned_record(document_id, owner_id)
-            self._store.delete_by_document_id(document_id)
+            self._store.delete_by_document_id(
+                document_id,
+                owner_id=owner_id or "anonymous",
+            )
             FileManager.delete(self._record_path(document_id))
-            self.refresh_engine()
+            self.refresh_engine(owner_id)
         logger.info("Deleted document %s", document_id)
         return {"document_id": document_id}
 
-    def refresh_engine(self) -> None:
+    def refresh_engine(self, owner_id: str | None = None) -> None:
         try:
-            self._engine.refresh(self._store)
+            self._engine.refresh(self._store, owner_id=owner_id)
         except Exception as exc:
             logger.warning("Failed to refresh retrieval engine: %s", exc)
 
@@ -495,7 +499,7 @@ class DocumentService:
                     ticker = parts[1]
             return _build_demo_retrieval_context(query, ticker, limit)
 
-        self.refresh_engine()
+        self.refresh_engine(owner_id or "anonymous")
         if document_id is not None:
             try:
                 self._load_owned_record(document_id, owner_id)
@@ -511,5 +515,5 @@ class DocumentService:
             limit=limit,
             document_id=document_id,
             as_of_date=as_of_date,
-            owner_id=owner_id,
+            owner_id=owner_id or "anonymous",
         )

@@ -218,7 +218,7 @@ def test_upload_preserves_financial_table_structure(monkeypatch, tmp_path):
     )
     assert record["tables"] == 1
     assert record["parser_used"] == "pymupdf"
-    points = service._store.get_all()
+    points = service._store.get_all(owner_id="anonymous")
     table_payloads = [
         table
         for point in points
@@ -254,7 +254,7 @@ def test_upload_keeps_page_and_parser_metadata(monkeypatch, tmp_path):
             ]
         ),
     )
-    points = service._store.get_all()
+    points = service._store.get_all(owner_id="anonymous")
     payloads = [point.payload for point in points]
     assert all(payload.get("parser_used") == "pymupdf" for payload in payloads)
     assert all(payload.get("source", "").startswith("Apple 10-K.pdf:page-") for payload in payloads)

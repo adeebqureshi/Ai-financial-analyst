@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from starlette.requests import ClientDisconnect
 from typing import TYPE_CHECKING, Any
 from app.agents.financial_analyst import INSUFFICIENT_EVIDENCE_MESSAGE
 from app.chat.cache import ChatSessionCache
@@ -212,19 +213,28 @@ class ChatService:
             request.session_id,
         )
         done_payload: dict[str, Any] | None = None
+
+        stream = self._coordinator.stream_run(
+            query=request.message,
+            ticker=request.ticker,
+            document_id=request.document_id,
+            session_id=request.session_id,
+            owner_id=owner_id,
+        )
         try:
-            async for event in self._coordinator.stream_run(
-                query=request.message,
-                ticker=request.ticker,
-                document_id=request.document_id,
-                session_id=request.session_id,
-                owner_id=owner_id,
-            ):
+            async for event in stream:
                 frame = dict(event)
                 event_type = frame.pop("type", "message")
                 if event_type == "done":
                     done_payload = frame
                 yield _format_sse(event_type, frame)
+        except ClientDisconnect:
+            # A disconnected client is a normal end of the request, not a
+            # provider failure.  In particular, do not emit an error frame.
+            return
+        except asyncio.CancelledError:
+            # Preserve cancellation so Starlette can finish request teardown.
+            raise
         except Exception as exc:
             logger.warning(
                 "Streaming chat failed for query %s: %s",
@@ -233,6 +243,12 @@ class ChatService:
             )
             yield _format_sse("error", {"message": "The chat stream failed unexpectedly."})
             return
+        finally:
+            # Closing the async generator finalizes its current async-for
+            # operation and releases any provider resources on every exit path.
+            aclose = getattr(stream, "aclose", None)
+            if aclose is not None:
+                await aclose()
         if done_payload is not None:
             await asyncio.to_thread(
                 self._persist_turn,
