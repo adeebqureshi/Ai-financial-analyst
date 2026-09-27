@@ -322,6 +322,70 @@ The API will be available at `http://localhost:8000`.
 - **API docs**: `http://localhost:8000/docs` (Swagger UI)
 - **Version info**: `GET /version` (shows `demo_mode` status)
 
+### Local Qdrant (No Docker)
+
+The vector store runs as a separate process. The backend talks to it over HTTP at
+`QDRANT_URL`, so **Qdrant must be running before the backend** or `/readiness`
+returns `503` and `/chat` returns `502 VECTOR_STORE_UNAVAILABLE`.
+
+#### One-time install (Windows)
+
+Download the official release and extract it anywhere outside the repo:
+
+```bash
+set QDRANT_HOME=%USERPROFILE%\qdrant-server
+curl -L -o qdrant.zip https://github.com/qdrant/qdrant/releases/download/v1.19.1/qdrant-x86_64-pc-windows-msvc.zip
+tar -xf qdrant.zip -C "%QDRANT_HOME%"
+```
+
+This yields `%QDRANT_HOME%\qdrant.exe`. Storage is persistent under
+`%QDRANT_HOME%\storage`, so collections and vectors survive restarts.
+
+#### Start (terminal 1)
+
+```bash
+scripts\start_qdrant.bat
+```
+
+Set `QDRANT_HOME` first if you extracted it somewhere else. The script is
+idempotent — it detects an already-running instance and exits `0` instead of
+failing on a port conflict.
+
+#### Start the backend (terminal 2)
+
+```bash
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+#### Verify
+
+```bash
+curl http://localhost:6333              # {"title":"qdrant - vector search engine", ...}
+curl http://localhost:8000/readiness    # 200, "vector_store": true
+```
+
+The `financial_documents` collection is created automatically on first connect,
+sized to `EMBEDDING_DIMENSION` (384) with cosine distance. If you ever change
+`EMBEDDING_DIMENSION`, delete the collection first — a size mismatch raises
+rather than migrating automatically.
+
+#### Ingest a document
+
+Retrieval returns nothing until a document is indexed:
+
+```bash
+curl -X POST http://localhost:8000/documents/upload -F "file=@path\to\filing.pdf"
+```
+
+#### Troubleshooting
+
+| Symptom | Cause |
+| --- | --- |
+| `WinError 10061` / `VECTOR_STORE_UNAVAILABLE` | Qdrant is not running — start it first |
+| `readiness` `503`, `vector_store: false` | Same as above; check `http://localhost:6333` |
+| `EMBEDDING_DIMENSION_MISMATCH` | Collection was created at a different vector size |
+| Port 6333 already in use | Another Qdrant instance is running; the start script will detect it |
+
 ### Docker Production Deployment
 
 For production deployments, use Docker Compose with the provided configuration:
