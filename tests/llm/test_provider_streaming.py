@@ -15,8 +15,6 @@ def test_mock_stream():
 def test_openai_stream(mock_openai, mock_getenv):
     client = MagicMock()
     mock_openai.return_value = client
-    # OpenAIProvider.generate() uses the chat.completions API and reads
-    # choices[0].message.content — mirror that exact response shape here.
     message = MagicMock()
     message.content = "Hello World"
     choice = MagicMock()

@@ -11,7 +11,6 @@ class DCFValuation:
         years: int,
         shares_outstanding: float,
     ) -> float | None:
-        # Preserve existing validation behavior for non-positive shares.
         if shares_outstanding == 0:
             return None
         if shares_outstanding < 0:

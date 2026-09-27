@@ -1,11 +1,3 @@
-"""
-Application Configuration
-
-This module defines the application's configuration system using
-``pydantic-settings``. It reads settings from environment variables and
-a ``.env`` file, validates them, and exposes a thread-safe singleton
-instance via ``get_settings()``.
-"""
 
 from __future__ import annotations
 
@@ -53,11 +45,7 @@ from app.core.exceptions import ConfigurationError
 
 
 class Settings(BaseSettings):
-    """
-    Application settings loaded from environment variables and ``.env``.
-    """
 
-    # ── Application ──────────────────────────────────────────────────────
 
     app_name: str = Field(
         default=APP_NAME,
@@ -98,7 +86,6 @@ class Settings(BaseSettings):
         description="Authentication secret key.",
     )
 
-    # ── API Keys ─────────────────────────────────────────────────────────
 
     openai_api_key: SecretStr = Field(
         default=SecretStr(""),
@@ -123,7 +110,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── FreeLLMAPI ───────────────────────────────────────────────────────
 
     freellmapi_base_url: str = Field(
         default="",
@@ -135,7 +121,6 @@ class Settings(BaseSettings):
         description="FreeLLMAPI API key.",
     )
 
-    # ── Logging ──────────────────────────────────────────────────────────
 
     log_level: LogLevel = Field(
         default=LogLevel.INFO,
@@ -152,7 +137,6 @@ class Settings(BaseSettings):
         description="Enable console logging.",
     )
 
-    # ── API / Network ────────────────────────────────────────────────────
 
     api_timeout: int = Field(
         default=API_DEFAULT_TIMEOUT,
@@ -169,11 +153,7 @@ class Settings(BaseSettings):
         description="Base delay for exponential backoff (seconds).",
     )
 
-    # ── Market Data Providers ────────────────────────────────────────────
 
-    # NOTE: Yahoo Finance (via yfinance) is an unofficial, non-commercial-use
-    # data source with no SLA. The provider chain is configuration-driven so
-    # it can be replaced without changing business logic.
 
     market_primary_provider: str = Field(
         default=DEFAULT_MARKET_PRIMARY_PROVIDER,
@@ -240,13 +220,7 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── Financial Assumptions (valuation inputs) ─────────────────────────
 
-    # These are the canonical "macro" inputs to DCF/WACC valuation. They are
-    # explicit assumptions, NOT live market data. Each carries a documented
-    # default; override any of them to reflect a different view. See
-    # ``app.financial.assumptions`` for the single source of truth and the
-    # validation bounds applied at runtime.
 
     risk_free_rate: float = Field(
         default=DEFAULT_RISK_FREE_RATE,
@@ -305,7 +279,6 @@ class Settings(BaseSettings):
         description="DCF projection horizon in whole years.",
     )
 
-    # ── LLM ──────────────────────────────────────────────────────────────
 
     llm_provider: str = Field(
         default=DEFAULT_LLM_PROVIDER,
@@ -341,7 +314,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── Retrieval / Vector Store ─────────────────────────────────────────
 
     embedding_model: str = Field(
         default=DEFAULT_EMBEDDING_MODEL,
@@ -363,7 +335,6 @@ class Settings(BaseSettings):
         description="Number of chunks to retrieve per query.",
     )
 
-    # ── Vector Store ─────────────────────────────────────────────────────
 
     qdrant_url: str = Field(
         default="",
@@ -387,7 +358,6 @@ class Settings(BaseSettings):
 
     @property
     def qdrant_api_key_str(self) -> str:
-        """Return the Qdrant API key as a plain string."""
         return self.qdrant_api_key.get_secret_value()
 
     chunk_size: int = Field(
@@ -419,7 +389,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── PDF Parsing ─────────────────────────────────────────────────────
 
     pdf_enable_optional_parsers: bool = Field(
         default=False,
@@ -432,7 +401,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── Sandbox ──────────────────────────────────────────────────────────
 
     sandbox_timeout: int = Field(
         default=SANDBOX_TIMEOUT,
@@ -444,7 +412,6 @@ class Settings(BaseSettings):
         description="Max memory (MB) for sandboxed processes.",
     )
 
-    # ── Authentication / Authorization ───────────────────────────────────
 
     access_token_expire_minutes: int = Field(
         default=60,
@@ -456,7 +423,6 @@ class Settings(BaseSettings):
         description="SQLAlchemy URL for the user account store.",
     )
 
-    # ── Chat Persistence ─────────────────────────────────────────────────
 
     chat_database_url: str = Field(
         default="sqlite:///./data/chat.db",
@@ -483,7 +449,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── CORS ─────────────────────────────────────────────────────────────
 
     cors_origins: str = Field(
         default="",
@@ -495,14 +460,12 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── SEC EDGAR ────────────────────────────────────────────────────────
 
     edgar_identity: str = Field(
         default="",
         description="SEC EDGAR identity string.",
     )
 
-    # ── Rate Limiting ────────────────────────────────────────────────────
 
     rate_limit_enabled: bool = Field(
         default=True,
@@ -585,7 +548,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── Pydantic Settings Configuration ─────────────────────────────────
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -595,14 +557,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── Validators ───────────────────────────────────────────────────────
 
     @field_validator("llm_temperature")
     @classmethod
     def validate_temperature(cls, v: float) -> float:
-        """
-        Ensure LLM temperature is within the valid range [0.0, 2.0].
-        """
         if not 0.0 <= v <= 2.0:
             raise ValueError(
                 "llm_temperature must be between 0.0 and 2.0"
@@ -612,9 +570,6 @@ class Settings(BaseSettings):
     @field_validator("chunk_overlap")
     @classmethod
     def validate_chunk_overlap(cls, v: int) -> int:
-        """
-        Ensure chunk overlap is non-negative.
-        """
         if v < 0:
             raise ValueError(
                 "chunk_overlap must be non-negative"
@@ -624,21 +579,14 @@ class Settings(BaseSettings):
     @field_validator("access_token_expire_minutes")
     @classmethod
     def validate_token_expiry(cls, v: int) -> int:
-        """
-        Ensure access token lifetime is within the valid range [1, 1440].
-        """
         if not 1 <= v <= 24 * 60:
             raise ValueError(
                 "access_token_expire_minutes must be between 1 and 1440"
             )
         return v
 
-    # ── Post-Init Environment Adjustments ────────────────────────────────
 
     def model_post_init(self, __context: Any) -> None:
-        """
-        Adjust settings based on the active environment after validation.
-        """
 
         if self.environment in (
             Environment.DEVELOPMENT,
@@ -657,52 +605,37 @@ class Settings(BaseSettings):
                 False,
             )
 
-    # ── Helper Properties ────────────────────────────────────────────────
 
     @property
     def is_production(self) -> bool:
-        """Return True if the current environment is production."""
         return self.environment == Environment.PRODUCTION
 
     @property
     def is_development(self) -> bool:
-        """Return True if the current environment is development."""
         return self.environment == Environment.DEVELOPMENT
 
     @property
     def is_test(self) -> bool:
-        """Return True if the current environment is test."""
         return self.environment == Environment.TEST
 
     @property
     def openai_api_key_str(self) -> str:
-        """Return the OpenAI API key as a plain string."""
         return self.openai_api_key.get_secret_value()
 
     @property
     def freellmapi_api_key_str(self) -> str:
-        """Return the FreeLLMAPI API key as a plain string."""
         return self.freellmapi_api_key.get_secret_value()
 
     @property
     def sec_api_key_str(self) -> str:
-        """Return the SEC API key as a plain string."""
         return self.sec_api_key.get_secret_value()
 
     @property
     def fmp_api_key_str(self) -> str:
-        """Return the Financial Modeling Prep API key as a plain string."""
         return self.fmp_api_key.get_secret_value()
 
     @property
     def uses_freellmapi(self) -> bool:
-        """
-        Return True when FreeLLMAPI is configured.
-
-        FreeLLMAPI exposes an OpenAI-compatible API, so the application
-        can continue using the OpenAI provider implementation while
-        redirecting requests to the FreeLLMAPI base URL.
-        """
         return bool(
             self.freellmapi_base_url.strip()
             and self.freellmapi_api_key_str.strip()
@@ -710,38 +643,22 @@ class Settings(BaseSettings):
 
     @property
     def is_demo_mode(self) -> bool:
-        """Return True if demo mode is enabled."""
         return self.demo_mode
 
     @property
     def llama_parse_api_key_str(self) -> str:
-        """Return the LlamaParse API key as a plain string."""
         return self.llama_parse_api_key.get_secret_value()
 
     @property
     def auth_secret_key_str(self) -> str:
-        """Return the JWT signing secret as a plain string."""
         return self.auth_secret_key.get_secret_value()
 
-    # ── Configuration Validation ─────────────────────────────────────────
 
     def validate_required_keys(self) -> None:
-        """
-        Validate required API credentials.
-
-        FreeLLMAPI is allowed to satisfy the LLM requirement when both
-        FREELLMAPI_BASE_URL and FREELLMAPI_API_KEY are configured.
-
-        Otherwise, the normal OPENAI_API_KEY is required for the OpenAI
-        provider.
-
-        Test environments skip external API-key validation.
-        """
 
         if self.environment == Environment.TEST:
             return
 
-        # Demo mode uses synthetic data and never requires external API keys.
         if self.is_demo_mode:
             return
 
@@ -749,25 +666,15 @@ class Settings(BaseSettings):
 
         provider = self.llm_provider.strip().lower()
 
-        # ── LLM provider validation ──────────────────────────────────────
-        #
-        # Only two providers exist: "openai" (the single primary provider, which
-        # also serves OpenAI-compatible gateways such as freellmapi) and "mock"
-        # (offline / tests). Anything else is a configuration error and is
-        # rejected here rather than failing later inside the provider factory.
 
         if provider not in SUPPORTED_LLM_PROVIDERS:
             missing.append("LLM_PROVIDER")
 
         elif provider == "openai":
-            # FreeLLMAPI is OpenAI-compatible, so when it is configured an
-            # OPENAI_API_KEY is NOT required.
             if not self.uses_freellmapi and not self.openai_api_key_str.strip():
                 missing.append("OPENAI_API_KEY")
 
-        # "mock" needs no credentials.
 
-        # ── Production requirements ─────────────────────────────────────
 
         if self.is_production and not self.fmp_api_key_str.strip():
             missing.append("FMP_API_KEY")
@@ -779,7 +686,6 @@ class Settings(BaseSettings):
         ):
             missing.append("AUTH_SECRET_KEY")
 
-        # ── Raise configuration error ───────────────────────────────────
 
         if missing:
             raise ConfigurationError(
@@ -798,19 +704,10 @@ class Settings(BaseSettings):
             )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Singleton Access
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """
-    Return the singleton ``Settings`` instance.
-
-    Uses ``functools.lru_cache`` to ensure the settings are loaded only once
-    per process.
-    """
 
     try:
         return Settings()
@@ -824,17 +721,9 @@ def get_settings() -> Settings:
             },
         ) from exc
 
-# The module-level ``settings`` object is part of the public configuration
-# API: existing modules import it directly, e.g.
-# ``from app.core.config import settings`` in
-# ``app.ingestion.clients.edgar_client``. It stays available alongside
-# ``get_settings()`` so both access styles keep working.
 settings = get_settings()
 
 
 def get_project_root() -> Path:
-    """
-    Return the project root directory.
-    """
 
     return Path(__file__).resolve().parent.parent.parent

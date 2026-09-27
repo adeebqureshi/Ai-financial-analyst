@@ -8,21 +8,16 @@ import { MetricCard, formatRatio } from "@/components/ui/metric";
 import type { RiskAssessmentData } from "@/types/analysis";
 
 type Props = {
-  /** Real beta from the `/analyze` market snapshot; null when unavailable. */
+
   beta: number | null;
-  /** Real risk assessment from `POST /risk-analysis`. */
+
   risk: RiskAssessmentData | null;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
 };
 
-/**
- * Renders only what the backend actually returns: the health score, rating,
- * risk level, and the individual score details. Volatility and business /
- * financial risk percentages are intentionally absent — no endpoint provides
- * them and the UI must not fabricate them.
- */
+
 export function RiskAnalysis({
   beta,
   risk,

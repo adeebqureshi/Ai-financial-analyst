@@ -97,7 +97,7 @@ async function request<T>(
     ...(init?.headers as Record<string, string> | undefined),
   };
 
-  // Get existing token or obtain a development token.
+
   if (typeof window !== "undefined") {
     let token = window.localStorage.getItem("access_token");
 
@@ -117,8 +117,8 @@ async function request<T>(
           }
         }
       } catch {
-        // Let the protected API request fail normally if authentication
-        // cannot be obtained.
+
+
       }
     }
 
@@ -185,8 +185,8 @@ async function request<T>(
       }
     }
 
-    // Remove an expired/invalid token.
-    // Do NOT retry the protected request without Authorization.
+
+
     if (response.status === 401 && typeof window !== "undefined") {
       window.localStorage.removeItem("access_token");
     }
@@ -298,12 +298,7 @@ function handleStreamFrame(
   }
 }
 
-/**
- * Consume the Server-Sent Events stream from `POST /chat/stream`.
- *
- * Calls onDelta for every streamed token so the UI can render progressive
- * output, then onDone with the complete result.
- */
+
 async function requestChatStream(
   body: unknown,
   handlers: ChatStreamHandlers,

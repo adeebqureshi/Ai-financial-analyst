@@ -1,9 +1,3 @@
-"""
-Report Writer Agent.
-
-Generates a comprehensive structured investment research report from the
-structured evidence collected by the agentic pipeline.
-"""
 
 from __future__ import annotations
 
@@ -32,9 +26,6 @@ LLM_UNAVAILABLE_MESSAGE = (
 
 
 class ReportWriterAgent:
-    """
-    Generates comprehensive investment research reports from agent evidence.
-    """
 
     def __init__(
         self,
@@ -46,7 +37,6 @@ class ReportWriterAgent:
 
     @staticmethod
     def _get_tool_result(tr: Any) -> dict | None:
-        """Extract result dict from ToolResult object or pass through dict."""
         if hasattr(tr, "status") and hasattr(tr, "result"):
             if tr.status == "done" and tr.result is not None:
                 return {"status": tr.status, "result": tr.result}
@@ -57,7 +47,6 @@ class ReportWriterAgent:
 
     @staticmethod
     def _is_done(tr: Any) -> bool:
-        """Check if a ToolResult or dict represents a successful execution."""
         if hasattr(tr, "status"):
             return tr.status == "done"
         elif isinstance(tr, dict):
@@ -66,7 +55,6 @@ class ReportWriterAgent:
 
     @staticmethod
     def _get_result_data(tr: Any) -> dict | None:
-        """Get the result data from a ToolResult or dict."""
         if hasattr(tr, "result"):
             return tr.result
         elif isinstance(tr, dict):
@@ -99,25 +87,11 @@ class ReportWriterAgent:
         sources: list[dict[str, Any]],
         tickers: list[str],
     ) -> tuple[str, str | None]:
-        """
-        Generate the full investment research report.
-
-        Args:
-            query: The user's original question/request.
-            intents: Detected intents (drives which sections are included).
-            evidence: Tool results keyed by tool name.
-            sources: Retrieved document chunks with metadata.
-            tickers: Tickers referenced in the report.
-
-        Returns:
-            A ``(report_markdown, model_name)`` tuple.
-        """
         if not evidence:
             return INSUFFICIENT_EVIDENCE_MESSAGE, None
 
         intent_names = {intent.value for intent in intents}
 
-        # Build structured evidence blocks per section
         sections = self._build_report_sections(
             query=query,
             intent_names=intent_names,
@@ -126,7 +100,6 @@ class ReportWriterAgent:
             tickers=tickers,
         )
 
-        # Generate the final markdown report via LLM
         prompt = self._build_report_prompt(
             query=query,
             sections=sections,
@@ -149,51 +122,43 @@ class ReportWriterAgent:
         sources: list[dict[str, Any]],
         tickers: list[str],
     ) -> list[dict[str, str]]:
-        """Build the structured sections for the report."""
         sections: list[dict[str, str]] = []
 
-        # 1. Executive Summary - always included
         sections.append({
             "title": "Executive Summary",
             "content": self._format_executive_summary(evidence, intent_names, tickers),
         })
 
-        # 2. Company Overview - if company data available
         if "get_company" in evidence:
             sections.append({
                 "title": "Company Overview",
                 "content": self._format_company_overview(evidence["get_company"]),
             })
 
-        # 3. Financial Performance - if financials available
         if "get_financials" in evidence:
             sections.append({
                 "title": "Financial Performance",
                 "content": self._format_financial_performance(evidence["get_financials"]),
             })
 
-        # 4. Valuation - if valuation was run
         if "calculate_valuation" in evidence:
             sections.append({
                 "title": "Valuation",
                 "content": self._format_valuation(evidence["calculate_valuation"]),
             })
 
-        # 5. Financial Health - if health was calculated
         if "calculate_financial_health" in evidence:
             sections.append({
                 "title": "Financial Health",
                 "content": self._format_financial_health(evidence["calculate_financial_health"]),
             })
 
-        # 6. Risk Analysis - if risk was calculated
         if "calculate_risk" in evidence:
             sections.append({
                 "title": "Risk Analysis",
                 "content": self._format_risk_analysis(evidence["calculate_risk"]),
             })
 
-        # 7. Annual Report / RAG Evidence - if documents were retrieved
         if "search_documents" in evidence:
             rag_content = self._format_rag_evidence(evidence["search_documents"], sources)
             if rag_content:
@@ -202,7 +167,6 @@ class ReportWriterAgent:
                     "content": rag_content,
                 })
 
-        # 8. Investment Thesis - for valuation/analysis/comparison intents
         if any(
             name in intent_names
             for name in (
@@ -217,13 +181,11 @@ class ReportWriterAgent:
                 "content": self._format_investment_thesis(evidence, intent_names),
             })
 
-        # 9. Final Assessment
         sections.append({
             "title": "Final Assessment",
             "content": self._format_final_assessment(evidence, intent_names, tickers),
         })
 
-        # 10. Sources
         if sources:
             sections.append({
                 "title": "Sources",
@@ -243,7 +205,6 @@ class ReportWriterAgent:
         lines.append(f"**Company(s):** {ticker_str}")
         lines.append(f"**Analysis Type:** {', '.join(sorted(intent_names)) or 'General'}")
 
-        # Key valuation metric if available
         for tr in evidence.get("calculate_valuation", []):
             if self._is_done(tr):
                 r = self._get_result_data(tr)
@@ -255,7 +216,6 @@ class ReportWriterAgent:
                         f"**Recommendation:** {r.get('recommendation', 'N/A')}"
                     )
 
-        # Health score if available
         for tr in evidence.get("calculate_financial_health", []):
             if self._is_done(tr):
                 r = self._get_result_data(tr)
@@ -347,7 +307,6 @@ class ReportWriterAgent:
             lines.append(f"| Discount Rate (WACC) | {self._pct((dr or 0) * 100)} |")
             lines.append("")
 
-            # Interpretation
             upside = r.get("upside")
             upside = upside if isinstance(upside, (int, float)) and not isinstance(upside, bool) else 0
             if upside > 20:
@@ -383,7 +342,6 @@ class ReportWriterAgent:
             lines.append(f"| Beneish M-Score | {self._num(r.get('beneish_score'))} |")
             lines.append("")
 
-            # Interpretations
             _score = r.get("score", 0)
             score = _score if isinstance(_score, (int, float)) and not isinstance(_score, bool) else 0
             if score >= 85:
@@ -396,7 +354,6 @@ class ReportWriterAgent:
                 lines.append("**Assessment:** Poor financial health — significant balance sheet or profitability concerns.")
             lines.append("")
 
-            # Piotroski interpretation
             _piotroski = r.get("piotroski_score", 0)
             piotroski = _piotroski if isinstance(_piotroski, (int, float)) and not isinstance(_piotroski, bool) else 0
             if piotroski >= 7:
@@ -406,7 +363,6 @@ class ReportWriterAgent:
             else:
                 lines.append(f"**Piotroski ({piotroski}/9):** Weak — deteriorating fundamentals.")
 
-            # Altman interpretation
             _altman = r.get("altman_score", 0)
             altman = _altman if isinstance(_altman, (int, float)) and not isinstance(_altman, bool) else 0
             if altman > 2.99:
@@ -416,7 +372,6 @@ class ReportWriterAgent:
             else:
                 lines.append(f"**Altman Z ({self._num(altman)}):** Distress zone — high bankruptcy risk.")
 
-            # Beneish interpretation
             _beneish = r.get("beneish_score", 0)
             beneish = _beneish if isinstance(_beneish, (int, float)) and not isinstance(_beneish, bool) else 0
             if beneish < -2.22:
@@ -451,7 +406,6 @@ class ReportWriterAgent:
             lines.append(f"**Beneish M-Score:** {self._num(beneish.get('score'))} — {beneish.get('interpretation', 'N/A')}")
             lines.append("")
 
-            # Risk summary
             risk_level = r.get("risk_level", "MEDIUM")
             if risk_level == "LOW":
                 lines.append("**Risk Summary:** Low financial risk — strong fundamentals, low distress probability.")
@@ -463,7 +417,6 @@ class ReportWriterAgent:
         return "\n".join(lines)
 
     def _format_rag_evidence(self, search_results: list[Any], sources: list[dict]) -> str:
-        """Format retrieved chunks without exceeding the hard RAG context limit."""
         chunks_by_doc: dict[str, list[dict]] = {}
 
         for tr in search_results:
@@ -497,8 +450,6 @@ class ReportWriterAgent:
                 lines.extend([header, ""])
                 used_tokens += header_tokens + 1
 
-            # Keep the existing top-3-per-document relevance policy, but enforce
-            # a global hard limit across every retrieved document.
             for chunk in chunks[:3]:
                 if used_tokens >= MAX_RAG_CONTEXT_TOKENS:
                     break

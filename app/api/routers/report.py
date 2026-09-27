@@ -53,8 +53,6 @@ async def report(
             query=payload.query,
         )
         
-        # Moved inside the try-block so Pydantic serialization errors or AttributeErrors 
-        # are safely caught and formatted as structured JSON
         return APIResponse.success_response(
             message=f"Report generated for {result.ticker}",
             data=result,

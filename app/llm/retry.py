@@ -15,7 +15,7 @@ T = TypeVar("T")
 
 
 class EmptyContentError(ProviderError):
-    """LLM provider returned empty content."""
+        pass
 
 
 class RetryPolicy:

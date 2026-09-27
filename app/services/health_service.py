@@ -34,7 +34,6 @@ class HealthService:
             "environment": self._settings.environment.value,
         }
         has_openai_key = bool(self._settings.openai_api_key_str)
-        # FreeLLMAPI (OpenAI-compatible) also satisfies the LLM requirement.
         has_llm_credentials = has_openai_key or self._settings.uses_freellmapi
         details["openai_api_key_set"] = has_openai_key
         details["freellmapi_configured"] = self._settings.uses_freellmapi

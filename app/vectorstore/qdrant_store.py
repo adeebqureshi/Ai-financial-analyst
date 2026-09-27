@@ -34,11 +34,6 @@ def _settings_dim() -> int | None:
 
 
 def _settings_value(name: str) -> str | None:
-    """Read a Qdrant setting from Settings, falling back to the environment.
-
-    QDRANT_* variables are read through Settings so all configuration lives in
-    one place; the environment is still honoured for direct ``uvicorn`` runs.
-    """
     try:
         from app.core.config import get_settings
 
@@ -49,7 +44,6 @@ def _settings_value(name: str) -> str | None:
 
 
 def _reset_shared_client_for_tests() -> None:
-    """Reset the in-memory Qdrant singleton (test isolation only)."""
     global _client
     try:
         if _client is not None:
@@ -63,18 +57,6 @@ def _get_shared_client(
     url: str | None,
     api_key: str | None,
 ) -> QdrantClient:
-    """Return the process-wide Qdrant client.
-
-    A single client is cached for both deployment modes:
-
-    * ``QDRANT_URL`` set  -> a server-backed client, so uploaded vectors
-      survive a backend restart (persistent storage lives on the Qdrant side).
-    * ``QDRANT_URL`` unset -> an in-process ``:memory:`` client, which is
-      volatile and intended for tests / throwaway runs.
-
-    Caching matters for the server mode: constructing a client per call would
-    open a fresh connection on every read and write.
-    """
     global _client
     if _client is None:
         _client = QdrantClient(url=url, api_key=api_key) if url else QdrantClient(":memory:")

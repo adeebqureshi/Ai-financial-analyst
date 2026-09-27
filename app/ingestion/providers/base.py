@@ -124,23 +124,19 @@ class MarketDataProvider(ABC):
         ticker: str,
         timeout_seconds: float = 10.0,
     ) -> Quote:
-        """Fetch a market quote for the given ticker."""
         raise NotImplementedError
 
 
 class ProviderError(Exception):
-    """Base exception for market-data provider errors."""
 
     pass
 
 
 class ProviderRateLimitError(ProviderError):
-    """Raised when a provider rate limit is exceeded."""
 
     pass
 
 
 class ProviderUnavailableError(ProviderError):
-    """Raised when a provider is unavailable."""
 
     pass

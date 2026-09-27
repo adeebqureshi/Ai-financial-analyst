@@ -1,6 +1,3 @@
-"""
-Base interface for all LLM providers.
-"""
 
 from __future__ import annotations
 
@@ -19,17 +16,12 @@ class BaseLLMProvider(ABC):
         self,
         request: LLMRequest,
     ) -> LLMResponse:
-        """Generate a complete response."""
+            pass
 
     def stream(
         self,
         request: LLMRequest,
     ) -> Iterator[str]:
-        """
-        Default streaming implementation.
-
-        Providers that support native streaming should override this method.
-        """
 
         response = self.generate(request)
 

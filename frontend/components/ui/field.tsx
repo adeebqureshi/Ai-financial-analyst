@@ -49,7 +49,7 @@ export function Select({ className, ...props }: React.ComponentProps<"select">) 
 
 type FieldProps = {
   label: React.ReactNode;
-  /** Id of the control this label describes. */
+
   htmlFor: string;
   hint?: React.ReactNode;
   error?: React.ReactNode;
@@ -58,12 +58,7 @@ type FieldProps = {
   children: React.ReactNode;
 };
 
-/**
- * Label + control + hint/error wrapper.
- *
- * The hint id is `${htmlFor}-hint` and the error id `${htmlFor}-error` so
- * callers can wire `aria-describedby` on the control.
- */
+
 export function Field({
   label,
   htmlFor,
@@ -110,11 +105,11 @@ type TickerInputProps = Omit<
 > & {
   value: string;
   onValueChange: (value: string) => void;
-  /** Symbols are 1-5 characters server-side; enforced here too. */
+
   maxLength?: number;
 };
 
-/** Ticker entry that normalises to uppercase as the user types. */
+
 export function TickerInput({
   value,
   onValueChange,

@@ -53,8 +53,8 @@ test.describe("Interactive Features Audit", () => {
     const tickerInput = page.locator("#criteria-ticker");
     await expect(tickerInput).toBeVisible();
 
-    // The screener validates on click and shows inline field errors rather
-    // than disabling a submit button, so assert that real behaviour.
+
+
     await tickerInput.fill("");
     await page.getByRole("button", { name: /fetch analysis/i }).click();
     await expect(page.getByText("Enter a ticker symbol.")).toBeVisible();

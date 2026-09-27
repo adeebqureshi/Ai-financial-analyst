@@ -88,8 +88,6 @@ def run_migrations(database_url: str) -> None:
 def init_db(settings: Settings) -> None:
     from app.auth import models
 
-    # Keep the import above so SQLAlchemy models are registered
-    # with Base.metadata before create_all() is called.
     _ = models
 
     engine = get_engine(settings)

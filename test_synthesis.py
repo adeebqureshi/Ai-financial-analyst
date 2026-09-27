@@ -1,14 +1,7 @@
-"""
-Run from project root:
-    python test_synthesis.py
-
-Tests the exact code path used by the RAG synthesis.
-"""
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# ── 1. Test raw LLM with a long prompt (like synthesis uses) ─────────────────
 print("\n[1] Testing LLM with a long prompt...")
 try:
     from openai import OpenAI
@@ -34,7 +27,6 @@ except Exception as e:
     print(f"[1] FAILED: {e}")
     traceback.print_exc()
 
-# ── 2. Test through app OpenAIClient ─────────────────────────────────────────
 print("\n[2] Testing through app OpenAIClient...")
 try:
     import sys; sys.path.insert(0, ".")
@@ -54,7 +46,6 @@ except Exception as e:
     print(f"[2] FAILED: {type(e).__name__}: {e}")
     traceback.print_exc()
 
-# ── 3. Test FinancialAnalystAgent.synthesize directly ────────────────────────
 print("\n[3] Testing FinancialAnalystAgent.synthesize...")
 try:
     from app.agents.financial_analyst import FinancialAnalystAgent

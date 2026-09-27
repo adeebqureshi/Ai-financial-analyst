@@ -24,11 +24,7 @@ type Criteria = {
   max_results: string;
 };
 
-/**
- * Screening thresholds. Prefilled with the backend's own `ScreenRequest`
- * defaults so the user starts from a documented baseline, never an invented
- * application value.
- */
+
 const defaultCriteria: Criteria = {
   min_piotroski: "0",
   min_altman: "0",
@@ -48,13 +44,7 @@ type Assumptions = {
   years: string;
 };
 
-/**
- * Valuation assumptions left blank until the user provides them, except the
- * three fields the backend `ValuationParams` schema documents as having
- * defaults (cost_of_debt 0.05, terminal_growth 0.03, years 5). Beta and the
- * other rates are never invented — they are either prefilled from real
- * `/analyze` market data or required from the user.
- */
+
 const baseAssumptions: Assumptions = {
   growth_rate: "",
   risk_free_rate: "",
@@ -72,7 +62,7 @@ function toNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-/** Schema ranges mirrored from the backend `ValuationParams`/`ScreenRequest`. */
+
 function validate(
   criteria: Criteria,
   assumptions: Assumptions,
@@ -157,8 +147,8 @@ function validate(
     errors.years = "Enter an integer between 1 and 30.";
   }
 
-  // Beta: prefilled from real market data when available; otherwise the
-  // user must supply it. No fabricated fallback.
+
+
   if (!betaAvailable) {
     const beta = toNumber(assumptions.beta);
     if (beta === null || beta < 0) {
@@ -167,8 +157,8 @@ function validate(
     }
   }
 
-  // Current price comes from real market data when available; otherwise the
-  // user must supply it for the valuation to be computed.
+
+
   if (!currentPriceAvailable) {
     const price = toNumber(currentPrice);
     if (price === null || price < 0) {
@@ -283,7 +273,7 @@ export function CriteriaCheck() {
 
   return (
     <div className="space-y-8">
-      {/* Step 1 — candidate ticker */}
+      {}
       <section
         aria-labelledby="criteria-ticker-heading"
         className="rounded-xl border border-border bg-card p-6"
@@ -392,7 +382,7 @@ export function CriteriaCheck() {
         )}
       </section>
 
-      {/* Steps 2 + 3 — criteria and assumptions */}
+      {}
       {analysis && (
         <>
           <section
@@ -727,7 +717,7 @@ export function CriteriaCheck() {
         </>
       )}
 
-      {/* Step 4 — result */}
+      {}
       {screenResult && (
         <section
           aria-labelledby="criteria-result-heading"
@@ -851,11 +841,3 @@ export function CriteriaCheck() {
     </div>
   );
 }
-
-
-
-
-
-
-
-

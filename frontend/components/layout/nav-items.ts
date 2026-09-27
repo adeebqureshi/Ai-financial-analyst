@@ -21,13 +21,7 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-/**
- * Single source of truth for the workspace information architecture.
- *
- * Consumed by the sidebar, the topbar (page title) and the command palette so
- * a destination can never be added, renamed or duplicated in one place only.
- * Every href here is a real route in `app/(app)`.
- */
+
 export const navigationGroups: NavGroup[] = [
   {
     label: "CO-PILOT",
@@ -61,22 +55,18 @@ export const navigationGroups: NavGroup[] = [
 
 export type NavDestination = NavItem & { group: string };
 
-/** Flattened destinations, used by the command palette. */
+
 export const navigationDestinations: NavDestination[] = navigationGroups.flatMap(
   (group) =>
     group.items.map((item) => ({ ...item, group: group.label }))
 );
 
-/** True when `pathname` is the href itself or a nested route beneath it. */
+
 export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-/**
- * Title shown in the topbar for a pathname (first segment), taken from the
- * navigation config. Routes outside the primary navigation (e.g. `/watchlist`)
- * fall back to a local map, then to "Workspace".
- */
+
 const secondaryTitles: Record<string, string> = {
   "/portfolio": "Portfolio",
   "/watchlist": "Watchlist",

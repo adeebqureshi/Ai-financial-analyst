@@ -9,7 +9,6 @@ from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 
-# --- FIXED IMPORTS: No duplicates, no conflicting AuthenticationError ---
 from app.auth.exceptions import AuthenticationError, AuthorizationError
 from app.core.config import Settings
 from app.core.exceptions import ParserError, ValidationError
@@ -44,9 +43,6 @@ def _build_demo_retrieval_context(query: str, ticker: str | None, limit: int):
 
 logger = get_logger(__name__)
 
-# Serializes ownership check + delete so concurrent requests cannot both pass
-# the check before either one removes the record (check-then-act race).
-# Class-level because a new DocumentService instance is built per request.
 _delete_lock = threading.Lock()
 
 _ALLOWED_MIME_TYPE = "application/pdf"
@@ -147,19 +143,10 @@ class DocumentService:
         try:
             return FileManager.load_json(path)
         except FileNotFoundError:
-            # Deleted between exists() and open() by a concurrent request.
             return None
 
     @staticmethod
     def _is_owned(record: dict, owner_id: str | None) -> bool:
-        """
-        Check record ownership within a single anonymous/authenticated namespace.
-
-        Anonymous records (owner None) are visible only to anonymous callers;
-        authenticated records only to the matching user. Cross-namespace
-        access (including authenticated users reaching legacy unowned
-        records) is denied, preventing IDOR.
-        """
         record_owner = record.get("owner_id")
         return str(record_owner or "") == str(owner_id or "") and str(owner_id or "") != "" or (
             record_owner is None and owner_id is None
@@ -415,18 +402,9 @@ class DocumentService:
             staging_path.unlink(missing_ok=True)
 
     def get_job(self, job_id: str, owner_id: str | None = None) -> dict | None:
-        # JobStore enforces ownership itself: a job is only visible when its
-        # stored owner_id matches the caller (None == anonymous namespace),
-        # so cross-user access returns None and surfaces as a 404.
         return self._jobs.get_job(job_id, owner_id)
 
     def list_documents(self, owner_id: str | None = None) -> dict:
-        """
-        Lists documents scoped strictly to the provided owner namespace.
-
-        Anonymous callers (owner None) see only anonymous records;
-        authenticated callers see only their own records.
-        """
         records = self._list_records()
         namespace = str(owner_id or "")
         records = [

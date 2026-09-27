@@ -3,13 +3,7 @@ import { ApiError, api } from "@/services/api";
 
 const mockFetch = vi.fn();
 
-/**
- * The API client first asks `/api/auth/token` for a development token when
- * localStorage holds none. That bootstrap call is production behaviour, so it
- * gets its own stub: routing it separately keeps the `mockResolvedValueOnce`
- * queue in these tests reserved for the endpoint actually under test (and makes
- * `toHaveBeenCalledTimes` assertions count only real API calls).
- */
+
 const mockAuthFetch = vi.fn(async () => ({
   ok: true,
   status: 200,
@@ -176,8 +170,8 @@ describe("services/api.ts", () => {
         .mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve('{"message":"expired"}') })
         .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
 
-      // The stale token is dropped and the error surfaces; the protected request
-      // is deliberately NOT retried without Authorization (see services/api.ts).
+
+
       await expect(api.health()).rejects.toMatchObject({
         name: "ApiError",
         status: 401,

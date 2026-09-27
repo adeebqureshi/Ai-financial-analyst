@@ -1,8 +1,3 @@
-"""
-base_vector_store.py
-
-Abstract vector database interface.
-"""
 
 from __future__ import annotations
 
@@ -18,9 +13,7 @@ class BaseVectorStore(ABC):
         vectors: list[list[float]],
         payloads: list[dict],
     ) -> None:
-        """
-        Insert or update vectors.
-        """
+            pass
 
     @abstractmethod
     def search(
@@ -28,6 +21,4 @@ class BaseVectorStore(ABC):
         vector: list[float],
         limit: int = 5,
     ):
-        """
-        Search similar vectors.
-        """
+            pass

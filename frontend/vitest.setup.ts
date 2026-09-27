@@ -22,10 +22,10 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-// A real, working in-memory stand-in. The previous bare `vi.fn()` mocks made
-// getItem() return `undefined` instead of the `null` the Storage contract
-// specifies, so code paths that read storage could not distinguish "no value"
-// from a broken mock.
+
+
+
+
 const storage = new Map<string, string>();
 
 Object.defineProperty(window, "localStorage", {

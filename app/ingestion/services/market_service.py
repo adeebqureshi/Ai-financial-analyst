@@ -31,7 +31,6 @@ _demo_provider_cls: type[MarketDataProvider] | None = None
 
 
 def _is_production() -> bool:
-    """Return whether the current runtime environment is production."""
     return get_settings().is_production
 
 
@@ -84,8 +83,6 @@ class MarketService:
     def _provider_chain(self) -> list[MarketDataProvider]:
         settings = self._settings
 
-        # Production can NEVER use the demo provider,
-        # regardless of is_demo_mode or any other configuration.
         if settings.is_production:
             names: list[str] = [
                 settings.market_primary_provider.strip().lower()
@@ -98,7 +95,6 @@ class MarketService:
                     if name and name != "demo" and name not in names:
                         names.append(name)
 
-            # Explicitly remove demo even if configured as the primary provider.
             names = [name for name in names if name != "demo"]
 
         elif settings.is_demo_mode:
@@ -117,8 +113,6 @@ class MarketService:
                     if name and name not in names:
                         names.append(name)
 
-            # Demo is an explicit, isolated mode.  It is never a valid
-            # production provider name, including in fallback configuration.
             names = [name for name in names if name != "demo"]
 
         if not names:
@@ -138,7 +132,6 @@ class MarketService:
                 )
                 continue
 
-            # Final defense-in-depth check.
             if settings.is_production and provider_cls.name == "demo":
                 logger.error(
                     "Blocked demo market provider in production."

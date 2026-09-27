@@ -31,7 +31,7 @@ test.describe("Analysis workflow", () => {
   test("displays loading skeleton while analysis loads", async ({ page }) => {
     await page.goto("/analysis/AAPL");
 
-    // Use the specific testid for the analysis skeleton
+
     await expect(page.locator("[data-testid='skeleton-analysis-view']")).toBeVisible();
   });
 
@@ -56,7 +56,7 @@ test.describe("Dashboard workflow", () => {
     await expect(page.locator("text=Watchlist")).toBeVisible();
     await expect(page.locator("text=Quick Actions")).toBeVisible();
 
-    // De-fabrication guarantees: no portfolio/Sharpe/Fear & Greed placeholders
+
     await expect(page.locator("text=Portfolio Value")).toHaveCount(0);
     await expect(page.locator("text=Sharpe Ratio")).toHaveCount(0);
     await expect(page.locator("text=Cash Available")).toHaveCount(0);
@@ -66,7 +66,7 @@ test.describe("Dashboard workflow", () => {
   test("displays AI search component", async ({ page }) => {
     await page.goto("/dashboard");
 
-    // AISearch component has this heading
+
     await expect(page.locator("text=Ask AI about any public company")).toBeVisible();
   });
 });

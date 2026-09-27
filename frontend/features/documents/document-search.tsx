@@ -142,9 +142,7 @@ export function DocumentSearch() {
                     </span>
                   </div>
 
-                  {/* `score` is the retriever's raw relevance score (reciprocal
-                      rank fusion, or a cross-encoder logit when reranking is
-                      enabled). It is not a percentage, so it is shown as-is. */}
+                  {}
                   <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-caption text-muted-foreground">
                     Relevance {hit.score.toFixed(3)}
                   </span>

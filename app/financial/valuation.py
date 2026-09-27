@@ -22,8 +22,6 @@ class ValuationEngine:
         try:
             equity = statement.total_assets - statement.total_liabilities
 
-            # Negative or zero equity makes the WACC calculation
-            # unreliable for this valuation model.
             if equity <= 0:
                 return None
 

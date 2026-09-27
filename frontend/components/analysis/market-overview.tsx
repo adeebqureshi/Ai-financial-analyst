@@ -19,12 +19,12 @@ function isMissing(value: number | null | undefined): boolean {
   return value === null || value === undefined || Number.isNaN(value);
 }
 
-/** Backend statement figures are reported in millions of USD. */
+
 const MILLIONS = 1_000_000;
 
 const NOT_PROVIDED = "Not provided by the market data provider";
 
-/** Backend `shares_outstanding` is in millions. */
+
 function formatShares(value: number | null | undefined): string {
   if (isMissing(value)) return EMPTY_VALUE;
   return `${((value as number) / 1000).toFixed(1)}B`;
@@ -45,12 +45,7 @@ function StatementRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/**
- * Market snapshot and statements, straight from the `/analyze` payload.
- *
- * Values the provider did not supply render an explicit "not provided" state
- * rather than a zero; statement figures ($M) are converted to dollars.
- */
+
 export function MarketOverview({ market, statement }: Props) {
   const quoteAvailable = !isMissing(market.current_price);
   const quotesAsOf = quoteTimestamp(market.as_of);

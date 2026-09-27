@@ -171,7 +171,7 @@ export function DocumentLibrary() {
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        {/* Library */}
+        {}
         <Card aria-labelledby="library-heading">
           <CardHeader>
             <div>
@@ -275,7 +275,7 @@ export function DocumentLibrary() {
           </CardBody>
         </Card>
 
-        {/* Ask AI — shared chat surface (streaming, session, citations) */}
+        {}
         <div className="min-h-0">
           <ChatSurface
             key={activeId ?? "no-document"}

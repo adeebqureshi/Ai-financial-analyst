@@ -5,9 +5,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  /** Adds hover affordance for cards that act as links or buttons. */
+
   interactive?: boolean;
-  /** Lifts the surface one level (popovers, inline panels). */
+
   raised?: boolean;
 };
 

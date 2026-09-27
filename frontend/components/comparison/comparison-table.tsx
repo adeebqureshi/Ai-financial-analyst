@@ -14,7 +14,7 @@ type Props = {
 
 type Row = {
   metric: string;
-  /** `null` renders the explicit "not available" dash. */
+
   cells: (string | null)[];
   align: "left" | "right";
 };
@@ -101,8 +101,7 @@ export function ComparisonTable({ tickers }: Props) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card shadow-card">
-      {/* Controlled horizontal scroll: the table grows with the number of
-          tickers, the page itself never overflows. */}
+      {}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-label">
           <caption className="sr-only">

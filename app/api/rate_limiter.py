@@ -12,13 +12,11 @@ logger = get_logger("app.api.rate_limiter")
 
 
 def _clock() -> float:
-    """Return the current Unix timestamp."""
     return time.time()
 
 
 @dataclass(slots=True)
 class RateLimitConfig:
-    """Configuration for a specific rate-limit rule."""
 
     requests_per_minute: int
     requests_per_hour: int
@@ -27,7 +25,6 @@ class RateLimitConfig:
 
 @dataclass(slots=True)
 class RateLimitResult:
-    """Result of a rate-limit check."""
 
     allowed: bool
     current_minute: int
@@ -38,7 +35,6 @@ class RateLimitResult:
 
 
 class RateLimiterBackend(ABC):
-    """Abstract base class for rate limiter backends."""
 
     @abstractmethod
     def increment(self, key: str, window_seconds: int) -> int:
@@ -62,7 +58,6 @@ class RateLimiterBackend(ABC):
 
 
 class LocalMemoryBackend(RateLimiterBackend):
-    """Thread-safe in-memory rate limiter backend."""
 
     def __init__(self) -> None:
         self._counters: dict[str, tuple[int, float]] = {}
@@ -133,16 +128,6 @@ class LocalMemoryBackend(RateLimiterBackend):
 
 
 class HybridRateLimiter:
-    """Rate limiter backed by an in-process counter.
-
-    The project runs a single backend worker, so request counters live in a
-    thread-safe in-process map. This replaces the previous Redis-backed
-    implementation: a distributed counter is unnecessary at this scale, and the
-    local backend was already the automatic fallback whenever Redis was
-    unreachable, so behaviour is unchanged for the local/demo setup.
-
-    The class name is retained for API compatibility with existing callers.
-    """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
@@ -161,7 +146,6 @@ class HybridRateLimiter:
         identifier: str,
         config: RateLimitConfig,
     ) -> RateLimitResult:
-        """Check whether a request is within the configured limits."""
 
         if not self._settings.rate_limit_enabled:
             return RateLimitResult(
@@ -220,9 +204,6 @@ class HybridRateLimiter:
             if current_minute > config.requests_per_minute:
                 retry_after = 60 - (int(current_time) % 60)
             else:
-                # A denial on the hourly bucket must advertise an hour-scale
-                # retry interval, not the remaining seconds in the current
-                # hour. This also avoids a misleading near-boundary value.
                 retry_after = 3600
 
         return RateLimitResult(
@@ -239,7 +220,6 @@ class HybridRateLimiter:
         identifier: str,
         prefix: str = "ratelimit",
     ) -> None:
-        """Reset the current minute/hour limits for an identifier."""
 
         backend = self._get_backend()
         current_time = _clock()
@@ -262,7 +242,6 @@ def get_endpoint_config(
     endpoint: str,
     settings: Settings,
 ) -> RateLimitConfig:
-    """Get the rate-limit configuration for an endpoint."""
 
     configs = {
         "chat": RateLimitConfig(
@@ -313,13 +292,6 @@ _rate_limiter_lock = threading.Lock()
 def get_rate_limiter(
     settings: Settings | None = None,
 ) -> HybridRateLimiter:
-    """
-    Return the singleton rate limiter.
-
-    Recreate the singleton when a different Settings instance is supplied.
-    This is important for tests and dependency overrides that provide
-    temporary rate-limit configuration.
-    """
 
     global _rate_limiter
     global _rate_limiter_settings
@@ -338,7 +310,6 @@ def get_rate_limiter(
 
 
 def reset_rate_limiter() -> None:
-    """Reset the singleton rate limiter and clear its state."""
 
     global _rate_limiter
     global _rate_limiter_settings
@@ -355,7 +326,6 @@ def reset_rate_limiter() -> None:
 
 
 def clear_all_rate_limits() -> None:
-    """Clear all in-process rate-limit counters."""
 
     global _rate_limiter
 

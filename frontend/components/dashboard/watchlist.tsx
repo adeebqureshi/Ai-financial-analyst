@@ -10,11 +10,7 @@ type Shortcut = {
   company: string;
 };
 
-/**
- * Navigation shortcuts only — no prices or changes are shown because no
- * dashboard endpoint provides them. Live values appear on each company's
- * analysis page, sourced from the backend.
- */
+
 const shortcuts: Shortcut[] = [
   { symbol: "AAPL", company: "Apple" },
   { symbol: "MSFT", company: "Microsoft" },

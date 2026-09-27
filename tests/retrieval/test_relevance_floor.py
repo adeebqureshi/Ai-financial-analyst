@@ -31,12 +31,6 @@ def _engine(floor: float) -> RetrievalEngine:
 
 
 class TestRelevanceFloor:
-    """The relevance floor is what makes "no evidence" mean no evidence.
-
-    A vector store always returns its top-K, even when the question is
-    completely unrelated to the indexed documents. These tests cover the
-    deterministic guard that drops those chunks before the LLM ever sees them.
-    """
 
     def test_unrelated_chunks_are_dropped(self) -> None:
         engine = _engine(0.30)
@@ -69,7 +63,6 @@ class TestRelevanceFloor:
         assert engine._last_dropped == 1
 
     def test_chunk_without_a_measured_similarity_is_kept(self) -> None:
-        """A sparse-only (BM25) match has no cosine score and must survive."""
         engine = _engine(0.30)
         chunks = [_chunk("bm25-only")]
 
@@ -78,7 +71,6 @@ class TestRelevanceFloor:
         assert [c.id for c in kept] == ["bm25-only"]
 
     def test_non_numeric_similarity_is_kept(self) -> None:
-        """An unusable score must not silently drop evidence."""
         engine = _engine(0.30)
         chunks = [_chunk("a")]
 
@@ -88,7 +80,6 @@ class TestRelevanceFloor:
         assert engine._last_dropped == 0
 
     def test_boolean_similarity_is_ignored(self) -> None:
-        """bool is an int subclass in Python; True must not read as 1.0."""
         engine = _engine(0.30)
         chunks = [_chunk("a")]
 
@@ -110,7 +101,6 @@ class TestRelevanceFloor:
         assert engine._apply_relevance_floor([], {}) == []
 
     def test_floor_matches_chunk_id_when_id_differs(self) -> None:
-        """Payload lookups key on chunk_id, which may differ from the row id."""
         engine = _engine(0.30)
         chunk = _chunk("row-id")
         chunk.id = "row-id"

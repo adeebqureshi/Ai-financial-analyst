@@ -2,7 +2,7 @@ import { request, type FullConfig } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-/** Create an isolated E2E identity through the real auth API. */
+
 export default async function globalSetup(config: FullConfig): Promise<void> {
   const apiBase = process.env.API_URL ?? "http://127.0.0.1:8000";
   const email = `playwright-${Date.now()}-${Math.random().toString(36).slice(2)}@e2e.invalid`;

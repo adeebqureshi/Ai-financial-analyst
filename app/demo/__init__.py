@@ -1,8 +1,3 @@
-"""Demo integrations loaded only when explicitly selected.
-
-Exports are resolved lazily so importing this package cannot import the demo
-market provider as a production-runtime side effect.
-"""
 from __future__ import annotations
 
 from importlib import import_module

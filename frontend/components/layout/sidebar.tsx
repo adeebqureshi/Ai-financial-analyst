@@ -18,7 +18,7 @@ type Props = {
 export function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname();
 
-  // Escape closes the mobile drawer (the desktop rail is always visible).
+
   useEffect(() => {
     if (!open) return;
 
@@ -45,8 +45,8 @@ export function Sidebar({ open, onClose }: Props) {
         className={cn(
           "fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-sidebar-border bg-sidebar",
           "transition-transform duration-200",
-          // `invisible` keeps the closed mobile drawer out of the tab order;
-          // it is always visible from `lg` up, where the rail is persistent.
+
+
           open
             ? "translate-x-0"
             : "-translate-x-full invisible lg:visible lg:translate-x-0"

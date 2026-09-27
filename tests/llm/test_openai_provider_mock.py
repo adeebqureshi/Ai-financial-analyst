@@ -28,5 +28,4 @@ def test_generate(mock_openai, mock_getenv):
     )
     assert response.text == "Hello"
     assert response.model == "test-model"
-    # Must use the chat.completions API (not the legacy responses API).
     client.chat.completions.create.assert_called_once()

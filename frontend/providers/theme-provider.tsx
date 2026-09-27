@@ -11,17 +11,10 @@ import {
 
 export type Theme = "light" | "dark";
 
-/** localStorage key used by the provider and the pre-paint script in `app/layout.tsx`. */
+
 export const THEME_STORAGE_KEY = "afa-theme";
 
-/**
- * Shipped default theme.
- *
- * Kept at ``dark`` while the page-by-page token migration is in flight so the
- * live app keeps its current look at every commit. The final polish phase
- * flips this single constant to ``light``, making the light-first palette the
- * default without touching any component.
- */
+
 export const DEFAULT_THEME: Theme = "light";
 
 type ThemeContextValue = {
@@ -43,19 +36,14 @@ function isDarkClassApplied(): boolean {
   return document.documentElement.classList.contains("dark");
 }
 
-/** Apply the theme to `document.documentElement` (the Tailwind `dark` class owner). */
+
 export function applyThemeClass(theme: Theme): void {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
   root.style.colorScheme = theme;
 }
 
-/**
- * The applied theme lives on `<html>` (written by the pre-paint script in the
- * root layout and by {@link applyThemeClass}), so the DOM is the single source
- * of truth. Subscribing to it keeps React in sync without a mount-time
- * `setState`, which React 19 flags as a cascading render.
- */
+
 function subscribeToTheme(onStoreChange: () => void): () => void {
   if (typeof window === "undefined") return () => undefined;
 
@@ -79,7 +67,7 @@ function getThemeSnapshot(): Theme {
 
 type Props = {
   children: ReactNode;
-  /** Theme assumed during SSR, before the client snapshot is available. */
+
   defaultTheme?: Theme;
 };
 
@@ -96,7 +84,7 @@ export function ThemeProvider({ children, defaultTheme = DEFAULT_THEME }: Props)
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
-      // Persisting is best-effort; the applied class is the source of truth.
+
     }
   }, []);
 
@@ -112,12 +100,7 @@ export function ThemeProvider({ children, defaultTheme = DEFAULT_THEME }: Props)
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-/**
- * Access the current theme.
- *
- * Returns a no-op context when used outside {@link ThemeProvider} so isolated
- * component tests never crash.
- */
+
 export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext) ?? NOOP_CONTEXT;
 }

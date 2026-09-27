@@ -104,7 +104,6 @@ class OpenAIProvider(BaseLLMProvider):
 
             output = response.choices[0].message.content
 
-            # Handle None or empty content from LLM provider (e.g., Gemini)
             if not output:
                 logger.warning(
                     "LLM provider returned empty content for prompt (first 100 chars): %s...",

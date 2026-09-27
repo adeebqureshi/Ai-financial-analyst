@@ -1,8 +1,3 @@
-"""
-markdown_report.py
-
-Markdown report generator.
-"""
 
 from __future__ import annotations
 

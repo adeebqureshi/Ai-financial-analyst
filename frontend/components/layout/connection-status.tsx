@@ -43,15 +43,7 @@ type HealthPayload = {
   components?: unknown;
 };
 
-/**
- * Real backend connection indicator.
- *
- * Combines `GET /health` (service status) with `GET /version` (app version
- * and demo-mode flag). Loading, connected, degraded, and unavailable states
- * are rendered explicitly from real responses — the shell never invents
- * status. Polls every 30 seconds and exposes a manual retry when the
- * backend is unreachable.
- */
+
 export function ConnectionStatus() {
   const [state, setState] = useState<HealthState>({ status: "checking" });
   const [attempt, setAttempt] = useState(0);
@@ -60,8 +52,8 @@ export function ConnectionStatus() {
     let cancelled = false;
 
     async function check() {
-      // Health first, because it carries per-component status for the
-      // degraded case. If health is unreachable, the backend is unavailable.
+
+
       let health: HealthPayload | null = null;
 
       try {
@@ -79,8 +71,8 @@ export function ConnectionStatus() {
         return;
       }
 
-      // Version is auxiliary (display + demo badge); it must not downgrade a
-      // healthy backend to unavailable when it alone fails.
+
+
       let demoMode = false;
       let version: string | null = null;
 
@@ -95,7 +87,7 @@ export function ConnectionStatus() {
         version =
           typeof data?.app_version === "string" ? data.app_version : null;
       } catch {
-        // Keep the health-derived state below; version details stay unknown.
+
       }
 
       if (cancelled) return;

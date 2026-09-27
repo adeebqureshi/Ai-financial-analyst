@@ -21,12 +21,6 @@ AUDITOR_SYSTEM_INSTRUCTION = (
 
 
 def delimit_untrusted_source(source: str) -> str:
-    """Return source text inside an explicit data/evidence boundary.
-
-    This helper is the strongest compatible boundary for auditor integrations
-    that use a single-string prompt abstraction. It does not sanitize, summarize,
-    or alter the evidence itself.
-    """
     return f"<UNTRUSTED_SOURCE>\n{source}\n</UNTRUSTED_SOURCE>"
 
 logger = get_logger(__name__)

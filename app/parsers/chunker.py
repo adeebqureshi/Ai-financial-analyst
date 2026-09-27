@@ -13,7 +13,6 @@ class Chunk:
 
 
 class Chunker:
-    """Chunk documents while preserving paragraph/table boundaries when possible."""
 
     def __init__(self, chunk_size: int = 800, overlap: int = 100) -> None:
         if chunk_size <= 0:
@@ -41,7 +40,6 @@ class Chunker:
         return table_lines >= 2 and separator
 
     def _semantic_blocks(self, text: str) -> list[tuple[str, bool]]:
-        """Return paragraph/table blocks; tables are never split across blocks."""
         raw_blocks = [block.strip() for block in text.split("\n\n") if block.strip()]
         if not raw_blocks:
             return []
@@ -92,9 +90,6 @@ class Chunker:
         for block, is_table in blocks:
             block_words = len(block.split())
 
-            # A financial table is an atomic semantic unit. If it is larger
-            # than chunk_size, keep the complete table rather than splitting
-            # rows/columns and destroying its meaning.
             if is_table:
                 if current:
                     flush()
@@ -108,8 +103,6 @@ class Chunker:
                 )
                 continue
 
-            # Oversized prose is split normally, but only after any completed
-            # semantic blocks have been flushed.
             if block_words > self.chunk_size:
                 if current:
                     flush()

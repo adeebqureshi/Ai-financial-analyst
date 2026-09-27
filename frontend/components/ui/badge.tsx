@@ -44,12 +44,7 @@ export function Badge({ className, variant, ...props }: BadgeProps) {
 
 type RecommendationTone = "success" | "warning" | "danger" | "neutral";
 
-/**
- * Map a backend recommendation string to a semantic tone.
- *
- * Mirrors the previous `badgeColor()` behaviour: substring matching so values
- * like "STRONG BUY" keep working, with unknown values falling back to neutral.
- */
+
 export function recommendationTone(recommendation: string): RecommendationTone {
   const normalized = recommendation.toUpperCase();
 
@@ -94,7 +89,7 @@ const statusVariants: Record<string, VariantProps<typeof badgeVariants>["variant
   unhealthy: "danger",
 };
 
-/** Status badge for backend health, agent tools and document states. */
+
 export function StatusBadge({
   status,
   label,
@@ -114,12 +109,7 @@ export function StatusBadge({
   );
 }
 
-/**
- * Marks data that is synthetic / not live market data.
- *
- * Used instead of inventing numbers: anything not backed by a real backend
- * response is labelled rather than presented as live.
- */
+
 export function DemoBadge({
   label = "Demo data",
   className,

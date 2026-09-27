@@ -71,7 +71,6 @@ def test_llamaparse_unavailable_without_package(monkeypatch) -> None:
     parser = LlamaParseParser(api_key="llx-test-key")
     assert parser.available() is False
 def test_default_chain_is_pymupdf_only() -> None:
-    """The default pipeline uses PyMuPDF alone (no optional parsers)."""
     unified = UnifiedDocumentParser(api_key="")
     assert [parser.name for parser in unified.parsers] == ["pymupdf"]
     assert unified.available_parsers() == ["pymupdf"]
@@ -85,7 +84,6 @@ def test_default_chain_reports_only_pymupdf_available() -> None:
 
 
 def test_optional_parsers_are_opt_in() -> None:
-    """The optional layout-aware parsers only join the chain when asked."""
     default = UnifiedDocumentParser(api_key="llx-test-key")
     assert [parser.name for parser in default.parsers] == ["pymupdf"]
 
@@ -170,7 +168,6 @@ def test_marker_failure_falls_back_to_pymupdf(monkeypatch, tmp_path) -> None:
 
 
 def test_pymupdf_used_by_default_without_optional_parsers(tmp_path) -> None:
-    """A normal PDF upload is handled by PyMuPDF with no opt-in flags."""
     pdf_path = _write_pdf(tmp_path, "apple", ["Gross profit was 300."])
     unified = UnifiedDocumentParser(api_key="")
     result = unified.parse(pdf_path, filename="apple_10k.pdf")

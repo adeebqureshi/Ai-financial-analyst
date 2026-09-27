@@ -22,7 +22,7 @@ type PaletteItem = {
   group: string;
 };
 
-/* Same destinations as the sidebar — defined once in `nav-items.ts`. */
+
 const ITEMS: PaletteItem[] = navigationDestinations.map(
   ({ title, href, group }) => ({ label: title, href, group })
 );
@@ -31,13 +31,7 @@ type Props = {
   children: ReactNode;
 };
 
-/**
- * Lightweight, dependency-free command palette.
- *
- * Opened by the wrapped trigger (mouse) or `Cmd/Ctrl+K`. Supports arrow-key
- * navigation, Enter to navigate, Escape to close, click-outside to close, and
- * renders dialog/listbox semantics so screen readers announce it correctly.
- */
+
 export function CommandPalette({ children }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -98,7 +92,7 @@ export function CommandPalette({ children }: Props) {
   function close() {
     setOpen(false);
     setQuery("");
-    // Return focus to the trigger so keyboard users are not dropped at <body>.
+
     restoreFocusRef.current?.focus();
     restoreFocusRef.current = null;
   }
@@ -116,7 +110,7 @@ export function CommandPalette({ children }: Props) {
     }
 
     if (event.key === "Tab") {
-      // Keep focus inside the modal dialog.
+
       const panel = panelRef.current;
       if (!panel) return;
 

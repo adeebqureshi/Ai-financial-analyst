@@ -90,9 +90,6 @@ DEFAULT_EMBEDDING_DIMENSION: Final[int] = 384
 DEFAULT_VECTOR_TOP_K: Final[int] = 5
 DEFAULT_QDRANT_COLLECTION: Final[str] = "financial_documents"
 DEFAULT_ENABLE_RERANKER: Final[bool] = False
-# Cosine-similarity floor below which a retrieved chunk is not evidence.
-# all-MiniLM-L6-v2 cosine similarities for unrelated text typically land well
-# below 0.3, while a genuine topical match is comfortably above it.
 DEFAULT_RETRIEVAL_MIN_SIMILARITY: Final[float] = 0.30
 DEFAULT_CHUNK_SIZE: Final[int] = 1000
 DEFAULT_CHUNK_OVERLAP: Final[int] = 200
@@ -101,17 +98,6 @@ DEFAULT_LLM_TEMPERATURE: Final[float] = 0.0
 DEFAULT_LLM_MAX_TOKENS: Final[int] = 4096
 DEFAULT_LLM_TOKEN_QUOTA_PER_USER_PER_DAY: Final[int] = 200_000
 
-# ── LLM provider policy ──────────────────────────────────────────────────────
-# The project uses exactly ONE primary LLM provider. "openai" is that provider:
-# it is the only fully-implemented one, and it also drives any
-# OpenAI-compatible gateway (e.g. the bundled `freellmapi` service) through
-# FREELLMAPI_BASE_URL / FREELLMAPI_API_KEY.
-#
-# "mock" is retained ONLY so the test-suite and offline demos can run without
-# network access; it echoes the prompt and is not a real completion.
-#
-# Stub providers (anthropic / gemini / litellm / ollama / vllm) were removed:
-# each merely echoed the prompt back and never produced a real completion.
 DEFAULT_LLM_PROVIDER: Final[str] = "openai"
 SUPPORTED_LLM_PROVIDERS: Final[tuple[str, ...]] = ("openai", "mock")
 STORAGE_ROOT: Final[str] = "storage"

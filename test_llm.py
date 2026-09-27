@@ -1,12 +1,5 @@
-"""
-Run from your project root:
-    python test_llm.py
-
-This bypasses all app wrappers and tests each layer independently.
-"""
 import os, sys
 
-# ── 1. Load .env ──────────────────────────────────────────────────────────────
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -14,7 +7,6 @@ try:
 except Exception as e:
     print(f"[.env] FAILED to load: {e}")
 
-# ── 2. Print resolved values ──────────────────────────────────────────────────
 base_url = os.getenv("FREELLMAPI_BASE_URL", "")
 api_key  = os.getenv("FREELLMAPI_API_KEY", "")
 model    = os.getenv("LLM_MODEL", "gpt-4o")
@@ -34,7 +26,6 @@ if not api_key:
     print("\n[FAIL] FREELLMAPI_API_KEY is empty — uses_freellmapi will be False!")
     sys.exit(1)
 
-# ── 3. Raw HTTP test (no openai SDK) ─────────────────────────────────────────
 print(f"\n[raw http] POST {base_url}/chat/completions ...")
 import urllib.request, json as _json
 
@@ -66,7 +57,6 @@ except Exception as e:
     print(f"[raw http] CONNECTION ERROR: {type(e).__name__}: {e}")
     sys.exit(1)
 
-# ── 4. OpenAI SDK test ────────────────────────────────────────────────────────
 print(f"\n[openai sdk] testing chat.completions.create ...")
 try:
     from openai import OpenAI
@@ -81,7 +71,6 @@ except Exception as e:
     print(f"[openai sdk] FAILED: {type(e).__name__}: {e}")
     sys.exit(1)
 
-# ── 5. App settings test ──────────────────────────────────────────────────────
 print(f"\n[app settings] loading ...")
 try:
     sys.path.insert(0, ".")
@@ -97,7 +86,6 @@ except Exception as e:
     print(f"[app settings] FAILED: {type(e).__name__}: {e}")
     sys.exit(1)
 
-# ── 6. Full app OpenAIClient test ─────────────────────────────────────────────
 print(f"\n[app client] testing OpenAIClient.generate ...")
 try:
     from app.llm.openai_client import OpenAIClient

@@ -34,12 +34,7 @@ export function AnalysisView({
 
   const health = result?.health ?? null;
 
-  /**
-   * Real risk assessment from `POST /risk-analysis`, requested with the
-   * health scores returned by `/analyze`. Only runs once those scores exist;
-   * the endpoint does not provide volatility or business/financial risk
-   * percentages, so none are displayed.
-   */
+
   const riskQuery = useQuery({
     queryKey: [
       "risk-analysis",

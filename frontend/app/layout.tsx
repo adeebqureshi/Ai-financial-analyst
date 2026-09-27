@@ -26,10 +26,7 @@ export const metadata: Metadata = {
   description: "Enterprise AI Financial Platform",
 };
 
-/**
- * Applies the persisted theme before first paint so the workspace never
- * flashes the wrong palette. Mirrors `ThemeProvider`'s storage key and default.
- */
+
 const themeScript = `(function(){try{var k=${JSON.stringify(
   THEME_STORAGE_KEY
 )};var s=window.localStorage.getItem(k);var t=s==="light"||s==="dark"?s:${JSON.stringify(

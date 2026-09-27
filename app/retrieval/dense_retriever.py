@@ -28,12 +28,6 @@ class DenseRetriever:
         document_id: str | None = None,
         owner_id: str | None = None,
     ) -> dict[str, float]:
-        """Return {chunk_id: cosine_similarity} for the dense candidates.
-
-        Hybrid fusion only preserves *order*, so its RRF scores always sit in a
-        narrow band near 1/(k+1) and can never indicate relevance. These raw
-        cosine similarities are what a relevance floor must be applied to.
-        """
         points = self.search(
             vector=vector,
             limit=limit,

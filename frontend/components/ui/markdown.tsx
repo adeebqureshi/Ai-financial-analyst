@@ -4,14 +4,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 
 import { cn } from "@/lib/utils";
 
-/**
- * Shared markdown renderer.
- *
- * Extracted from the agent workspace so the chat transcript and the generated
- * investment report render identically. Replaces the previous `prose` classes
- * on the report viewer, which had no effect because `@tailwindcss/typography`
- * is not installed.
- */
+
 export const markdownComponents: Components = {
   h1: (props) => (
     <h1 {...props} className="mb-3 mt-6 text-title text-foreground first:mt-0" />

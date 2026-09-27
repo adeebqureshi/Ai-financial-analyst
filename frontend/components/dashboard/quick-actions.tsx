@@ -21,11 +21,7 @@ type Action = {
   icon: LucideIcon;
 };
 
-/**
- * Destinations that exist in the application. Descriptions state what the
- * destination actually does — no workflow is advertised that the app cannot
- * perform (e.g. there is no PDF export and no portfolio tracker).
- */
+
 const actions: Action[] = [
   {
     title: "Analyze a company",

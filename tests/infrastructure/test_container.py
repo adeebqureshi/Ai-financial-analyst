@@ -8,7 +8,6 @@ def test_container():
 
 
 def test_health_reports_database_and_qdrant():
-    """Qdrant is the single vector database probed by readiness."""
     container = Container()
     checks = container.health()
     assert set(checks) == {"database", "vector_store", "cache"}

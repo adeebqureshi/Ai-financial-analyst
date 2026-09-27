@@ -37,8 +37,6 @@ def test_invalid():
 
 
 def test_removed_stub_providers_are_no_longer_registered():
-    # The stub providers (anthropic/gemini/litellm/ollama/vllm) only echoed the
-    # prompt back. They are gone, so the factory must reject them.
     for removed in ("anthropic", "gemini", "litellm", "ollama", "vllm", "google"):
         with pytest.raises(ValueError):
             ProviderFactory.create(removed)

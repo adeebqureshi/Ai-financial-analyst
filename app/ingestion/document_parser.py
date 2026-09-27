@@ -1,36 +1,3 @@
-"""
-document_parser.py
-
-Financial PDF text extraction.
-
-The normal ingestion pipeline uses a single, reliable parser::
-
-    PDF -> PyMuPDF -> Text -> Chunking -> Embedding
-
-PyMuPDF is a core dependency and the only parser on the default path. It
-reuses :class:`app.ingestion.pdf_loader.PDFLoader`, preserves per-page text,
-and never fabricates tables — table extraction only recognises Markdown table
-syntax that is literally present in the text.
-
-The optional layout-aware parsers (LlamaParse, Marker) live in this module but
-are **off by default**. They are only used when the ``document-parsing`` extra
-is installed AND ``PDF_ENABLE_OPTIONAL_PARSERS=true`` is set, in which case the
-chain LlamaParse -> Marker -> PyMuPDF is tried in order. They are never
-required for a normal PDF upload.
-
-Design principles:
-    - **Reliable default.** PyMuPDF alone handles normal financial PDFs, so the
-      upload path has no external API or heavy-model dependency.
-    - **Graceful degradation.** A missing optional dependency or a parse
-      failure at one level silently falls through to the next parser, so the
-      upload pipeline never crashes because an optional parser is unavailable.
-    - **Observable failures.** Every skipped or failed parser is logged, and a
-      total failure raises :class:`ParserError` with per-parser details — a
-      failure is never silently treated as success.
-    - **Structure preservation.** Markdown tables are turned into structured
-      :class:`ParsedTable` objects, keeping columnar financial data associated
-      instead of flattened into prose.
-"""
 
 from __future__ import annotations
 
@@ -58,19 +25,6 @@ _SUPPORTED_EXTENSIONS: Final[tuple[str, ...]] = (".pdf",)
 
 @dataclass(slots=True)
 class DocumentParseResult:
-    """
-    Canonical, parser-independent result of document parsing.
-
-    Attributes:
-        text: Full extracted text/Markdown.
-        parser_used: Name of the parser that produced the result.
-        pages: Optional page-split text (1-indexed by position). Best effort —
-            structural page boundaries are only available for PyMuPDF and
-            Markdown output that carries page markers.
-        tables: Structured financial tables found in the source.
-        filename: Source filename when known.
-        warnings: Non-fatal observations (e.g. degraded page attribution).
-    """
 
     text: str
     parser_used: str
@@ -81,23 +35,16 @@ class DocumentParseResult:
 
     @property
     def is_empty(self) -> bool:
-        """True when no text content was extracted."""
         return not self.text.strip()
 
 
 class BaseDocumentParser(ABC):
-    """Interface implemented by every parser in the fallback chain."""
 
     name: str = ""
 
     @abstractmethod
     def available(self) -> bool:
-        """
-        Whether this parser can currently be used.
-
-        ``False`` for optional parsers whose package or credentials are
-        missing; ``True`` alone does not guarantee a successful parse.
-        """
+            pass
 
     @abstractmethod
     def parse(
@@ -105,28 +52,12 @@ class BaseDocumentParser(ABC):
         path: str,
         filename: str | None = None,
     ) -> DocumentParseResult:
-        """
-        Parse a document from ``path``.
-
-        Raises:
-            ParserError: If parsing fails or produces no content. The caller
-                (the fallback chain) is expected to continue to the next
-                parser.
-        """
+            pass
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Shared helpers
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 def _split_markdown_pages(markdown: str) -> list[str]:
-    """
-    Split LlamaParse/Marker Markdown on ``Page N:`` markers when present.
-
-    Returns an empty list when no reliable page markers exist, letting
-    callers fall back to treating the whole document as a single page.
-    """
     matches = list(_PAGE_MARKER.finditer(markdown))
 
     if not matches:
@@ -157,7 +88,6 @@ def _split_markdown_pages(markdown: str) -> list[str]:
 
 
 def _tables_from_pages(pages: list[str]) -> list[ParsedTable]:
-    """Extract tables page by page so each table records its page number."""
     tables: list[ParsedTable] = []
 
     parser = TableParser()
@@ -174,7 +104,6 @@ def _tables_from_pages(pages: list[str]) -> list[ParsedTable]:
 
 
 def _component_text(component: object) -> str:
-    """Extract text from a LlamaParse document/component object."""
     text = getattr(component, "text", None)
 
     if isinstance(text, str):
@@ -183,19 +112,9 @@ def _component_text(component: object) -> str:
     return str(component)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Concrete parsers
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 class LlamaParseParser(BaseDocumentParser):
-    """
-    Layout-aware Markdown parsing via LlamaParse.
-
-    Requires an ``LLAMA_PARSE_API_KEY`` and the optional ``llama-parse``
-    package. When either is missing this parser reports itself unavailable
-    and the fallback chain skips it.
-    """
 
     name: str = PARSER_LLAMAPARSE
 
@@ -261,13 +180,6 @@ class LlamaParseParser(BaseDocumentParser):
         )
 
     def _extract(self, path: str) -> str:
-        """
-        Load the document through LlamaParse requesting Markdown output.
-
-        The package's sync API surface has changed across releases, so both
-        the modern ``load_data()`` reader interface and the legacy
-        ``_load_file()`` job interface are attempted.
-        """
         from llama_parse import LlamaParse
 
         parser = LlamaParse(
@@ -286,13 +198,6 @@ class LlamaParseParser(BaseDocumentParser):
 
 
 class MarkerParser(BaseDocumentParser):
-    """
-    Layout-aware Markdown parsing via the optional ``marker-pdf`` package.
-
-    Marker requires local model artifacts that may be missing on fresh
-    environments; when the package is installed but conversion fails, the
-    fallback chain continues to PyMuPDF so ingestion is never blocked.
-    """
 
     name: str = PARSER_MARKER
 
@@ -342,9 +247,6 @@ class MarkerParser(BaseDocumentParser):
 
     @staticmethod
     def _convert(path: str) -> str:
-        """
-        Convert a PDF to Markdown with the Marker Python API.
-        """
         from marker.converters.pdf import PdfConverter
         from marker.models import create_model_dict
         from marker.output import text_from_rendered
@@ -361,13 +263,6 @@ class MarkerParser(BaseDocumentParser):
 
 
 class PyMuPDFParser(BaseDocumentParser):
-    """
-    Reliable plain-text fallback using PyMuPDF.
-
-    Reuses the existing :class:`app.ingestion.pdf_loader.PDFLoader`, keeps
-    per-page text and never fabricates tables — table extraction only
-    recognizes Markdown table syntax that is literally present in the text.
-    """
 
     name: str = PARSER_PYMUPDF
 
@@ -408,27 +303,9 @@ class PyMuPDFParser(BaseDocumentParser):
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Unified orchestration
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 class UnifiedDocumentParser:
-    """
-    Parser entry point for financial PDFs.
-
-    The normal pipeline is a single, reliable parser::
-
-        PDF -> PyMuPDF -> Text -> Chunking -> Embedding
-
-    PyMuPDF is a core dependency and the only parser on the default path.
-
-    The optional layout-aware parsers (LlamaParse, Marker) are **off by
-    default** and are never required for a normal PDF upload. They remain
-    available as an explicit opt-in via ``enable_optional_parsers=True`` for
-    users who install the ``document-parsing`` extra, in which case the chain
-    LlamaParse -> Marker -> PyMuPDF is tried in order.
-    """
 
     def __init__(
         self,
@@ -452,11 +329,9 @@ class UnifiedDocumentParser:
 
     @property
     def parsers(self) -> list[BaseDocumentParser]:
-        """The configured parser chain (new list every access)."""
         return list(self._parsers)
 
     def available_parsers(self) -> list[str]:
-        """Names of parsers that currently report themselves available."""
         return [parser.name for parser in self._parsers if parser.available()]
 
     def parse(
@@ -464,13 +339,6 @@ class UnifiedDocumentParser:
         path: str | Path,
         filename: str | None = None,
     ) -> DocumentParseResult:
-        """
-        Parse a financial PDF using the best available parser.
-
-        Raises:
-            ParserError: If the file type is unsupported, the file is missing,
-                or every available parser fails.
-        """
         path_obj = Path(path)
 
         if not path_obj.exists():
@@ -521,7 +389,7 @@ class UnifiedDocumentParser:
                     }
                 )
                 continue
-            except Exception as exc:  # noqa: BLE001 - defensive chain boundary
+            except Exception as exc:
                 logger.warning(
                     "Parser '%s' raised an unexpected error for '%s': %s",
                     parser.name,
@@ -573,13 +441,9 @@ class UnifiedDocumentParser:
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Module helpers
-# ──────────────────────────────────────────────────────────────────────────────
 
 
 def _is_module_available(module_name: str) -> bool:
-    """Return True when ``module_name`` can be imported."""
     try:
         return importlib.util.find_spec(module_name) is not None
     except (ImportError, ValueError):

@@ -27,7 +27,6 @@ class DemoMarketProvider(MarketDataProvider):
         ticker: str,
         timeout_seconds: float = 10.0,
     ) -> Quote:
-        # Demo data must never be usable in production.
         if os.getenv("ENV", "").strip().lower() == "production":
             raise ProviderError(
                 "Demo market provider is disabled in production."

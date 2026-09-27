@@ -137,4 +137,3 @@ def test_qdrant_connection_failures_are_dependency_errors(error):
 
     assert raised.value.error_code == "VECTOR_STORE_UNAVAILABLE"
     assert "qdrant" not in raised.value.message.lower()
-

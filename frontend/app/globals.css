@@ -6,14 +6,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Typography — the font variables are defined by next/font on <html>. */
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
     Consolas, monospace;
   --font-heading: var(--font-sans);
 
-  /* Type scale — three levels plus table/label sizes. */
+
   --text-display: 1.75rem;
   --text-display--line-height: 1.2;
   --text-display--letter-spacing: -0.02em;
@@ -79,14 +79,12 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Elevation — themed through --elevation-* so dark surfaces can be stronger. */
+
   --shadow-card: var(--elevation-card);
   --shadow-overlay: var(--elevation-overlay);
 }
 
-/* ---------------------------------------------------------------------------
- * Light theme (default palette).
- * ------------------------------------------------------------------------- */
+
 :root {
   color-scheme: light;
 
@@ -146,9 +144,7 @@
   --sidebar-ring: oklch(0.55 0.19 262);
 }
 
-/* ---------------------------------------------------------------------------
- * Dark theme — applied by ThemeProvider via the `dark` class on <html>.
- * ------------------------------------------------------------------------- */
+
 .dark {
   color-scheme: dark;
 
@@ -220,14 +216,14 @@
     @apply bg-background text-foreground antialiased;
   }
 
-  /* Financial figures must align in columns. */
+
   th,
   td {
     font-variant-numeric: tabular-nums;
   }
 }
 
-/* Explicit opt-in for tabular figures outside tables. */
+
 @utility tnum {
   font-variant-numeric: tabular-nums;
 }

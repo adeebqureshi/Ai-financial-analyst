@@ -229,11 +229,8 @@ class ChatService:
                     done_payload = frame
                 yield _format_sse(event_type, frame)
         except ClientDisconnect:
-            # A disconnected client is a normal end of the request, not a
-            # provider failure.  In particular, do not emit an error frame.
             return
         except asyncio.CancelledError:
-            # Preserve cancellation so Starlette can finish request teardown.
             raise
         except Exception as exc:
             logger.warning(
@@ -244,8 +241,6 @@ class ChatService:
             yield _format_sse("error", {"message": "The chat stream failed unexpectedly."})
             return
         finally:
-            # Closing the async generator finalizes its current async-for
-            # operation and releases any provider resources on every exit path.
             aclose = getattr(stream, "aclose", None)
             if aclose is not None:
                 await aclose()

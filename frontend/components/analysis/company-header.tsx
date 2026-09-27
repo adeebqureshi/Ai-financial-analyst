@@ -17,7 +17,7 @@ type Props = {
   recommendation: string;
 };
 
-/** The backend flags synthetic fixtures by suffixing the company name. */
+
 function isDemoData(name: string): boolean {
   return name.includes("[DEMO / SYNTHETIC DATA]");
 }

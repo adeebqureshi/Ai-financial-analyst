@@ -1,9 +1,3 @@
-"""SECLoader contract: filing HTML is fetched through the central gateway.
-
-The loader used to call ``requests.get`` directly; it now delegates to the
-centralized SEC gateway, which owns the distributed rate limit and the SEC
-identification headers.
-"""
 
 from __future__ import annotations
 

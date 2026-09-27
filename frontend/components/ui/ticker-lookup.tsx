@@ -7,9 +7,9 @@ import { Button } from "./button";
 import { Field, TickerInput } from "./field";
 
 type Props = {
-  /** Label of the submit button. */
+
   submitLabel?: string;
-  /** Helper text rendered under the field. */
+
   hint?: string;
   onSubmit: (symbol: string) => void;
   className?: string;
@@ -17,13 +17,7 @@ type Props = {
 
 const SYMBOL_PATTERN = /^[A-Z]{1,5}$/;
 
-/**
- * Ticker entry used by the `/analysis` and `/company` landing pages.
- *
- * Extracted so both routes render the same validated control instead of two
- * near-identical local forms. Validation mirrors the backend contract
- * (1–5 uppercase letters) and is announced through `aria-describedby`/`role`.
- */
+
 export function TickerLookupForm({
   submitLabel = "Continue",
   hint,

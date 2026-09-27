@@ -1,25 +1,22 @@
-"""
-LLM exceptions.
-"""
 
 from __future__ import annotations
 
 
 class LLMError(Exception):
-    """Base LLM exception."""
+        pass
 
 
 class ProviderError(LLMError):
-    """Provider request failed."""
+        pass
 
 
 class AuthenticationError(ProviderError):
-    """Authentication failed."""
+        pass
 
 
 class RateLimitError(ProviderError):
-    """Rate limit exceeded."""
+        pass
 
 
 class TimeoutError(ProviderError):
-    """Provider timed out."""
+        pass

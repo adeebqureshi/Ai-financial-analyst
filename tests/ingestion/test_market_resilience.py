@@ -227,7 +227,6 @@ def test_demo_mode_true_uses_explicit_demo_provider() -> None:
 
 
 class TestProductionDataSourceEnforcement:
-    """Issue #5: production mode must never serve demo/mock/sample data."""
 
     def test_production_mode_uses_only_real_providers(self) -> None:
         service = MarketService(_settings(demo_mode=False))

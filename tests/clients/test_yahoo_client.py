@@ -8,14 +8,6 @@ from app.ingestion.clients.yahoo_client import YahooClient
 
 
 def _stub_ticker(info: dict, history: pd.DataFrame) -> MagicMock:
-    """Build a deterministic stand-in for ``yfinance.Ticker``.
-
-    Yahoo Finance (via ``yfinance``) is an unofficial, rate-limited external
-    provider without an SLA. Unit tests must never depend on live network
-    access, so the client's ``yf`` seam is patched and a canned response object
-    is injected instead of issuing a real HTTP request. Production keeps using
-    the real ``yfinance`` implementation untouched.
-    """
     stock = MagicMock()
     stock.info = info
     stock.history.return_value = history

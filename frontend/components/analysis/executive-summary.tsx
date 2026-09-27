@@ -10,24 +10,14 @@ import { RecommendationBadge } from "@/components/ui/badge";
 
 type Props = {
   recommendation: string;
-  /**
-   * Company profile text from `/analyze`, or null when the backend has none.
-   * The UI never invents a narrative when it is absent.
-   */
+
   summary: string | null;
   upside: number;
   intrinsicValue: number;
   currentPrice: number;
 };
 
-/**
- * Headline read of a completed analysis.
- *
- * Every figure here is a backend value: the recommendation, the intrinsic
- * value, the current price and the upside percentage. The only derived number
- * is the per-share difference between intrinsic value and price, which is
- * labelled as such.
- */
+
 export function ExecutiveSummary({
   recommendation,
   summary,

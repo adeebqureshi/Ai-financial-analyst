@@ -10,7 +10,7 @@ type Props = {
   className?: string;
 };
 
-/** Consistent empty state for lists, results and not-yet-populated panels. */
+
 export function EmptyState({
   icon,
   title,

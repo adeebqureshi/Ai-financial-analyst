@@ -137,14 +137,7 @@ export interface ChatData {
   ticker: string | null;
   model: string | null;
   sources: DocumentCitation[];
-  /**
-   * Optional agent orchestration metadata.
-   *
-   * The current backend chat endpoint does not emit these fields yet. They are
-   * declared so the workspace UI can consume real tool execution / research
-   * plan metadata as soon as the orchestrator exposes it, without inventing
-   * data in the frontend today.
-   */
+
   plan?: string[];
   tools_used?: AgentToolExecution[];
 }
@@ -189,7 +182,7 @@ export interface ScreenData {
   total: number;
 }
 
-/** Request payload for `POST /screen` (single candidate company). */
+
 export interface ScreenRequestData {
   min_piotroski: number;
   min_altman: number;

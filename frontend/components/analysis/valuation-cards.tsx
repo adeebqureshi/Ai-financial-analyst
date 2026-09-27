@@ -14,13 +14,7 @@ type Props = {
   discountRate: number;
 };
 
-/**
- * Valuation tiles for a completed analysis.
- *
- * All four values are returned by the backend valuation model; the UI adds no
- * commentary of its own beyond naming the model that produced the discount
- * rate (a WACC discount rate computed server-side).
- */
+
 export function ValuationCards({
   intrinsicValue,
   currentPrice,

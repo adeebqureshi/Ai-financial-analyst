@@ -13,10 +13,6 @@ _default_chat_db = os.path.join(
     "ai-financial-analyst-test-chat.db",
 ).replace("\\\\", "/")
 os.environ.setdefault("CHAT_DATABASE_URL", f"sqlite:///{_default_chat_db}")
-# Tests must never touch a real Qdrant server. An empty QDRANT_URL forces the
-# volatile in-process :memory: client, keeping the suite hermetic even when a
-# developer has QDRANT_URL configured in .env for the local demo.
-# (Environment variables take precedence over the .env file.)
 os.environ.setdefault("QDRANT_URL", "")
 
 import pytest

@@ -12,12 +12,7 @@ type Props = {
   beneish: number;
 };
 
-/**
- * Standard academic interpretation thresholds for the two backend scores:
- * Altman Z > 3 safe / 1.8-3 grey / < 1.8 distress, and Beneish M > -1.78
- * flags possible manipulation. They are applied to real backend scores and
- * labelled as interpretations of those scores.
- */
+
 function bankruptcyRiskLabel(altman: number): string {
   if (altman > 3) return "Low";
   if (altman > 1.8) return "Moderate";

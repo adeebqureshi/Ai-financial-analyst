@@ -179,9 +179,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _run_database_migrations(settings, app_logger)
         _run_chat_retention_cleanup(settings, app_logger)
 
-        # Pre-warm embedding model so first request isn't slow.
-        # Skipped entirely in test/dev/demo environments to avoid heavy
-        # downloads and startup hangs; the service loads lazily per request.
         if not (settings.is_test or settings.is_development or settings.is_demo_mode):
             try:
                 import asyncio

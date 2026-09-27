@@ -1,21 +1,18 @@
-"""
-Exceptions for document ingestion.
-"""
 
 from __future__ import annotations
 
 
 class IngestionError(Exception):
-    """Base ingestion exception."""
+        pass
 
 
 class UnsupportedDocumentError(IngestionError):
-    """Unsupported document type."""
+        pass
 
 
 class DocumentParseError(IngestionError):
-    """Document parsing failed."""
+        pass
 
 
 class DocumentNotFoundError(IngestionError):
-    """Document not found."""
+        pass

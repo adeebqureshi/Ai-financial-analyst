@@ -39,7 +39,7 @@ def test_embed_documents(mock_get_model):
 
 @patch("app.embeddings.embedding_service._get_model")
 def test_embed_text_rejects_dimension_mismatch(mock_get_model):
-    mock_get_model.return_value = _StubModel([1.0, 2.0])  # wrong dimension
+    mock_get_model.return_value = _StubModel([1.0, 2.0])
     service = EmbeddingService()
     with pytest.raises(RetrievalError) as exc_info:
         service.embed_text("Apple")

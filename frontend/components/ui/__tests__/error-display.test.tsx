@@ -16,7 +16,7 @@ describe("ErrorDisplay", () => {
 
     expect(screen.getByText("Not Authenticated")).toBeInTheDocument();
     expect(screen.getByText("Please refresh the page to continue.")).toBeInTheDocument();
-    // Auth failures are marked retryable, so the retry affordance is shown.
+
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });

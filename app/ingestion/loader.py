@@ -1,6 +1,3 @@
-"""
-Base loader interface.
-"""
 
 from __future__ import annotations
 
@@ -17,6 +14,4 @@ class DocumentLoader(ABC):
         self,
         path: str,
     ) -> FinancialDocument:
-        """
-        Load a financial document.
-        """
+            pass

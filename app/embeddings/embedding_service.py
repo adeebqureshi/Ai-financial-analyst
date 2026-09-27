@@ -72,11 +72,6 @@ class EmbeddingService:
 
 
 def _fallback_vector(*args, **kwargs):
-    """Deterministic non-zero test vector (NOT used in production code).
-
-    Production methods above always raise on failure. This helper exists only
-    so unit tests can monkeypatch hermetic embeddings without downloads.
-    """
     import hashlib
 
     def _vec_for_text(text: str, dim: int = 384) -> list[float]:
@@ -85,7 +80,6 @@ def _fallback_vector(*args, **kwargs):
         norm = sum(v * v for v in vals) ** 0.5 or 1.0
         return [v / norm for v in vals]
 
-    # If the tests pass a list of strings (mocking embed_documents)
     if args and isinstance(args[0], list):
         return [_vec_for_text(str(t)) for t in args[0]]
 

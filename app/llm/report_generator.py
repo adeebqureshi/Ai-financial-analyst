@@ -10,7 +10,6 @@ MAX_RAG_CONTEXT_TOKENS = 100_000
 
 
 def _truncate_context(context: str, max_tokens: int = MAX_RAG_CONTEXT_TOKENS) -> str:
-    """Hard-limit retrieved context before it reaches the report LLM."""
     if not context:
         return ""
     if max_tokens <= 0:

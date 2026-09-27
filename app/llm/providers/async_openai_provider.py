@@ -34,8 +34,6 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
         self.config = config or ProviderConfig()
         self._retry = retry_policy or RetryPolicy()
         self.client: AsyncOpenAI | None = None
-        # FreeLLMAPI is OpenAI-compatible; prefer its credential/base URL,
-        # while remaining backwards compatible with a plain OPENAI_API_KEY.
         if api_key is None:
             api_key = (
                 os.getenv("FREELLMAPI_API_KEY")

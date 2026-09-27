@@ -1,22 +1,3 @@
-"""
-code_agent.py
-
-FinancialCodeAgent — turns a natural-language calculation request into code
-that runs *inside the sandbox* and returns the sandbox-computed numeric result.
-
-The trusted result never comes straight from the LLM. The LLM only writes the
-formula/code; the arithmetic is performed by :class:`PythonSandbox`. The final
-answer must be assigned to ``result`` inside the generated code.
-
-Input-data discipline
----------------------
-The sandbox receives **only** the explicitly supplied ``context`` (real values
-from the application's financial-data tools). The code agent's prompt forbids
-the LLM from inventing inputs, and the sandbox structurally enforces this:
-any variable name that was not supplied raises a ``NameError`` at runtime. The
-sandbox verifies arithmetic; it does **not** verify the truth of the input
-data — that is the application's data layer's responsibility.
-"""
 
 from __future__ import annotations
 
@@ -43,17 +24,6 @@ _CODE_FENCE_PATTERN = re.compile(
 
 @dataclass(slots=True)
 class CodeAgentResult:
-    """
-    Result of the code generation → sandbox execution pipeline.
-
-    Attributes:
-        success: ``True`` when the generated code validated, executed and
-            produced a ``result`` inside the sandbox.
-        code: The exact code that ran in the sandbox.
-        output: Captured stdout from the sandbox execution.
-        result: The sandbox-computed ``result`` value.
-        error: Structured error when ``success`` is ``False``.
-    """
 
     success: bool
     code: str = ""
@@ -63,13 +33,6 @@ class CodeAgentResult:
 
 
 class FinancialCodeAgent:
-    """
-    Generate a formula from a request and execute it in the sandbox.
-
-    The LLM is the *code writer*; the sandbox is the *calculator*. The numeric
-    answer returned by :meth:`run` is the sandbox's ``result``, never a number
-    the LLM printed.
-    """
 
     def __init__(
         self,
@@ -88,18 +51,6 @@ class FinancialCodeAgent:
         question: str,
         context: dict[str, Any] | None = None,
     ) -> CodeAgentResult:
-        """
-        Generate and sandbox-execute Python for ``question``.
-
-        Args:
-            question: The calculation request (e.g. "What is Apple's WACC?").
-            context: Real financial values supplied by the application's
-                data tools. Only these values are visible to the code.
-
-        Returns:
-            A :class:`CodeAgentResult`; ``success`` is ``True`` only when the
-            sandbox produced a result.
-        """
         prompt = _build_calculation_prompt(question, context)
 
         try:
@@ -153,13 +104,6 @@ def _to_agent_result(
 
 
 def _extract_code(text: str) -> str | None:
-    """
-    Extract Python source from an LLM response.
-
-    Prefers the longest fenced code block (```python ... ```). When the
-    response has no fence, falls back to the whole (stripped) text only if it
-    parses as valid Python — so explanatory prose is never executed.
-    """
     if not text:
         return None
 
@@ -237,5 +181,4 @@ def build_calculation_prompt(
     question: str,
     context: dict[str, Any] | None,
 ) -> str:
-    """Public helper (testable) mirroring the internal prompt builder."""
     return _build_calculation_prompt(question, context)

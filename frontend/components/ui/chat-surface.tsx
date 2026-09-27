@@ -9,19 +9,19 @@ import { useChatStream, type SendOptions } from "@/hooks/use-chat-stream";
 import type { AgentToolExecution } from "@/types/analysis";
 
 type Props = {
-  /** Stable per-surface scope for the persisted session id. */
+
   scope?: string;
-  /** Optional ticker context forwarded with every send. */
+
   ticker?: string;
-  /** Optional uploaded-document scope forwarded with every send. */
+
   documentId?: string;
-  /** Optional historical date (YYYY-MM-DD) forwarded with every send. */
+
   asOfDate?: string;
-  /** Accessible label for the input field. */
+
   inputLabel?: string;
-  /** Optional placeholder text for the composer. */
+
   placeholder?: string;
-  /** Hides the composer when the surface is embedded in a larger workspace. */
+
   readOnly?: boolean;
 };
 
@@ -32,14 +32,7 @@ const toolStatusTone: Record<AgentToolExecution["status"], string> = {
   skipped: "text-muted-foreground",
 };
 
-/**
- * Shared chat surface.
- *
- * Renders the transcript, streaming indicator, inline errors with retry,
- * cancel control, tool/source/plan metadata (only when the backend returned
- * it), and the composer. Built on {@link useChatStream} for all session and
- * streaming lifecycle behavior.
- */
+
 export function ChatSurface({
   scope = "default",
   ticker,
@@ -56,7 +49,7 @@ export function ChatSurface({
   const listRef = useRef<HTMLDivElement>(null);
   const followRef = useRef(true);
 
-  // Follow the stream unless the user has scrolled up to read.
+
   useEffect(() => {
     if (!listRef.current || !followRef.current) return;
     listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -337,4 +330,3 @@ function ChatMessageRow({ message, isStreaming, isLast }: RowProps) {
     </div>
   );
 }
-

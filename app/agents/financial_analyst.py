@@ -1,17 +1,3 @@
-"""
-financial_analyst.py
-
-Financial Analyst Agent.
-
-Two responsibilities:
-
-1. Legacy quantitative analysis (``analyze``) — wraps the existing
-   ``FinancialAnalysisEngine``; used by ``FinancialPipeline`` for the
-   ``/analyze`` and ``/report`` endpoints.
-
-2. Evidence-grounded synthesis (``synthesize``) — produces the final
-   research answer for the agentic chat pipeline.
-"""
 
 from __future__ import annotations
 
@@ -45,7 +31,6 @@ LLM_UNAVAILABLE_MESSAGE = (
     "could not be summarized."
 )
 
-# Hard safety boundary for retrieved RAG context.
 MAX_RAG_CONTEXT_TOKENS = 100_000
 
 
@@ -65,20 +50,11 @@ class FinancialAnalystAgent:
         self.engine = FinancialAnalysisEngine()
 
     def ensure_async_client(self) -> AsyncOpenAIClient:
-        """
-        Return the async LLM client, building it once on first use.
-
-        The client is built lazily so that synchronous callers (``synthesize``)
-        never construct the async provider unnecessarily.
-        """
         if self._async_client is None:
             self._async_client = AsyncOpenAIClient()
 
         return self._async_client
 
-    # ──────────────────────────────────────────────────────────────────
-    # Legacy quantitative analysis (used by FinancialPipeline)
-    # ──────────────────────────────────────────────────────────────────
 
     def analyze(
         self,
@@ -106,9 +82,6 @@ class FinancialAnalystAgent:
             beneish_score=beneish_score,
         )
 
-    # ──────────────────────────────────────────────────────────────────
-    # Evidence-grounded synthesis (agentic chat pipeline)
-    # ──────────────────────────────────────────────────────────────────
 
     def synthesize(
         self,
@@ -118,12 +91,6 @@ class FinancialAnalystAgent:
         sources: list[dict[str, Any]],
         tickers: list[str],
     ) -> tuple[str, str | None]:
-        """
-        Generate the final research answer from collected tool evidence.
-
-        Retrieved RAG context is hard-limited to 100,000 tokens before it is
-        placed into the synthesis prompt.
-        """
         if not evidence:
             return INSUFFICIENT_EVIDENCE_MESSAGE, None
 
@@ -173,9 +140,6 @@ class FinancialAnalystAgent:
 
         return response.text, getattr(response, "model", None)
 
-    # ──────────────────────────────────────────────────────────────────
-    # Streaming evidence-grounded synthesis
-    # ──────────────────────────────────────────────────────────────────
 
     async def stream_synthesize(
         self,
@@ -185,12 +149,6 @@ class FinancialAnalystAgent:
         sources: list[dict[str, Any]],
         tickers: list[str],
     ) -> AsyncIterator[str]:
-        """
-        Stream the final research answer token-by-token.
-
-        Retrieved RAG context is hard-limited to 100,000 tokens before it is
-        placed into the synthesis prompt.
-        """
         if not evidence:
             yield INSUFFICIENT_EVIDENCE_MESSAGE
             return
@@ -246,9 +204,6 @@ class FinancialAnalystAgent:
 def _normalize_evidence(
     evidence: dict[str, Any],
 ) -> dict[str, Any]:
-    """
-    Convert collected ToolResult objects into plain JSON-able structures.
-    """
     normalized: dict[str, Any] = {}
 
     for tool, results in evidence.items():
@@ -275,11 +230,6 @@ def _normalize_evidence(
 
 
 def _source_text(source: dict[str, Any]) -> str:
-    """
-    Extract the actual retrieved text from a source.
-
-    Supports the common field names used by retrieval pipelines.
-    """
     for key in (
         "text",
         "content",
@@ -296,12 +246,6 @@ def _source_text(source: dict[str, Any]) -> str:
 
 
 def _estimate_tokens(text: str) -> int:
-    """
-    Estimate tokens using the project's tokenizer when available.
-
-    Falls back to whitespace counting so the hard boundary still works even
-    if the tokenizer module cannot be imported.
-    """
     if not text:
         return 0
 
@@ -317,12 +261,6 @@ def _truncate_text_to_tokens(
     text: str,
     max_tokens: int,
 ) -> str:
-    """
-    Hard-limit text to the requested token budget.
-
-    The project's Tokenizer currently counts whitespace-separated tokens, so
-    truncation is performed using the same representation.
-    """
     if max_tokens <= 0:
         return ""
 
@@ -338,16 +276,6 @@ def _truncate_sources(
     sources: list[dict[str, Any]],
     max_tokens: int = MAX_RAG_CONTEXT_TOKENS,
 ) -> list[dict[str, Any]]:
-    """
-    Apply a hard 100,000-token limit to retrieved RAG context.
-
-    Sources are preserved in retrieval order. Complete sources are retained
-    whenever possible. If the final source exceeds the remaining budget, only
-    its text is truncated.
-
-    Metadata such as filename and page is retained so citations remain
-    meaningful.
-    """
     if max_tokens <= 0 or not sources:
         return []
 
@@ -362,7 +290,6 @@ def _truncate_sources(
         text = _source_text(copied)
 
         if not text:
-            # Metadata-only source consumes no RAG token budget.
             truncated.append(copied)
             continue
 
@@ -381,8 +308,6 @@ def _truncate_sources(
         if copied_text:
             copied["text"] = copied_text
 
-            # Remove alternate content fields so the same text cannot
-            # accidentally be included twice downstream.
             for key in (
                 "content",
                 "chunk",
@@ -420,12 +345,6 @@ def _truncate_sources(
 def _format_sources(
     sources: list[dict[str, Any]],
 ) -> str:
-    """Render retrieved chunks as citations wrapped in untrusted-data blocks.
-
-    Each chunk body is delimited with :func:`delimit_untrusted_source` so the
-    model can clearly distinguish document *data* from its own *instructions*,
-    even when the document text contains an embedded instruction.
-    """
     lines: list[str] = []
 
     for source in sources:

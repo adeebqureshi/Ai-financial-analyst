@@ -47,12 +47,6 @@ def _parse_sec_date(value: str | None) -> date | None:
 
 
 class SECLoader(DocumentLoader):
-    """SEC filing loader, rate limited by the centralized SEC gateway.
-
-    This module performs no local HTTP call: the filing HTML is fetched
-    through :mod:`app.data.sec_http`, so it is covered by the distributed SEC
-    request limit and by the gateway's SEC host validation.
-    """
 
     USER_AGENT = (
         "AI Financial Analyst "

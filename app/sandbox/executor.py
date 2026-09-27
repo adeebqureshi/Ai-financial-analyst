@@ -25,26 +25,20 @@ MAX_CODE_LENGTH: Final[int] = 8000
 
 SANDBOX_SOURCE_NAME: Final[str] = "<sandbox>"
 
-# Default wall-clock budget (seconds) when the caller passes none.
 _DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
 
-# Extra grace (seconds) beyond the timeout before we hard-kill a worker.
 _KILL_GRACE_SECONDS: Final[int] = 5
 
 
 class SandboxSecurityError(Exception):
-    """Raised when sandboxed code attempts a blocked operation."""
+        pass
 
 
 class SandboxTimeoutError(TimeoutError):
-    """Raised when sandboxed execution exceeds the configured time budget."""
+        pass
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Controlled builtins
-# ─────────────────────────────────────────────────────────────────────────────
 
-# Pure, side-effect-free builtins every financial formula may rely on.
 _BASIC_BUILTIN_NAMES: Final[tuple[str, ...]] = (
     "abs",
     "all",
@@ -90,7 +84,6 @@ _BASIC_BUILTIN_NAMES: Final[tuple[str, ...]] = (
     "zip",
 )
 
-# Exception types so ``try/except`` clauses resolve inside the sandbox.
 _EXCEPTION_NAMES: Final[tuple[str, ...]] = (
     "ArithmeticError",
     "AssertionError",
@@ -109,7 +102,6 @@ _EXCEPTION_NAMES: Final[tuple[str, ...]] = (
     "ZeroDivisionError",
 )
 
-# Math helpers commonly needed by DCF / WACC / ratio formulas.
 _MATH_FUNCTION_NAMES: Final[tuple[str, ...]] = (
     "ceil",
     "comb",
@@ -140,7 +132,6 @@ _MATH_CONSTANTS: Final[dict[str, float]] = {
 
 
 def _build_safe_builtins() -> dict[str, Any]:
-    """Build the controlled ``builtins`` dictionary exposed to sandboxed code."""
     safe: dict[str, Any] = {}
 
     for name in _BASIC_BUILTIN_NAMES + _EXCEPTION_NAMES:
@@ -156,12 +147,8 @@ def _build_safe_builtins() -> dict[str, Any]:
 
 SAFE_BUILTINS: Final[dict[str, Any]] = _build_safe_builtins()
 
-# Names that are never available to sandboxed code — neither as plain names
-# nor as attributes. Accessing any of them (read, write or delete) is
-# rejected at the AST level.
 _FORBIDDEN_NAMES: Final[frozenset[str]] = frozenset(
     {
-        # modules
         "os",
         "sys",
         "subprocess",
@@ -192,7 +179,6 @@ _FORBIDDEN_NAMES: Final[frozenset[str]] = frozenset(
         "glob",
         "tempfile",
         "io",
-        # dynamic execution / introspection
         "eval",
         "exec",
         "compile",
@@ -209,17 +195,14 @@ _FORBIDDEN_NAMES: Final[frozenset[str]] = frozenset(
         "hasattr",
         "memoryview",
         "id",
-        # filesystem
         "open",
         "file",
-        # interpreter exits
         "exit",
         "quit",
         "help",
         "copyright",
         "credits",
         "license",
-        # dunder module/namespace names
         "__builtins__",
         "__loader__",
         "__spec__",
@@ -233,26 +216,11 @@ _FORBIDDEN_NAMES: Final[frozenset[str]] = frozenset(
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# AST-level security validation
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 class SandboxValidator:
-    """
-    AST-level static check that rejects dangerous Python constructs.
-
-    Validation happens *before* any execution, so a rejected program never
-    starts running. The checks are structural (they inspect the parsed tree)
-    rather than string matches, which defeats simple textual obfuscation,
-    while still allowing legitimate arithmetic.
-    """
 
     def validate(self, code: str) -> str | None:
-        """
-        Return ``None`` when ``code`` is safe, otherwise a human-readable
-        reason why it was rejected.
-        """
         if not code.strip():
             return "empty code"
 
@@ -302,26 +270,10 @@ class SandboxValidator:
         return None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Structured result
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass(slots=True)
 class SandboxResult:
-    """
-    Structured outcome of one sandboxed execution.
-
-    Attributes:
-        success: ``True`` when the code validated and executed without error;
-            ``False`` on validation rejection, syntax error, runtime error or
-            timeout.
-        output: Captured stdout produced by ``print()`` calls.
-        error: ``None`` on success; otherwise a short, structured error
-            message (never a raw traceback).
-        return_value: The value of ``result`` at the end of execution, or
-            ``None`` when the code did not define it.
-    """
 
     success: bool
     output: str
@@ -329,25 +281,9 @@ class SandboxResult:
     return_value: Any | None = None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Executor
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 class PythonSandbox:
-    """
-    Restricted in-process Python execution environment.
-
-    The sandbox never receives the application's environment, secrets,
-    database connections or filesystem; it only sees the explicitly supplied
-    ``context`` values and the controlled builtins.
-
-    Args:
-        timeout: Optional wall-clock budget in seconds. Enforced with
-            ``SIGALRM`` where the platform supports it; on Windows (no
-            ``SIGALRM``) the budget is informational. See the module docstring
-            for the documented limitation.
-    """
 
     def __init__(
         self,
@@ -357,12 +293,8 @@ class PythonSandbox:
         self.timeout = timeout
         self.memory_limit_mb = memory_limit_mb
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Public API
-    # ──────────────────────────────────────────────────────────────────────
 
     def validate(self, code: str) -> str | None:
-        """Return ``None`` if ``code`` passes validation, else the reason."""
         return SandboxValidator().validate(code)
 
     def run(
@@ -372,20 +304,6 @@ class PythonSandbox:
         *,
         timeout: int | None = None,
     ) -> SandboxResult:
-        """
-        Validate and execute ``code`` inside an isolated subprocess worker.
-
-        Args:
-            code: The untrusted Python source to run.
-            context: Explicit values the code may reference. Every value is
-                injected into the worker namespace under its key; no other
-                data (environment, filesystem, secrets) is visible to it.
-            timeout: Optional override for the configured timeout. The worker
-                is hard-killed if it exceeds the budget.
-
-        Returns:
-            A structured :class:`SandboxResult`. Exceptions never propagate.
-        """
         reason = self.validate(code)
         if reason:
             return SandboxResult(
@@ -404,9 +322,6 @@ class PythonSandbox:
             memory_limit_mb=self.memory_limit_mb,
         )
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Internals
-    # ──────────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _build_namespace(context: dict[str, Any] | None) -> dict[str, Any]:
@@ -454,7 +369,7 @@ class PythonSandbox:
                             "Sandbox timeout requested but SIGALRM is unavailable "
                             "on this platform/thread; running without a hard timeout."
                         )
-                    exec(compiled, namespace)  # noqa: S102 — isolated below
+                    exec(compiled, namespace)
         except SandboxTimeoutError as exc:
             return buffer.getvalue(), f"timeout: {exc}"
         except (KeyboardInterrupt, SystemExit):
@@ -470,51 +385,31 @@ class PythonSandbox:
         namespace: dict[str, Any],
         timeout: int,
     ) -> None:
-        # ``SIGALRM``/``setitimer`` exist on POSIX only; the caller guards with
-        # ``hasattr(signal, "SIGALRM")`` so these are unreachable elsewhere.
-        previous = signal.signal(signal.SIGALRM, _raise_timeout)  # type: ignore[attr-defined]
-        signal.setitimer(  # type: ignore[attr-defined]
-            signal.ITIMER_REAL,  # type: ignore[attr-defined]
+        previous = signal.signal(signal.SIGALRM, _raise_timeout)
+        signal.setitimer(
+            signal.ITIMER_REAL,
             timeout,
         )
         try:
-            exec(compiled, namespace)  # noqa: S102 — isolated below
+            exec(compiled, namespace)
         finally:
-            signal.setitimer(  # type: ignore[attr-defined]
-                signal.ITIMER_REAL,  # type: ignore[attr-defined]
+            signal.setitimer(
+                signal.ITIMER_REAL,
                 0,
             )
-            signal.signal(signal.SIGALRM, previous)  # type: ignore[attr-defined]
+            signal.signal(signal.SIGALRM, previous)
 
 
 def _raise_timeout(signum: int, frame: Any) -> None:
     raise SandboxTimeoutError("sandbox execution exceeded the timeout budget")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Subprocess isolation
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def execute_untrusted(
     code: str,
     context: dict[str, Any] | None = None,
 ) -> SandboxResult:
-    """
-    Validate and execute ``code`` inline with the restricted namespace.
-
-    This is the **worker-side** path: the untrusted code runs inside the
-    already-isolated child process. It deliberately does *not* spawn another
-    subprocess (avoiding recursion). The parent's kill-timer remains the hard
-    safety net for timeouts/memory.
-
-    Args:
-        code: The untrusted Python source to run.
-        context: Explicit values the code may reference.
-
-    Returns:
-        A structured :class:`SandboxResult`. Exceptions never propagate.
-    """
     sandbox = PythonSandbox()
 
     reason = sandbox.validate(code)
@@ -534,9 +429,9 @@ def execute_untrusted(
             error=f"syntax error: {exc.msg}",
         )
 
-    namespace = sandbox._build_namespace(context)  # noqa: SLF001 - internal worker path
+    namespace = sandbox._build_namespace(context)
 
-    output, error = sandbox._execute(compiled, namespace, None)  # noqa: SLF001 - internal worker path
+    output, error = sandbox._execute(compiled, namespace, None)
 
     if error is not None:
         return SandboxResult(
@@ -559,23 +454,9 @@ def _run_in_subprocess(
     timeout: int,
     memory_limit_mb: int | None,
 ) -> SandboxResult:
-    """
-    Run ``code`` in a fresh, hard-killable worker process.
-
-    The worker is spawned with a minimal, secret-free environment and an empty
-    working directory. Input (code + context) is sent over stdin as JSON; the
-    result is read back from stdout. If the worker exceeds ``timeout`` it is
-    terminated and then forcibly killed (whole process group on POSIX).
-    """
     project_root = Path(__file__).resolve().parent.parent.parent
     worker_script = project_root / "app" / "sandbox" / "worker.py"
 
-    # Spawn the worker with a secret-free environment.
-    #
-    # On POSIX we start from a minimal map. On Windows the interpreter needs
-    # system variables (SYSTEMROOT, PATH, ...), so we start from a copy of the
-    # current environment but strip everything that looks like a secret or a
-    # provider credential. Either way the untrusted code never sees secrets.
     if os.name == "posix":
         worker_env: dict[str, str] | None = {
             "PYTHONPATH": str(project_root),
@@ -672,10 +553,6 @@ def _run_in_subprocess(
 
 
 def _terminate_worker(proc: subprocess.Popen, _exc: Any) -> None:
-    """
-    Safely stop a runaway worker: terminate gracefully, then force-kill the
-    whole process group so no descendant survives.
-    """
     if proc is None or proc.poll() is not None:
         return
 
@@ -684,14 +561,12 @@ def _terminate_worker(proc: subprocess.Popen, _exc: Any) -> None:
     except OSError:
         pass
 
-    # Give it a moment, then SIGKILL the process group (POSIX).
     try:
         proc.wait(timeout=1.0)
     except subprocess.TimeoutExpired:
         try:
-            os.killpg(os.getpgid(proc.pid), 9)  # type: ignore[attr-defined]
+            os.killpg(os.getpgid(proc.pid), 9)
         except (AttributeError, OSError, ProcessLookupError):
-            # Windows: no killpg / getpgid; fall back to kill().
             try:
                 proc.kill()
             except OSError:

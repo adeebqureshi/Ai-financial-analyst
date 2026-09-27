@@ -3,24 +3,18 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  /** Rendered above the title (e.g. "Research"). */
+
   eyebrow?: React.ReactNode;
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Buttons or links aligned to the end of the header row. */
+
   actions?: React.ReactNode;
   className?: string;
-  /** Applied to the `<h1>`; the analysis page pins `data-testid="company-name"`. */
+
   titleProps?: React.HTMLAttributes<HTMLHeadingElement>;
 };
 
-/**
- * Single page heading block.
- *
- * Every route previously rendered its own ad-hoc heading (and the documents
- * feature rendered a second `<h1>` inside the page), producing duplicate h1s.
- * Routes now render exactly one PageHeader.
- */
+
 export function PageHeader({
   eyebrow,
   title,

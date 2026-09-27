@@ -1,6 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -10,40 +8,29 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
 /coverage
 
-# Playwright auth state. Regenerated on every `npm run test:e2e` run by
-# e2e/auth.setup.ts and contains a real JWT access token, so it must never
-# be committed.
 /e2e/.auth/
 **/.auth/
 .audit_token.txt
 
-# next.js
 /.next/
 **/.next/
 /out/
 
-# production
 /build
 
-# misc
 .DS_Store
 *.pem
 
-# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
 .env*
 
-# vercel
 .vercel
 
-# typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -1,8 +1,3 @@
-"""
-interfaces.py
-
-LLM interface definitions.
-"""
 
 from __future__ import annotations
 
@@ -20,6 +15,4 @@ class LLMProvider(ABC):
         self,
         request: LLMRequest,
     ) -> LLMResponse:
-        """
-        Generate an LLM response.
-        """
+            pass

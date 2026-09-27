@@ -1,8 +1,3 @@
-"""
-prompt_builder.py
-
-LLM prompt builder.
-"""
 
 from __future__ import annotations
 

@@ -13,16 +13,6 @@ from app.utils.tickers import normalize_ticker
 logger = get_logger(__name__)
 _KEY_PREFIX = "market:quote:v1"
 class MarketQuoteCache:
-    """Bounded in-process LRU cache of market quotes.
-
-    The project runs a single backend worker, so a thread-safe in-process LRU
-    is sufficient and no external cache service is required. This replaces the
-    previous Redis-backed cache, which already degraded to this same in-process
-    map whenever Redis was unreachable.
-
-    ``backend`` is accepted for backwards compatibility: only the in-process
-    behaviour remains and any value is ignored.
-    """
 
     def __init__(
         self,
@@ -137,13 +127,11 @@ class MarketQuoteCache:
             while len(self._entries) > self._max_entries:
                 self._entries.popitem(last=False)
     def delete(self, ticker: str) -> None:
-        """Remove a cached quote."""
         key = self._key(ticker)
         with self._lock:
             self._entries.pop(key, None)
 
     def backend_name(self) -> str:
-        """The active backend. Always the in-process LRU."""
         return "memory"
     def clear(self) -> None:
         with self._lock:

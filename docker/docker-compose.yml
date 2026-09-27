@@ -14,16 +14,11 @@ services:
       - ../.env
 
     environment:
-      # Auth + chat stores use SQLite by default (no database service needed).
-      # Override these with postgresql+psycopg://... if you later want Postgres.
       AUTH_DATABASE_URL: sqlite:///./data/auth.db
       CHAT_DATABASE_URL: sqlite:///./data/chat.db
 
-      # Reach the Qdrant service by its compose hostname (not localhost,
-      # which inside the container would mean the app itself).
       QDRANT_URL: http://qdrant:6333
 
-      # Docker app runs in production environment
       ENVIRONMENT: production
 
     depends_on:
@@ -48,15 +43,9 @@ services:
     volumes:
       - app-data:/app/data
 
-  # The single vector database. The named volume makes the collection
-  # persistent, so uploaded document vectors survive a backend restart.
-  # Started automatically with the app; can also be run alone for local dev:
-  #   docker compose up -d qdrant
   qdrant:
     image: qdrant/qdrant:latest
 
-    # Exposed to the host so a locally running FastAPI can reach it at
-    # http://localhost:6333 (as configured via QDRANT_URL in .env).
     ports:
       - "6333:6333"
       - "6334:6334"

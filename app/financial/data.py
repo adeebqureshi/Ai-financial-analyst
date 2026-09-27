@@ -307,6 +307,26 @@ class FinancialDataService:
         asset_turnover_t = self._ratio(rev_t, ta_t)
         asset_turnover_p = self._ratio(rev_p, ta_p)
         equity_issued = bool(shares_t is not None and shares_p is not None and shares_t > shares_p)
+        missing = [
+            name
+            for name, value in (
+                ("prior_period_net_income", ni_p),
+                ("prior_period_total_assets", ta_p),
+                ("prior_period_revenue", rev_p),
+                ("prior_period_current_assets", ca_p),
+                ("prior_period_current_liabilities", cl_p),
+            )
+            if value is None
+        ]
+        if missing:
+            raise RetrievalError(
+                message=(
+                    "Financial data unavailable for insufficient prior-period "
+                    f"history; missing: {', '.join(missing)}."
+                ),
+                error_code="RETR_DATA",
+                details={"missing": missing},
+            )
         return Piotroski.calculate(
             roa=roa_t,
             operating_cash_flow=cfo,

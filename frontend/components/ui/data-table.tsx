@@ -12,7 +12,7 @@ export type DataTableColumn<T> = {
   key: string;
   header: React.ReactNode;
   align?: "left" | "center" | "right";
-  /** Set together with `sortValue` to make the column sortable. */
+
   sortable?: boolean;
   sortValue?: (row: T) => string | number | null | undefined;
   render: (row: T) => React.ReactNode;
@@ -24,7 +24,7 @@ type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
   rows: T[];
   getRowKey: (row: T, index: number) => string;
-  /** Required: describes the table for screen readers. */
+
   caption: string;
   initialSortKey?: string;
   initialSortDirection?: SortDirection;
@@ -32,7 +32,7 @@ type DataTableProps<T> = {
   emptyDescription?: string;
   className?: string;
   testId?: string;
-  /** Prefer real links in cells; use only for tables of non-navigable rows. */
+
   onRowClick?: (row: T) => void;
 };
 
@@ -42,7 +42,7 @@ const alignClassNames = {
   right: "text-right",
 } as const;
 
-/** Missing values always sort last, regardless of direction. */
+
 function compareValues(
   a: string | number | null | undefined,
   b: string | number | null | undefined

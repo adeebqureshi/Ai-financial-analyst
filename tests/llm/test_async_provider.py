@@ -38,7 +38,6 @@ def test_async_llm_provider_is_abstract():
         AsyncLLMProvider()
 @pytest.mark.anyio
 async def test_async_openai_provider_missing_key_fails_fast(monkeypatch):
-    # Hermetic: clear every credential the provider may read.
     for var in (
         "OPENAI_API_KEY",
         "FREELLMAPI_API_KEY",

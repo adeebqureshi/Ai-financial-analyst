@@ -5,13 +5,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/providers/theme-provider";
 import { Button } from "./button";
 
-/**
- * Light/dark switch.
- *
- * Icons are chosen with the `dark` variant rather than React state so the
- * rendered icon always matches the CSS-applied theme (and SSR output is
- * unambiguous during hydration).
- */
+
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
 

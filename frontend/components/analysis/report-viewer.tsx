@@ -60,8 +60,8 @@ function ReportViewerContent({ report }: Props) {
     try {
       await navigator.clipboard.writeText(report);
     } catch {
-      // Clipboard access can be denied by the browser; the report stays
-      // selectable so the user can still copy it manually.
+
+
       return;
     }
 

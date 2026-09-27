@@ -67,4 +67,3 @@ def test_intentional_domain_error_contract_is_preserved():
     assert response.status_code == 500
     assert response.json()["message"] == "Safe domain message"
     assert response.json()["errors"][0]["code"] == "DOMAIN_ERROR"
-

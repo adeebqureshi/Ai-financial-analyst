@@ -103,9 +103,6 @@ class RetrievalEngine:
         vector = self.embedder.embed_text(query)
         candidate_limit = limit * 3 if as_of_date is not None else limit
 
-        # Raw cosine similarities from the dense index. Hybrid fusion only
-        # preserves order (its RRF scores are always ~1/(k+1)), so the relevance
-        # floor has to be applied to these real similarities instead.
         similarity = self.retriever.dense.similarity_scores(
             vector=vector,
             limit=candidate_limit,
@@ -161,17 +158,6 @@ class RetrievalEngine:
         chunks: list[RetrievedChunk],
         similarity: dict[str, float],
     ) -> list[RetrievedChunk]:
-        """Drop chunks that are not semantically close to the query.
-
-        This is the deterministic safeguard that keeps the RAG path honest: a
-        vector store always returns its top-K, even when the question has
-        nothing to do with the indexed documents. Without a floor, an unrelated
-        question would still be handed to the LLM as "evidence" and could be
-        answered confidently from irrelevant text.
-
-        Chunks with no measured similarity (e.g. matched only by the sparse
-        BM25 leg) are kept, so the floor never discards a keyword match.
-        """
         floor = self._min_similarity
         if floor <= 0.0 or not chunks:
             self._last_dropped = 0
@@ -183,8 +169,6 @@ class RetrievalEngine:
             score = similarity.get(chunk.id)
             if score is None and chunk.chunk_id:
                 score = similarity.get(chunk.chunk_id)
-            # A non-numeric score means the store gave us nothing usable to
-            # judge, so the chunk is kept rather than dropped.
             if isinstance(score, (int, float)) and not isinstance(score, bool) and score < floor:
                 dropped += 1
                 continue
