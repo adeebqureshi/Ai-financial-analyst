@@ -4,7 +4,6 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import text
 POSTGRES_URL = os.getenv("TEST_POSTGRES_URL", "")
-REDIS_URL = os.getenv("TEST_REDIS_URL", "")
 pytestmark = [
     pytest.mark.integration,
 ]
@@ -51,49 +50,3 @@ class TestPostgresIntegration:
         assert loaded is not None
         assert loaded["session_id"] == "pg-integration-session"
         assert store2.delete_session(None, "pg-integration-session") is True
-@pytest.fixture()
-def redis_cache():
-    if not REDIS_URL:
-        pytest.skip("TEST_REDIS_URL not set; Redis integration test skipped")
-    from app.infrastructure.redis_cache import RedisCache
-    with patch.dict(os.environ, {"REDIS_URL": REDIS_URL}):
-        cache = RedisCache()
-        if not cache.health_check():
-            cache.close()
-            pytest.skip("Redis service not reachable at TEST_REDIS_URL")
-        yield cache
-        cache.close()
-class TestRedisIntegration:
-    def test_ping(self, redis_cache):
-        assert redis_cache.health_check() is True
-    def test_round_trip(self, redis_cache):
-        key = "infra-test:roundtrip"
-        redis_cache.client.set(key, "v1", ex=60)
-        assert redis_cache.client.get(key) == "v1"
-        redis_cache.client.delete(key)
-    def test_rate_limiter_distributed_increment(self, redis_cache):
-        from app.api.rate_limiter import RedisBackend
-        backend = RedisBackend(REDIS_URL)
-        key = "ratelimit:test:integration"
-        try:
-            first = backend.increment(key, 60)
-            second = backend.increment(key, 60)
-            assert second == first + 1
-            assert backend.get(key) == second
-        finally:
-            try:
-                backend.reset(key)
-            except Exception:
-                pass
-    def test_chat_cache_round_trip(self, redis_cache):
-        from app.chat.cache import ChatSessionCache
-        cache = ChatSessionCache(REDIS_URL, ttl_seconds=60)
-        cache.set_context("owner-1", "sess-1", {"tickers": ["AAPL"], "answer": "ok"})
-        assert cache.get_context("owner-1", "sess-1") == {"tickers": ["AAPL"], "answer": "ok"}
-        cache.invalidate("owner-1", "sess-1")
-        assert cache.get_context("owner-1", "sess-1") is None
-    def test_chat_store_uses_redis_cache(self, redis_cache, tmp_path):
-        from app.chat.cache import ChatSessionCache
-        cache = ChatSessionCache(REDIS_URL, ttl_seconds=60)
-        assert cache.enabled is True
-        assert cache.get_context("no-one", "no-session") is None

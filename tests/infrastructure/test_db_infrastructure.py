@@ -4,7 +4,6 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy.pool import StaticPool
 from app.infrastructure.postgres import PostgreSQLManager, create_db_engine
-from app.infrastructure.redis_cache import RedisCache, build_redis_url
 class TestCreateDbEngine:
     def test_sqlite_memory_uses_shared_static_pool(self):
         engine = create_db_engine("sqlite+pysqlite:///:memory:")
@@ -85,47 +84,3 @@ class TestPostgreSQLManager:
         assert connection is not None
         connection.close()
         manager.dispose()
-_REDIS_ENV_VARS = ("REDIS_URL", "REDIS_HOST", "REDIS_PORT", "REDIS_DB", "REDIS_PASSWORD")
-class TestRedisCache:
-    def test_build_redis_url_defaults(self):
-        with patch.dict(os.environ, {}, clear=False):
-            for var in _REDIS_ENV_VARS:
-                os.environ.pop(var, None)
-            assert build_redis_url() == "redis://localhost:6379/0"
-    def test_build_redis_url_from_redis_url_env(self):
-        with patch.dict(os.environ, {"REDIS_URL": "redis://cache:6380/3"}):
-            assert build_redis_url() == "redis://cache:6380/3"
-    def test_build_redis_url_with_password(self):
-        env = {"REDIS_HOST": "r", "REDIS_PORT": "6379", "REDIS_PASSWORD": "secret"}
-        with patch.dict(os.environ, env):
-            url = build_redis_url()
-        assert url == "redis://:secret@r:6379/0"
-    def test_client_has_socket_timeouts(self):
-        with patch.dict(os.environ, {"REDIS_URL": "redis://localhost:6379/0"}):
-            cache = RedisCache()
-        kwargs = cache.client.connection_pool.connection_kwargs
-        assert kwargs["socket_connect_timeout"] > 0
-        assert kwargs["socket_timeout"] > 0
-        assert kwargs["decode_responses"] is True
-        cache.close()
-    def test_health_check_false_when_unreachable(self):
-        with patch.dict(os.environ, {"REDIS_URL": "redis://127.0.0.1:1/0"}):
-            cache = RedisCache()
-        assert cache.health_check() is False
-        cache.close()
-    def test_ping_alias(self):
-        with patch.dict(os.environ, {"REDIS_URL": "redis://127.0.0.1:1/0"}):
-            cache = RedisCache()
-        assert isinstance(cache.ping(), bool)
-        cache.close()
-    def test_legacy_host_port_attributes(self):
-        with patch.dict(os.environ, {"REDIS_HOST": "myredis", "REDIS_PORT": "6400"}):
-            cache = RedisCache()
-        assert cache.host == "myredis"
-        assert cache.port == 6400
-        cache.close()
-    def test_close_is_safe_when_never_connected(self):
-        with patch.dict(os.environ, {"REDIS_URL": "redis://127.0.0.1:1/0"}):
-            cache = RedisCache()
-        cache.close()
-        cache.close()

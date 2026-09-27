@@ -100,6 +100,7 @@ class DocumentService:
         self._jobs = JobStore(self._paths.get_metadata_path() / "jobs")
         self._parser = UnifiedDocumentParser(
             api_key=settings.llama_parse_api_key_str,
+            enable_optional_parsers=settings.pdf_enable_optional_parsers,
         )
         self._chunker = Chunker(
             chunk_size=settings.chunk_size,

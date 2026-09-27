@@ -15,9 +15,12 @@ class RetrievalEngine:
         self.retriever = HybridRetriever()
         self.metadata = MetadataStore()
         from app.core.config import get_settings
-        self._reranker_enabled = get_settings().enable_reranker
+        settings = get_settings()
+        self._reranker_enabled = settings.enable_reranker
         self._reranker = None
         self._reranker_failed = False
+        self._min_similarity = settings.retrieval_min_similarity
+        self._last_dropped = 0
     def build(
         self,
         ids: list[str],
@@ -97,12 +100,19 @@ class RetrievalEngine:
         owner_id: str | None = None,
     ) -> RetrievalContext:
         start = time.perf_counter()
-        vector = self.embedder.embed_text(
-            query,
+        vector = self.embedder.embed_text(query)
+        candidate_limit = limit * 3 if as_of_date is not None else limit
+
+        # Raw cosine similarities from the dense index. Hybrid fusion only
+        # preserves order (its RRF scores are always ~1/(k+1)), so the relevance
+        # floor has to be applied to these real similarities instead.
+        similarity = self.retriever.dense.similarity_scores(
+            vector=vector,
+            limit=candidate_limit,
+            document_id=document_id,
+            owner_id=owner_id,
         )
-        candidate_limit = (
-            limit * 3 if as_of_date is not None else limit
-        )
+
         ids = self.retriever.search(
             vector=vector,
             query=query,
@@ -110,9 +120,7 @@ class RetrievalEngine:
             document_id=document_id,
             owner_id=owner_id,
         )
-        chunks = self.metadata.get_many(
-            ids,
-        )
+        chunks = self.metadata.get_many(ids)
         for rank, chunk in enumerate(chunks):
             chunk.score = 1.0 / (60 + rank + 1)
         if owner_id is not None:
@@ -130,13 +138,14 @@ class RetrievalEngine:
             query,
             chunks,
         )
-        elapsed = (
-            time.perf_counter() - start
-        ) * 1000
+        chunks = self._apply_relevance_floor(chunks, similarity)
+        elapsed = (time.perf_counter() - start) * 1000
         logger.debug(
-            "Retrieval completed: duration_ms=%.1f chunks=%d scoped_to_document=%s owner_scoped=%s temporal=%s",
+            "Retrieval completed: duration_ms=%.1f chunks=%d "
+            "dropped_below_floor=%d scoped_to_document=%s owner_scoped=%s temporal=%s",
             elapsed,
             len(chunks),
+            self._last_dropped,
             document_id is not None,
             owner_id is not None,
             as_of_date is not None,
@@ -146,6 +155,51 @@ class RetrievalEngine:
             chunks=chunks,
             retrieval_time_ms=elapsed,
         )
+
+    def _apply_relevance_floor(
+        self,
+        chunks: list[RetrievedChunk],
+        similarity: dict[str, float],
+    ) -> list[RetrievedChunk]:
+        """Drop chunks that are not semantically close to the query.
+
+        This is the deterministic safeguard that keeps the RAG path honest: a
+        vector store always returns its top-K, even when the question has
+        nothing to do with the indexed documents. Without a floor, an unrelated
+        question would still be handed to the LLM as "evidence" and could be
+        answered confidently from irrelevant text.
+
+        Chunks with no measured similarity (e.g. matched only by the sparse
+        BM25 leg) are kept, so the floor never discards a keyword match.
+        """
+        floor = self._min_similarity
+        if floor <= 0.0 or not chunks:
+            self._last_dropped = 0
+            return chunks
+
+        kept: list[RetrievedChunk] = []
+        dropped = 0
+        for chunk in chunks:
+            score = similarity.get(chunk.id)
+            if score is None and chunk.chunk_id:
+                score = similarity.get(chunk.chunk_id)
+            # A non-numeric score means the store gave us nothing usable to
+            # judge, so the chunk is kept rather than dropped.
+            if isinstance(score, (int, float)) and not isinstance(score, bool) and score < floor:
+                dropped += 1
+                continue
+            kept.append(chunk)
+
+        self._last_dropped = dropped
+        if dropped:
+            logger.info(
+                "Relevance floor %.3f dropped %d of %d retrieved chunks as "
+                "insufficient evidence.",
+                floor,
+                dropped,
+                len(chunks),
+            )
+        return kept
     def _rerank(
         self,
         query: str,

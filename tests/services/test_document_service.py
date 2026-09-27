@@ -7,6 +7,7 @@ from app.core.config import get_settings
 from app.core.exceptions import ValidationError
 from app.embeddings.embedding_service import EmbeddingService, _fallback_vector
 from app.services.document_service import DocumentService
+from app.core import config as _app_core_config
 def _make_pdf(pages: list[str]) -> bytes:
     doc = fitz.open()
     for text in pages:
@@ -20,6 +21,23 @@ def _fake_embed_documents(_self, documents):
     return [_fallback_vector(text) for text in documents]
 def _fake_embed_text(_self, text):
     return _fallback_vector(text)
+
+
+def _settings_with_no_similarity_floor(_base):
+    """Settings clone with the relevance floor disabled.
+
+    The hermetic test embeddings are SHA-256 hashes with no semantic meaning,
+    so a cosine-similarity floor would reject every chunk. The floor itself is
+    covered by tests/retrieval/test_relevance_floor.py.
+    """
+    # NOTE: use the module-level singleton, NOT get_settings().
+    # get_settings() is itself monkeypatched by the fixture below, so calling
+    # it here would recurse forever.
+    base = _app_core_config.settings
+
+    return base.model_copy(update={"retrieval_min_similarity": 0.0})
+
+
 @pytest.fixture(autouse=True)
 def _hermetic_embeddings(monkeypatch):
     monkeypatch.setattr(
@@ -31,6 +49,15 @@ def _hermetic_embeddings(monkeypatch):
         EmbeddingService,
         "embed_text",
         _fake_embed_text,
+    )
+    # These hermetic embeddings are SHA-256 hashes, so they carry no semantic
+    # signal: every cosine similarity is ~0 and the relevance floor would drop
+    # everything. The floor is exercised for real in
+    # tests/retrieval/test_relevance_floor.py, so disable it here.
+    _real_get_settings = _app_core_config.get_settings
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: _settings_with_no_similarity_floor(_real_get_settings()),
     )
 def _make_service(monkeypatch, tmp_path) -> DocumentService:
     monkeypatch.setattr(

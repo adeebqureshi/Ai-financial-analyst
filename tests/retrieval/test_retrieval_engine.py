@@ -14,6 +14,8 @@ def test_retrieve(
     mock_embedder.return_value = embedder
     retriever = MagicMock()
     retriever.search.return_value = ["1"]
+    # The relevance floor reads raw cosine similarities from the dense index.
+    retriever.dense.similarity_scores.return_value = {"1": 0.72}
     mock_retriever.return_value = retriever
     engine = RetrievalEngine()
     chunk = RetrievedChunk(

@@ -31,6 +31,7 @@ from app.core.constants import (
     DEFAULT_LLM_TEMPERATURE,
     DEFAULT_COST_OF_DEBT,
     DEFAULT_ENABLE_RERANKER,
+    DEFAULT_RETRIEVAL_MIN_SIMILARITY,
     DEFAULT_LLM_TOKEN_QUOTA_PER_USER_PER_DAY,
     DEFAULT_MARKET_FALLBACK_PROVIDERS,
     DEFAULT_MARKET_PRIMARY_PROVIDER,
@@ -40,6 +41,9 @@ from app.core.constants import (
     DEFAULT_TAX_RATE,
     DEFAULT_TERMINAL_GROWTH,
     DEFAULT_VECTOR_TOP_K,
+    DEFAULT_QDRANT_COLLECTION,
+    DEFAULT_LLM_PROVIDER,
+    SUPPORTED_LLM_PROVIDERS,
     Environment,
     LogLevel,
     SANDBOX_MEMORY_LIMIT_MB,
@@ -229,10 +233,10 @@ class Settings(BaseSettings):
     )
 
     market_cache_backend: str = Field(
-        default="auto",
+        default="memory",
         description=(
-            "Quote cache backend: 'auto' (Redis else in-process), 'redis', "
-            "or 'memory'."
+            "Deprecated and unused. Market quotes are cached in a bounded "
+            "in-process LRU, so no cache service is required."
         ),
     )
 
@@ -304,8 +308,12 @@ class Settings(BaseSettings):
     # ── LLM ──────────────────────────────────────────────────────────────
 
     llm_provider: str = Field(
-        default="openai",
-        description="LLM provider.",
+        default=DEFAULT_LLM_PROVIDER,
+        description=(
+            "Primary LLM provider. Only 'openai' (the single primary provider, "
+            "which also serves OpenAI-compatible gateways) and 'mock' (offline "
+            "tests/demos) are supported."
+        ),
     )
 
     llm_model: str = Field(
@@ -355,6 +363,33 @@ class Settings(BaseSettings):
         description="Number of chunks to retrieve per query.",
     )
 
+    # ── Vector Store ─────────────────────────────────────────────────────
+
+    qdrant_url: str = Field(
+        default="",
+        description=(
+            "Base URL of a Qdrant server, e.g. 'http://localhost:6333'. When "
+            "set, vectors are stored on the Qdrant server and therefore survive "
+            "a backend restart. When empty, an in-process :memory: client is "
+            "used, which is volatile and intended for tests only."
+        ),
+    )
+
+    qdrant_collection: str = Field(
+        default=DEFAULT_QDRANT_COLLECTION,
+        description="Qdrant collection holding the document chunk vectors.",
+    )
+
+    qdrant_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        description="Optional API key for a secured Qdrant server.",
+    )
+
+    @property
+    def qdrant_api_key_str(self) -> str:
+        """Return the Qdrant API key as a plain string."""
+        return self.qdrant_api_key.get_secret_value()
+
     chunk_size: int = Field(
         default=DEFAULT_CHUNK_SIZE,
         description="Character length of text chunks.",
@@ -368,6 +403,33 @@ class Settings(BaseSettings):
     enable_reranker: bool = Field(
         default=DEFAULT_ENABLE_RERANKER,
         description="Run the cross-encoder reranker after hybrid retrieval.",
+    )
+
+    retrieval_min_similarity: float = Field(
+        default=DEFAULT_RETRIEVAL_MIN_SIMILARITY,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Minimum cosine similarity for a retrieved chunk to be treated as "
+            "evidence. A vector store always returns its top-K, even for a "
+            "question that has nothing to do with the indexed documents; this "
+            "floor drops those chunks so the RAG path reports insufficient "
+            "evidence instead of answering from irrelevant text. Set to 0 to "
+            "disable the floor and always return the top-K."
+        ),
+    )
+
+    # ── PDF Parsing ─────────────────────────────────────────────────────
+
+    pdf_enable_optional_parsers: bool = Field(
+        default=False,
+        description=(
+            "Enable the optional layout-aware PDF parsers (LlamaParse, "
+            "Marker) in front of PyMuPDF. Off by default: PyMuPDF is a core "
+            "dependency and the only parser needed for normal PDF uploads. "
+            "Only set this to true if the 'document-parsing' extra is "
+            "installed (llama-parse / marker-pdf)."
+        ),
     )
 
     # ── Sandbox ──────────────────────────────────────────────────────────
@@ -406,11 +468,10 @@ class Settings(BaseSettings):
     )
 
     chat_redis_url: str = Field(
-        default="redis://localhost:6379/1",
+        default="",
         description=(
-            "Optional Redis URL used to cache recent chat session context. "
-            "When Redis is unavailable the store transparently falls back to "
-            "the database."
+            "Deprecated and unused. Chat session context is cached in-process, "
+            "so no cache service is required."
         ),
     )
 
@@ -449,10 +510,10 @@ class Settings(BaseSettings):
     )
 
     rate_limit_redis_url: str = Field(
-        default="redis://localhost:6379/0",
+        default="",
         description=(
-            "Redis URL for distributed rate limiting. Falls back to local "
-            "memory when unavailable."
+            "Deprecated and unused. Rate-limit counters are in-process, so no "
+            "cache service is required."
         ),
     )
 
@@ -689,38 +750,22 @@ class Settings(BaseSettings):
         provider = self.llm_provider.strip().lower()
 
         # ── LLM provider validation ──────────────────────────────────────
+        #
+        # Only two providers exist: "openai" (the single primary provider, which
+        # also serves OpenAI-compatible gateways such as freellmapi) and "mock"
+        # (offline / tests). Anything else is a configuration error and is
+        # rejected here rather than failing later inside the provider factory.
 
-        if provider == "openai":
+        if provider not in SUPPORTED_LLM_PROVIDERS:
+            missing.append("LLM_PROVIDER")
 
-            # FreeLLMAPI is OpenAI-compatible.
-            # If it is configured, OPENAI_API_KEY is NOT required.
-            if not self.uses_freellmapi:
-                if not self.openai_api_key_str.strip():
-                    missing.append("OPENAI_API_KEY")
+        elif provider == "openai":
+            # FreeLLMAPI is OpenAI-compatible, so when it is configured an
+            # OPENAI_API_KEY is NOT required.
+            if not self.uses_freellmapi and not self.openai_api_key_str.strip():
+                missing.append("OPENAI_API_KEY")
 
-        elif provider in {
-            "mock",
-            "ollama",
-            "vllm",
-        }:
-            # These providers do not require OPENAI_API_KEY.
-            pass
-
-        elif provider == "anthropic":
-            # Keep existing behavior flexible here. The provider itself
-            # will report a missing credential if needed.
-            pass
-
-        elif provider == "gemini":
-            pass
-
-        elif provider == "litellm":
-            pass
-
-        else:
-            # Unknown provider: let the provider factory/runtime produce
-            # the more specific error.
-            pass
+        # "mock" needs no credentials.
 
         # ── Production requirements ─────────────────────────────────────
 
@@ -747,6 +792,7 @@ class Settings(BaseSettings):
                     "missing_keys": missing,
                     "environment": str(self.environment),
                     "llm_provider": provider,
+                    "supported_providers": list(SUPPORTED_LLM_PROVIDERS),
                     "using_freellmapi": self.uses_freellmapi,
                 },
             )

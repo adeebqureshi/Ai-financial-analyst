@@ -4,7 +4,6 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
 
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
@@ -133,228 +132,28 @@ class LocalMemoryBackend(RateLimiterBackend):
             self._counters.clear()
 
 
-class RedisBackend(RateLimiterBackend):
-    """Redis-backed rate limiter backend."""
-
-    _reconnect_cooldown_seconds = 5.0
-
-    def __init__(self, redis_url: str) -> None:
-        self._redis_url = redis_url
-        self._client: Any = None
-        self._last_connect_attempt = 0.0
-
-        self._connect()
-
-    def _connect(self) -> None:
-        self._last_connect_attempt = time.monotonic()
-
-        try:
-            import redis
-
-            self._client = redis.from_url(
-                self._redis_url,
-                decode_responses=True,
-                socket_connect_timeout=2,
-                socket_timeout=2,
-                health_check_interval=30,
-            )
-
-            self._client.ping()
-
-            logger.info(
-                "Rate limiter connected to Redis (URL withheld from logs)"
-            )
-
-        except Exception as exc:
-            logger.warning(
-                "Failed to connect to Redis for rate limiting: %s. "
-                "Using local fallback.",
-                exc,
-            )
-            self._client = None
-
-    def _ensure_client(self) -> Any:
-        if self._client is None and self._cooldown_elapsed():
-            self._connect()
-
-        return self._client
-
-    def _cooldown_elapsed(self) -> bool:
-        return (
-            time.monotonic() - self._last_connect_attempt
-            >= self._reconnect_cooldown_seconds
-        )
-
-    def _drop_client(self) -> None:
-        self._client = None
-
-    def increment(self, key: str, window_seconds: int) -> int:
-        client = self._ensure_client()
-
-        if client is None:
-            raise RuntimeError("Redis client not available")
-
-        try:
-            pipe = client.pipeline()
-
-            pipe.incr(key)
-            pipe.expire(key, window_seconds)
-
-            results = pipe.execute()
-
-            return int(results[0])
-
-        except Exception as exc:
-            logger.warning(
-                "Redis increment failed, falling back to local: %s",
-                exc,
-            )
-
-            self._drop_client()
-            raise
-
-    def get(self, key: str) -> int:
-        client = self._ensure_client()
-
-        if client is None:
-            raise RuntimeError("Redis client not available")
-
-        try:
-            value = client.get(key)
-
-            return int(value) if value else 0
-
-        except Exception as exc:
-            logger.warning("Redis get failed: %s", exc)
-
-            self._drop_client()
-            raise
-
-    def reset(self, key: str) -> None:
-        client = self._ensure_client()
-
-        if client is None:
-            raise RuntimeError("Redis client not available")
-
-        try:
-            client.delete(key)
-
-        except Exception as exc:
-            logger.warning("Redis reset failed: %s", exc)
-
-            self._drop_client()
-            raise
-
-    def health_check(self) -> bool:
-        client = self._ensure_client()
-
-        if client is None:
-            return False
-
-        try:
-            return bool(client.ping())
-
-        except Exception:
-            return False
-
-    def clear_all(self) -> None:
-        client = self._ensure_client()
-
-        if client is None:
-            return
-
-        try:
-            cursor = 0
-            deleted_count = 0
-
-            while True:
-                cursor, keys = client.scan(
-                    cursor,
-                    match="ratelimit:*",
-                    count=100,
-                )
-
-                if keys:
-                    client.delete(*keys)
-                    deleted_count += len(keys)
-
-                if cursor == 0:
-                    break
-
-            if deleted_count:
-                logger.info(
-                    "Cleared %d rate limit keys from Redis for testing",
-                    deleted_count,
-                )
-
-        except Exception as exc:
-            logger.warning(
-                "Failed to clear Redis rate limit keys: %s",
-                exc,
-            )
-
-            self._drop_client()
-            raise
-
-
 class HybridRateLimiter:
-    """Rate limiter with Redis backend and local fallback."""
+    """Rate limiter backed by an in-process counter.
 
-    _redis_reprobe_interval_seconds = 30.0
+    The project runs a single backend worker, so request counters live in a
+    thread-safe in-process map. This replaces the previous Redis-backed
+    implementation: a distributed counter is unnecessary at this scale, and the
+    local backend was already the automatic fallback whenever Redis was
+    unreachable, so behaviour is unchanged for the local/demo setup.
+
+    The class name is retained for API compatibility with existing callers.
+    """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
 
-        self._redis_backend = RedisBackend(
-            self._settings.rate_limit_redis_url
-        )
-
         self._local_backend = LocalMemoryBackend()
 
-        self._use_redis = self._redis_backend.health_check()
+        self._backend: RateLimiterBackend = self._local_backend
 
-        self._backend: RateLimiterBackend = (
-            self._redis_backend
-            if self._use_redis
-            else self._local_backend
-        )
-
-        self._last_redis_probe = time.monotonic()
-
-        logger.info(
-            "Rate limiter initialized with %s backend",
-            "Redis" if self._use_redis else "local memory",
-        )
+        logger.info("Rate limiter initialized with in-process backend")
 
     def _get_backend(self) -> RateLimiterBackend:
-        if self._use_redis:
-            if not self._redis_backend.health_check():
-                logger.warning(
-                    "Redis health check failed, switching to local backend"
-                )
-
-                self._use_redis = False
-                self._backend = self._local_backend
-                self._last_redis_probe = time.monotonic()
-
-            return self._backend
-
-        now = time.monotonic()
-
-        if (
-            now - self._last_redis_probe
-            >= self._redis_reprobe_interval_seconds
-            and self._redis_backend.health_check()
-        ):
-            logger.info(
-                "Redis recovered, switching rate limiter back to Redis backend"
-            )
-
-            self._use_redis = True
-            self._backend = self._redis_backend
-
-        self._last_redis_probe = now
-
         return self._backend
 
     def check_rate_limit(
@@ -548,7 +347,6 @@ def reset_rate_limiter() -> None:
         if _rate_limiter is not None:
             try:
                 _rate_limiter._local_backend.clear_all()
-                _rate_limiter._redis_backend.clear_all()
             except Exception:
                 pass
 
@@ -557,15 +355,7 @@ def reset_rate_limiter() -> None:
 
 
 def clear_all_rate_limits() -> None:
-    """Clear all Redis and local rate-limit counters."""
-
-    settings = get_settings()
-
-    redis_backend = RedisBackend(
-        settings.rate_limit_redis_url
-    )
-
-    redis_backend.clear_all()
+    """Clear all in-process rate-limit counters."""
 
     global _rate_limiter
 

@@ -17,6 +17,10 @@ venv/
 .env.local
 .env.*.local
 
+# Stray credential dumps. A real access token was committed here once; never
+# let one be written back into the working tree.
+.audit_token.txt
+
 # Python Cache
 .pytest_cache/
 .mypy_cache/
@@ -49,6 +53,9 @@ storage/logs/
 *.db-wal
 *.db-shm
 data/
+# Runtime storage: application logs, uploaded PDFs, document metadata and
+# cached SEC/market responses. Generated locally, never source.
+storage/
 # ...but the application package under app/ must stay tracked, otherwise
 # security-critical code such as app/data/sec_http.py (the centralized SEC
 # HTTP gateway) would never be committed.

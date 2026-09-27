@@ -2,17 +2,41 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ApiError, api } from "@/services/api";
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+
+/**
+ * The API client first asks `/api/auth/token` for a development token when
+ * localStorage holds none. That bootstrap call is production behaviour, so it
+ * gets its own stub: routing it separately keeps the `mockResolvedValueOnce`
+ * queue in these tests reserved for the endpoint actually under test (and makes
+ * `toHaveBeenCalledTimes` assertions count only real API calls).
+ */
+const mockAuthFetch = vi.fn(async () => ({
+  ok: true,
+  status: 200,
+  json: async () => ({ access_token: "test-access-token" }),
+}));
+
+global.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === "string" ? input : String(input);
+
+  if (url === "/api/auth/token") {
+    return mockAuthFetch() as unknown as Promise<Response>;
+  }
+
+  return mockFetch(input, init) as unknown as Promise<Response>;
+}) as typeof fetch;
 
 const API_URL = "/api/backend";
 
 describe("services/api.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
     vi.resetAllMocks();
+    window.localStorage.clear();
   });
 
   describe("ApiError class", () => {
@@ -146,15 +170,21 @@ describe("services/api.ts", () => {
       vi.useRealTimers();
     });
 
-    it("parses a valid stale-token retry through the same success parser", async () => {
+    it("clears a stale token and refuses an unauthenticated retry", async () => {
       window.localStorage.setItem("access_token", "stale");
       mockFetch
         .mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve('{"message":"expired"}') })
         .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
-      await expect(api.health()).resolves.toEqual({ ok: true });
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockFetch.mock.calls[1][1].headers.Authorization).toBeUndefined();
-      window.localStorage.removeItem("access_token");
+
+      // The stale token is dropped and the error surfaces; the protected request
+      // is deliberately NOT retried without Authorization (see services/api.ts).
+      await expect(api.health()).rejects.toMatchObject({
+        name: "ApiError",
+        status: 401,
+        message: "expired",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem("access_token")).toBeNull();
     });
   });
 

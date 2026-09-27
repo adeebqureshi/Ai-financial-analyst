@@ -13,6 +13,13 @@
 # testing
 /coverage
 
+# Playwright auth state. Regenerated on every `npm run test:e2e` run by
+# e2e/auth.setup.ts and contains a real JWT access token, so it must never
+# be committed.
+/e2e/.auth/
+**/.auth/
+.audit_token.txt
+
 # next.js
 /.next/
 **/.next/

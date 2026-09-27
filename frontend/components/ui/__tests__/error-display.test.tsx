@@ -14,9 +14,10 @@ describe("ErrorDisplay", () => {
     const error = new ApiError("Unauthorized", 401, "/api/test");
     render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
-    expect(screen.getByText("Authentication Required")).toBeInTheDocument();
-    expect(screen.getByText("Your session has expired. Please sign in again.")).toBeInTheDocument();
-    expect(screen.queryByText("Try again")).not.toBeInTheDocument();
+    expect(screen.getByText("Not Authenticated")).toBeInTheDocument();
+    expect(screen.getByText("Please refresh the page to continue.")).toBeInTheDocument();
+    // Auth failures are marked retryable, so the retry affordance is shown.
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
@@ -133,7 +134,7 @@ describe("ErrorInline", () => {
     const error = new ApiError("Unauthorized", 401, "/api/test");
     render(<ErrorInline error={error} onRetry={mockOnRetry} />);
 
-    expect(screen.getByText("Your session has expired. Please sign in again.")).toBeInTheDocument();
+    expect(screen.getByText("Please refresh the page to continue.")).toBeInTheDocument();
     expect(screen.queryByText("Try again")).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });

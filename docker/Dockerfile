@@ -21,5 +21,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
 
-# Multi-worker ready: override WEB_CONCURRENCY to scale (e.g. 4).
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-2}"]
+# Single worker: the in-process rate limiter, quote cache, chat cache and
+# Qdrant health probe all assume one backend process. Do not raise
+# WEB_CONCURRENCY without reintroducing shared state.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-1}"]

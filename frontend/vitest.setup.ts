@@ -22,13 +22,23 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
+// A real, working in-memory stand-in. The previous bare `vi.fn()` mocks made
+// getItem() return `undefined` instead of the `null` the Storage contract
+// specifies, so code paths that read storage could not distinguish "no value"
+// from a broken mock.
+const storage = new Map<string, string>();
+
 Object.defineProperty(window, "localStorage", {
   writable: true,
   value: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => void storage.set(key, String(value)),
+    removeItem: (key: string) => void storage.delete(key),
+    clear: () => storage.clear(),
+    key: (index: number) => Array.from(storage.keys())[index] ?? null,
+    get length() {
+      return storage.size;
+    },
   },
 });
 

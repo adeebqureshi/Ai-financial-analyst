@@ -1,73 +1,62 @@
 from __future__ import annotations
+
 import json
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
 from app.core.logging import get_logger
-if TYPE_CHECKING:
-    from redis import Redis
+
 logger = get_logger(__name__)
+
+
 class ChatSessionCache:
-    def __init__(self, redis_url: str, *, ttl_seconds: int = 300) -> None:
-        self._redis_url = redis_url
+    """In-process cache of recent chat-session context.
+
+    The project runs a single backend worker, so a thread-safe in-process dict
+    is sufficient and no external cache service is required. This replaces the
+    previous Redis-backed implementation; when Redis was unreachable it already
+    degraded to the database, so the persisted chat store remains the source of
+    truth either way.
+    """
+
+    def __init__(self, redis_url: str = "", *, ttl_seconds: int = 300) -> None:
+        # ``redis_url`` is accepted for backwards compatibility and ignored.
         self._ttl_seconds = ttl_seconds
-        self._client: Redis | None = None
-        self._healthy = False
-    def _connect(self) -> None:
-        if self._client is not None:
-            return
-        try:
-            import redis
-            client = redis.from_url(
-                self._redis_url,
-                decode_responses=True,
-                socket_connect_timeout=1.0,
-                socket_timeout=1.0,
-            )
-            client.ping()
-            self._client = client
-            self._healthy = True
-            logger.info("Chat session cache connected to Redis (URL withheld from logs)")
-        except Exception:
-            self._client = None
-            self._healthy = False
+        self._entries: dict[str, tuple[float, dict[str, Any]]] = {}
+
     @property
     def enabled(self) -> bool:
-        self._connect()
-        return self._healthy
-    @staticmethod
-    def _key(owner_id: str | None, session_id: str) -> str:
+        """The in-process cache is always available."""
+        return True
+
+    def _key(self, owner_id: str | None, session_id: str) -> str:
         owner = owner_id or "anonymous"
         return f"chat:{owner}:{session_id}:context"
+
     def get_context(self, owner_id: str | None, session_id: str) -> dict[str, Any] | None:
-        if not self.enabled:
+        import time
+
+        key = self._key(owner_id, session_id)
+        entry = self._entries.get(key)
+        if entry is None:
             return None
-        try:
-            raw = self._client.get(self._key(owner_id, session_id))
-            if raw is None:
-                return None
-            payload = json.loads(raw)
-            return payload if isinstance(payload, dict) else None
-        except Exception:
+        stored_at, payload = entry
+        if time.monotonic() - stored_at > self._ttl_seconds:
+            self._entries.pop(key, None)
             return None
+        return payload
+
     def set_context(
         self,
         owner_id: str | None,
         session_id: str,
         context: dict[str, Any],
     ) -> None:
-        if not self.enabled:
-            return
-        try:
-            self._client.setex(
-                self._key(owner_id, session_id),
-                self._ttl_seconds,
-                json.dumps(context, default=str),
-            )
-        except Exception:
-            return
+        import time
+
+        self._entries[self._key(owner_id, session_id)] = (
+            time.monotonic(),
+            json.loads(json.dumps(context, default=str)),
+        )
+
     def invalidate(self, owner_id: str | None, session_id: str) -> None:
-        if not self.enabled:
-            return
-        try:
-            self._client.delete(self._key(owner_id, session_id))
-        except Exception:
-            return
+        self._entries.pop(self._key(owner_id, session_id), None)

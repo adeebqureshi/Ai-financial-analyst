@@ -1,32 +1,35 @@
 """
 document_parser.py
 
-Unified, layout-aware financial PDF parsing.
+Financial PDF text extraction.
 
-This module provides a single entry point for parsing financial PDFs
-through a best-available-parser fallback chain::
+The normal ingestion pipeline uses a single, reliable parser::
 
-    LlamaParse  (layout-aware Markdown, API key required)
-        ↓ fallback
-    Marker      (layout-aware Markdown, optional dependency)
-        ↓ fallback
-    PyMuPDF     (reliable plain-text fallback, never fabricates tables)
+    PDF -> PyMuPDF -> Text -> Chunking -> Embedding
+
+PyMuPDF is a core dependency and the only parser on the default path. It
+reuses :class:`app.ingestion.pdf_loader.PDFLoader`, preserves per-page text,
+and never fabricates tables — table extraction only recognises Markdown table
+syntax that is literally present in the text.
+
+The optional layout-aware parsers (LlamaParse, Marker) live in this module but
+are **off by default**. They are only used when the ``document-parsing`` extra
+is installed AND ``PDF_ENABLE_OPTIONAL_PARSERS=true`` is set, in which case the
+chain LlamaParse -> Marker -> PyMuPDF is tried in order. They are never
+required for a normal PDF upload.
 
 Design principles:
-    - **Graceful degradation.** A missing optional dependency (LlamaParse /
-      Marker) or a parse failure at one level silently falls through to the
-      next parser. The upload pipeline therefore never crashes because an
-      optional parser is unavailable.
-    - **Observable failures.** Every skipped or failed parser is logged, and
-      a total failure raises :class:`ParserError` with per-parser details —
-      a failure is never silently treated as success.
-    - **Reuse over duplication.** The PyMuPDF fallback reuses the existing
-      :class:`app.ingestion.pdf_loader.PDFLoader`, and tables are extracted
-      with the existing :class:`app.parsers.table_parser.TableParser`.
-    - **Structure preservation.** Markdown tables produced by LlamaParse /
-      Marker are turned into structured :class:`ParsedTable` objects, keeping
-      columnar financial data (e.g. ``Revenue | COGS | Gross Profit``)
-      associated instead of flattened into prose.
+    - **Reliable default.** PyMuPDF alone handles normal financial PDFs, so the
+      upload path has no external API or heavy-model dependency.
+    - **Graceful degradation.** A missing optional dependency or a parse
+      failure at one level silently falls through to the next parser, so the
+      upload pipeline never crashes because an optional parser is unavailable.
+    - **Observable failures.** Every skipped or failed parser is logged, and a
+      total failure raises :class:`ParserError` with per-parser details — a
+      failure is never silently treated as success.
+    - **Structure preservation.** Markdown tables are turned into structured
+      :class:`ParsedTable` objects, keeping columnar financial data associated
+      instead of flattened into prose.
 """
 
 from __future__ import annotations
@@ -412,12 +415,19 @@ class PyMuPDFParser(BaseDocumentParser):
 
 class UnifiedDocumentParser:
     """
-    Best-available-parser orchestrator for financial PDFs.
+    Parser entry point for financial PDFs.
 
-    The parser chain is: LlamaParse → Marker → PyMuPDF. Each parser is only
-    attempted when it reports itself available; any failure or empty result
-    falls through to the next parser. If every parser fails, a controlled
-    :class:`ParserError` is raised with per-parser failure details.
+    The normal pipeline is a single, reliable parser::
+
+        PDF -> PyMuPDF -> Text -> Chunking -> Embedding
+
+    PyMuPDF is a core dependency and the only parser on the default path.
+
+    The optional layout-aware parsers (LlamaParse, Marker) are **off by
+    default** and are never required for a normal PDF upload. They remain
+    available as an explicit opt-in via ``enable_optional_parsers=True`` for
+    users who install the ``document-parsing`` extra, in which case the chain
+    LlamaParse -> Marker -> PyMuPDF is tried in order.
     """
 
     def __init__(
@@ -425,18 +435,20 @@ class UnifiedDocumentParser:
         *,
         api_key: str | None = None,
         parsers: list[BaseDocumentParser] | None = None,
+        enable_optional_parsers: bool = False,
     ) -> None:
         self._api_key = api_key
 
-        self._parsers: list[BaseDocumentParser] = (
-            parsers
-            if parsers is not None
-            else [
+        if parsers is not None:
+            self._parsers: list[BaseDocumentParser] = parsers
+        elif enable_optional_parsers:
+            self._parsers = [
                 LlamaParseParser(api_key=api_key),
                 MarkerParser(),
                 PyMuPDFParser(),
             ]
-        )
+        else:
+            self._parsers = [PyMuPDFParser()]
 
     @property
     def parsers(self) -> list[BaseDocumentParser]:

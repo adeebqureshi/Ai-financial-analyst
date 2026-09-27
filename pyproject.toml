@@ -14,9 +14,6 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.30.0",
     "sqlalchemy>=2.0.0",
-    "redis>=5.0.0",
-    "psycopg[binary]>=3.1.0",
-    "chromadb>=0.5.0",
     "openai>=1.0.0",
     "yfinance>=0.2.0",
     "qdrant-client>=1.9.0",
@@ -42,6 +39,9 @@ dev = [
     "mypy>=1.8.0",
     "ruff>=0.3.0",
 ]
+# Optional extra PDF parsers. The default and only required parser is PyMuPDF
+# (a core dependency above). LlamaParse and Marker are not installed by default
+# and are not required for the normal PDF upload -> chunk -> embed pipeline.
 document-parsing = [
     "llama-parse>=0.4.0",
     "marker-pdf>=1.0.0",

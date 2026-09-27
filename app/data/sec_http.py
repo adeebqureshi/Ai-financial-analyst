@@ -5,28 +5,29 @@ Architecture (single choke point)::
     application code (SECClient / SECDownloader / SECLoader / EdgarClient)
         |
         v
-    SECRequestGateway            <- the one approved SEC request API
+    SECRequestGateway           <- the one approved SEC request API
         |
         v
-    RedisStrictRateLimiter       <- distributed, atomic, shared Redis state
+    StrictRateLimiter           <- strict rolling window, in-process
         |
         v
-    SECHttpTransport             <- the only module allowed to call `requests`
+    SECHttpTransport            <- the only module allowed to call `requests`
         |
         v
     www.sec.gov / data.sec.gov
 
 Invariants enforced by this module:
 
-* Every outbound SEC request is admitted by one Redis-backed limiter that is
-  shared by all processes, workers, threads and containers (single Redis key).
+* Every outbound SEC request is admitted by one rolling-window limiter shared
+  by every gateway and limiter object in this process.
 * The admission decision is a strict rolling 1-second window: at most
   ``SEC_MAX_REQUESTS_PER_SECOND`` (10) admissions in any rolling second.
-* The decision is made inside a single atomic Lua script that uses Redis
-  server time, so client clock skew cannot weaken the limit.
+* The decision is made under a single lock, so a check can never interleave
+  with a write and the window limit can never be exceeded.
 * Every retry is a new outbound request and therefore re-enters the limiter.
-* If Redis is unavailable the request is *not* sent (fail closed). There is no
-  direct-HTTP fallback anywhere in this module.
+* The limiter needs no external service. It is deliberately in-process because
+  the project runs a single backend worker, which is what makes a shared
+  distributed counter unnecessary.
 """
 
 from __future__ import annotations
@@ -208,72 +209,36 @@ class SECRateLimitGrant:
     in_window: int
 
 
-# ── Distributed strict rolling-window limiter ────────────────────────────────
-
-# Single atomic decision:
-#   1. read Redis server time (shared clock for every worker/container)
-#   2. drop every admission outside the rolling window
-#   3. count the admissions that are still inside the window
-#   4. reject when the window is already full (return the exact retry delay)
-#   5. otherwise record the new admission and refresh the key TTL
+# ── Strict rolling-window limiter (in-process) ───────────────────────────────
 #
-# Everything happens in one script evaluation, so concurrent workers can never
-# interleave a check with a write ("check + write" race) and can never exceed
-# the window limit.
-_STRICT_ROLLING_WINDOW_SCRIPT = """
-local window_key = KEYS[1]
-local sequence_key = KEYS[2]
-
-local limit = tonumber(ARGV[1])
-local window = tonumber(ARGV[2])
-local ttl_ms = tonumber(ARGV[3])
-
--- Redis server time: identical for every application process.
-local redis_time = redis.call('TIME')
-local now = tonumber(redis_time[1]) + (tonumber(redis_time[2]) / 1000000)
-
--- Admitting a request at `now` must never push the count above `limit` for
--- the closed window [now - window, now].
-local window_start = now - window
-
-redis.call('ZREMRANGEBYSCORE', window_key, '-inf', '(' .. string.format('%.6f', window_start))
-
-local admitted = redis.call('ZCARD', window_key)
-
-if admitted >= limit then
-    local oldest = redis.call('ZRANGE', window_key, 0, 0, 'WITHSCORES')
-    local wait = window
-    if oldest[1] ~= nil and oldest[2] ~= nil then
-        wait = (tonumber(oldest[2]) + window) - now
-    end
-    if wait <= 0 then
-        wait = 0.001
-    end
-    redis.call('PEXPIRE', window_key, ttl_ms)
-    return {0, string.format('%.6f', wait), '0', admitted}
-end
-
-local sequence = redis.call('INCR', sequence_key)
-local member = string.format('%.6f', now) .. ':' .. tostring(sequence)
-
-redis.call('ZADD', window_key, string.format('%.6f', now), member)
-redis.call('PEXPIRE', window_key, ttl_ms)
-redis.call('PEXPIRE', sequence_key, ttl_ms)
-
-return {1, '0', string.format('%.6f', now), admitted + 1}
-"""
+# Admission decision, made in one critical section:
+#   1. read the shared monotonic clock
+#   2. drop every admission outside the rolling window
+#   3. count the admissions still inside the window
+#   4. reject when the window is full (return the exact retry delay)
+#   5. otherwise record the new admission
+#
+# The whole decision happens under one lock, so concurrent threads in this
+# process can never interleave a check with a write and can never exceed the
+# window limit.
+#
+# Redis is deliberately NOT required. The project runs a single backend worker,
+# so a process-local limiter enforces the same strict rolling-window limit with
+# no external infrastructure.
 
 
-class RedisStrictRateLimiter:
-    """Strict distributed rolling-window limiter shared through Redis.
+class StrictRateLimiter:
+    """Strict rolling-window limiter shared across threads in this process.
 
     Semantics: at most :attr:`limit` admissions inside *any* rolling
     ``window_seconds`` interval. This is deliberately **not** a token bucket -
     a token bucket of capacity 10 refilling at 10/s permits bursts and can
-    admit more than 10 requests inside one second.
+    admit more than 10 requests inside one second, which the SEC's fair-access
+    guidelines do not allow.
 
-    All instances that share :attr:`key` share the same distributed state, so
-    separate client objects, threads, workers and containers are coordinated.
+    Every limiter instance using the same ``key`` shares the same in-process
+    window, so separate client objects, gateway objects and threads are
+    coordinated. This is sufficient for the single-worker local/demo setup.
     """
 
     LIMIT: Final[int] = SEC_MAX_REQUESTS_PER_SECOND
@@ -287,7 +252,10 @@ class RedisStrictRateLimiter:
     REFILL_RATE: Final[float] = SEC_MAX_REQUESTS_PER_SECOND / SEC_RATE_LIMIT_WINDOW_SECONDS
     DEFAULT_KEY: Final[str] = SEC_RATE_LIMIT_REDIS_KEY
 
-    _RECONNECT_COOLDOWN_SECONDS: Final[float] = 5.0
+    # Shared windows, keyed by window key, so every limiter instance using the
+    # same key admits against the same rolling window.
+    _windows: Final[dict[str, list[float]]] = {}
+    _windows_lock: Final[threading.Lock] = threading.Lock()
 
     def __init__(
         self,
@@ -307,86 +275,29 @@ class RedisStrictRateLimiter:
         self._window_seconds = float(window_seconds)
         self._key = key
         self._sequence_key = f"{key}:seq"
-        self._ttl_ms = max(
-            1000,
-            int(round(max(float(key_ttl_seconds), float(window_seconds) + 1.0) * 1000)),
-        )
-        self._script_sha: str | None = None
-        self._lock = threading.Lock()
-        self._last_connect_attempt = 0.0
+        self._ttl_seconds = max(float(key_ttl_seconds), float(window_seconds) + 1.0)
+        # ``redis_url`` / ``client`` are accepted for backwards compatibility with
+        # the previous Redis-backed signature but are intentionally unused: the
+        # limiter is now self-contained and does not talk to Redis.
         self._redis_url = resolve_redis_url(redis_url) if client is None else redis_url
 
-        if client is not None:
-            # Injected client (tests / dependency injection) - no connection.
-            self._client: Any | None = client
-        else:
-            self._client = self._connect()
-
         logger.info(
-            "SEC strict rate limiter ready (limit=%d per %ss, key=%s)",
+            "SEC strict rate limiter ready (limit=%d per %ss, key=%s, in-process)",
             self._limit,
             self._window_seconds,
             self._key,
         )
 
-    # ── connection handling ──────────────────────────────────────────────
-
-    def _connect(self) -> Any:
-        self._last_connect_attempt = time.monotonic()
-
-        try:
-            import redis
-        except ImportError as exc:  # pragma: no cover - dependency is declared
-            raise SECRateLimitUnavailableError(
-                "The 'redis' package is required for SEC rate limiting."
-            ) from exc
-
-        client = redis.from_url(
-            self._redis_url or SEC_DEFAULT_REDIS_URL,
-            decode_responses=True,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-            health_check_interval=30,
-        )
-
-        # Fail closed: without Redis we cannot prove the SEC limit holds.
-        try:
-            client.ping()
-        except Exception as exc:
-            logger.error("SEC rate limiter cannot reach Redis: %s", exc)
-            raise SECRateLimitUnavailableError(
-                "Redis is required for SEC rate limiting but is unavailable."
-            ) from exc
-
-        return client
-
-    def _require_client(self) -> Any:
-        if self._client is not None:
-            return self._client
-
-        if time.monotonic() - self._last_connect_attempt < self._RECONNECT_COOLDOWN_SECONDS:
-            raise SECRateLimitUnavailableError("SEC rate limiter Redis connection is unavailable.")
-
-        with self._lock:
-            if self._client is None:
-                self._client = self._connect()
-
-        return self._client
-
-    def _drop_client(self) -> None:
-        self._client = None
-        self._last_connect_attempt = time.monotonic()
-
     # ── shared state description ─────────────────────────────────────────
 
     @property
     def key(self) -> str:
-        """The shared Redis key holding the rolling window."""
+        """The shared key identifying the rolling window."""
         return self._key
 
     @property
     def sequence_key(self) -> str:
-        """The shared Redis key used to keep admission members unique."""
+        """Sequence key (retained for API compatibility; unused in-process)."""
         return self._sequence_key
 
     @property
@@ -397,52 +308,59 @@ class RedisStrictRateLimiter:
     def window_seconds(self) -> float:
         return self._window_seconds
 
-    # ── admission ────────────────────────────────────────────────────────
+    @property
+    def redis_url(self) -> str:
+        return self._redis_url or SEC_DEFAULT_REDIS_URL
 
     def _evaluate(self) -> SECRateLimitGrant:
-        client = self._require_client()
-        arguments = (self._limit, self._window_seconds, self._ttl_ms)
+        """Decide, under one lock, whether one SEC request may be admitted now."""
+        with self._windows_lock:
+            # The clock MUST be read inside the lock. Reading it before
+            # acquiring the lock lets a thread that queued behind others
+            # evaluate against a stale "now", so the window would fail to
+            # drain and more than `limit` admissions could land in one real
+            # second.
+            now = time.monotonic()
+            window_start = now - self._window_seconds
 
-        try:
-            if self._script_sha is None:
-                self._script_sha = client.script_load(_STRICT_ROLLING_WINDOW_SCRIPT)
+            admissions = self._windows.get(self._key)
+            if admissions is None:
+                admissions = []
+                self._windows[self._key] = admissions
 
-            result = client.evalsha(
-                self._script_sha,
-                2,
-                self._key,
-                self._sequence_key,
-                *arguments,
+            # Drop every admission that has fallen out of the rolling window.
+            # The list stays in ascending time order, so expired entries are
+            # always a prefix and can be trimmed in a single pass.
+            cutoff = 0
+            for index, admitted_at in enumerate(admissions):
+                if admitted_at > window_start:
+                    break
+                cutoff = index + 1
+            if cutoff:
+                del admissions[:cutoff]
+
+            in_window = len(admissions)
+
+            if in_window >= self._limit:
+                wait = self._window_seconds
+                if admissions:
+                    wait = (admissions[0] + self._window_seconds) - now
+                if wait <= 0:
+                    wait = 0.001
+                return SECRateLimitGrant(
+                    allowed=False,
+                    wait_seconds=wait,
+                    admitted_at=now,
+                    in_window=in_window,
+                )
+
+            admissions.append(now)
+            return SECRateLimitGrant(
+                allowed=True,
+                wait_seconds=0.0,
+                admitted_at=now,
+                in_window=in_window + 1,
             )
-        except Exception as exc:
-            if _is_noscript_error(exc):
-                try:
-                    self._script_sha = None
-                    result = client.eval(
-                        _STRICT_ROLLING_WINDOW_SCRIPT,
-                        2,
-                        self._key,
-                        self._sequence_key,
-                        *arguments,
-                    )
-                except Exception as retry_exc:
-                    self._drop_client()
-                    raise SECRateLimitUnavailableError(
-                        "SEC rate limiter failed; the SEC request was not sent."
-                    ) from retry_exc
-            else:
-                self._drop_client()
-                raise SECRateLimitUnavailableError(
-                    "SEC rate limiter failed; the SEC request was not sent."
-                ) from exc
-
-        grant = _parse_grant(result)
-        if grant is None:
-            raise SECRateLimitUnavailableError(
-                "SEC rate limiter returned an invalid response; the SEC request was not sent."
-            )
-
-        return grant
 
     def check(self) -> SECRateLimitGrant:
         """Atomically decide whether one SEC request may be admitted now.
@@ -454,6 +372,8 @@ class RedisStrictRateLimiter:
         """
         return self._evaluate()
 
+    # ── blocking admission ───────────────────────────────────────────────
+
     def acquire(self, max_wait_seconds: float | None = None) -> SECRateLimitGrant:
         """Block until one SEC request slot is admitted.
 
@@ -461,8 +381,6 @@ class RedisStrictRateLimiter:
             max_wait_seconds: optional cap on the total blocking time.
 
         Raises:
-            SECRateLimitUnavailableError: when Redis cannot make a decision
-                (fail closed - the caller must not send the request).
             TimeoutError: when ``max_wait_seconds`` is exceeded.
         """
         deadline = time.monotonic() + max_wait_seconds if max_wait_seconds is not None else None
@@ -485,11 +403,7 @@ class RedisStrictRateLimiter:
         self,
         max_wait_seconds: float | None = None,
     ) -> SECRateLimitGrant:
-        """Async twin of :meth:`acquire`.
-
-        Uses the same Redis key and the same atomic script, so async and sync
-        callers share one distributed limit.
-        """
+        """Async twin of :meth:`acquire`, using the same shared window."""
         deadline = time.monotonic() + max_wait_seconds if max_wait_seconds is not None else None
 
         while True:
@@ -507,38 +421,20 @@ class RedisStrictRateLimiter:
             await asyncio.sleep(wait_seconds)
 
     def close(self) -> None:
-        """Release the Redis connection held by this limiter instance."""
-        client, self._client = self._client, None
-        if client is None:
-            return
-        try:
-            client.close()
-        except Exception:  # pragma: no cover - best effort cleanup
-            logger.debug("Ignoring error while closing the SEC rate limiter.")
-
-
-# The canonical alias used across the repository. It is the same class using
-# the same Redis key, so there is exactly one distributed coordination
-# mechanism for SEC traffic.
-SECRateLimiter = RedisStrictRateLimiter
-
-
-def _is_noscript_error(exc: Exception) -> bool:
-    return "NOSCRIPT" in str(exc).upper()
-
-
-def _parse_grant(result: Any) -> SECRateLimitGrant | None:
-    try:
-        allowed_raw, wait_raw, admitted_at_raw, in_window_raw = result[0:4]
-        return SECRateLimitGrant(
-            allowed=int(allowed_raw) == 1,
-            wait_seconds=float(wait_raw),
-            admitted_at=float(admitted_at_raw),
-            in_window=int(in_window_raw),
-        )
-    except Exception:
-        logger.error("Unexpected SEC rate limiter response: %r", result)
+        """Release this limiter. Kept for API compatibility (no-op in-process)."""
         return None
+
+
+# Backwards-compatible alias: this class was previously Redis-backed.
+RedisStrictRateLimiter = StrictRateLimiter
+
+# The canonical alias used across the repository. There is exactly one
+# coordination mechanism for SEC traffic.
+SECRateLimiter = StrictRateLimiter
+
+
+
+
 
 
 # ── The only HTTP transport allowed to talk to the SEC ───────────────────────

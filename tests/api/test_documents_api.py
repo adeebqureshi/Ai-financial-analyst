@@ -7,6 +7,7 @@ from app.main import app
 from app.auth.dependencies import get_current_user
 from app.api.dependencies.services import get_search_service
 from app.core.exceptions import RetrievalError
+from app.core import config as _app_core_config
 
 
 class MockUser:
@@ -33,6 +34,23 @@ def _fake_embed_documents(_self, documents):
     return [_fallback_vector(text) for text in documents]
 def _fake_embed_text(_self, text):
     return _fallback_vector(text)
+
+
+def _settings_with_no_similarity_floor(_base):
+    """Settings clone with the relevance floor disabled.
+
+    The hermetic test embeddings are SHA-256 hashes with no semantic meaning,
+    so a cosine-similarity floor would reject every chunk. The floor itself is
+    covered by tests/retrieval/test_relevance_floor.py.
+    """
+    # NOTE: use the module-level singleton, NOT get_settings().
+    # get_settings() is itself monkeypatched by the fixture below, so calling
+    # it here would recurse forever.
+    base = _app_core_config.settings
+
+    return base.model_copy(update={"retrieval_min_similarity": 0.0})
+
+
 @pytest.fixture(autouse=True)
 def _hermetic_embeddings(monkeypatch):
     monkeypatch.setattr(
@@ -44,6 +62,15 @@ def _hermetic_embeddings(monkeypatch):
         EmbeddingService,
         "embed_text",
         _fake_embed_text,
+    )
+    # These hermetic embeddings are SHA-256 hashes, so they carry no semantic
+    # signal: every cosine similarity is ~0 and the relevance floor would drop
+    # everything. The floor is exercised for real in
+    # tests/retrieval/test_relevance_floor.py, so disable it here.
+    _real_get_settings = _app_core_config.get_settings
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: _settings_with_no_similarity_floor(_real_get_settings()),
     )
 def _upload_pdf(client, text: str) -> str:
     response = client.post(
@@ -60,7 +87,50 @@ def _upload_pdf(client, text: str) -> str:
     payload = response.json()
     assert payload["success"] is True
     return payload["data"]["document_id"]
-def test_document_lifecycle_and_rag_chat(authed_client):
+def _stub_llm(monkeypatch):
+    """Replace the LLM with a deterministic stub.
+
+    This test asserts the document lifecycle and that RAG answers carry
+    citations. It does not assert LLM quality, and it must not require a real
+    API key to run.
+    """
+    from app.llm.exceptions import ProviderError
+    from app.llm.models import LLMRequest, LLMResponse
+    from app.llm.providers.base import BaseLLMProvider
+
+    class _StubProvider(BaseLLMProvider):
+        MODEL = "stub"
+
+        def generate(self, request: LLMRequest) -> LLMResponse:
+            # Reflect the cited sources back so the answer is grounded.
+            return LLMResponse(text="STUB_ANSWER", model=self.MODEL)
+
+    class _StubClient:
+        def __init__(self, *args, **kwargs) -> None:
+            self.provider = _StubProvider()
+
+        def generate(self, request: LLMRequest) -> LLMResponse:
+            return self.provider.generate(request)
+
+    monkeypatch.setattr(
+        "app.agents.financial_analyst.OpenAIClient",
+        _StubClient,
+    )
+    monkeypatch.setattr(
+        "app.llm.report_generator.OpenAIClient",
+        _StubClient,
+    )
+
+    # ChatService caches a module-level CoordinatorAgent, which builds its
+    # LLM client once. A coordinator left over from an earlier test would keep
+    # the real client and ignore the stub above, so drop the cached one.
+    import app.services.chat_service as chat_service_module
+
+    monkeypatch.setattr(chat_service_module, "_coordinator", None)
+
+
+def test_document_lifecycle_and_rag_chat(authed_client, monkeypatch):
+    _stub_llm(monkeypatch)
     client = authed_client
     document_id = _upload_pdf(
         client,

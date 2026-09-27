@@ -70,11 +70,36 @@ def test_llamaparse_unavailable_without_package(monkeypatch) -> None:
     )
     parser = LlamaParseParser(api_key="llx-test-key")
     assert parser.available() is False
+def test_default_chain_is_pymupdf_only() -> None:
+    """The default pipeline uses PyMuPDF alone (no optional parsers)."""
+    unified = UnifiedDocumentParser(api_key="")
+    assert [parser.name for parser in unified.parsers] == ["pymupdf"]
+    assert unified.available_parsers() == ["pymupdf"]
+
+
 def test_default_chain_reports_only_pymupdf_available() -> None:
     unified = UnifiedDocumentParser(api_key="")
     available = unified.available_parsers()
     assert "llamaparse" not in available
     assert "pymupdf" in available
+
+
+def test_optional_parsers_are_opt_in() -> None:
+    """The optional layout-aware parsers only join the chain when asked."""
+    default = UnifiedDocumentParser(api_key="llx-test-key")
+    assert [parser.name for parser in default.parsers] == ["pymupdf"]
+
+    opt_in = UnifiedDocumentParser(
+        api_key="llx-test-key",
+        enable_optional_parsers=True,
+    )
+    assert [parser.name for parser in opt_in.parsers] == [
+        "llamaparse",
+        "marker",
+        "pymupdf",
+    ]
+
+
 def test_llamaparse_success(monkeypatch, tmp_path) -> None:
     pdf_path = _write_pdf(tmp_path, "apple", ["placeholder"])
     monkeypatch.setattr(
@@ -87,7 +112,10 @@ def test_llamaparse_success(monkeypatch, tmp_path) -> None:
         "_extract",
         lambda self, path: _CONFIDENTIAL_MARKDOWN,
     )
-    unified = UnifiedDocumentParser(api_key="llx-test-key")
+    unified = UnifiedDocumentParser(
+        api_key="llx-test-key",
+        enable_optional_parsers=True,
+    )
     result = unified.parse(pdf_path, filename="apple_10k.pdf")
     assert result.parser_used == "llamaparse"
     assert len(result.tables) == 2
@@ -96,13 +124,17 @@ def test_llamaparse_success(monkeypatch, tmp_path) -> None:
     assert result.tables[0].source_page == 1
     assert result.tables[1].rows == [["1,250,000", "(500)"]]
     assert result.tables[1].source_page == 2
+
+
 def test_llamaparse_failure_falls_back_to_marker(monkeypatch, tmp_path) -> None:
     pdf_path = _write_pdf(tmp_path, "apple", ["placeholder"])
+
     def failing_extract(self, path: str) -> str:
         raise ParserError(
             message="LlamaParse quota exceeded",
             error_code="PARSER_LLAMAPARSE_FAILED",
         )
+
     monkeypatch.setattr(LlamaParseParser, "available", lambda self: True)
     monkeypatch.setattr(LlamaParseParser, "_extract", failing_extract)
     monkeypatch.setattr(MarkerParser, "available", lambda self: True)
@@ -111,21 +143,34 @@ def test_llamaparse_failure_falls_back_to_marker(monkeypatch, tmp_path) -> None:
         "_convert",
         staticmethod(lambda path: _CONFIDENTIAL_MARKDOWN),
     )
-    unified = UnifiedDocumentParser(api_key="llx-test-key")
+    unified = UnifiedDocumentParser(
+        api_key="llx-test-key",
+        enable_optional_parsers=True,
+    )
     result = unified.parse(pdf_path, filename="apple_10k.pdf")
     assert result.parser_used == "marker"
     assert len(result.tables) == 2
+
+
 def test_marker_failure_falls_back_to_pymupdf(monkeypatch, tmp_path) -> None:
     pdf_path = _write_pdf(tmp_path, "apple", ["Revenue increased 25%."])
+
     def failing_convert(path: str) -> str:
         raise RuntimeError("model artifacts missing")
+
     monkeypatch.setattr(MarkerParser, "available", lambda self: True)
     monkeypatch.setattr(MarkerParser, "_convert", failing_convert)
-    unified = UnifiedDocumentParser(api_key="")
+    unified = UnifiedDocumentParser(
+        api_key="",
+        enable_optional_parsers=True,
+    )
     result = unified.parse(pdf_path, filename="apple_10k.pdf")
     assert result.parser_used == "pymupdf"
     assert "Revenue" in result.text
-def test_pymupdf_fallback_without_optional_parsers(tmp_path) -> None:
+
+
+def test_pymupdf_used_by_default_without_optional_parsers(tmp_path) -> None:
+    """A normal PDF upload is handled by PyMuPDF with no opt-in flags."""
     pdf_path = _write_pdf(tmp_path, "apple", ["Gross profit was 300."])
     unified = UnifiedDocumentParser(api_key="")
     result = unified.parse(pdf_path, filename="apple_10k.pdf")

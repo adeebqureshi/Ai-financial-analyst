@@ -33,6 +33,21 @@ def _settings_dim() -> int | None:
         return None
 
 
+def _settings_value(name: str) -> str | None:
+    """Read a Qdrant setting from Settings, falling back to the environment.
+
+    QDRANT_* variables are read through Settings so all configuration lives in
+    one place; the environment is still honoured for direct ``uvicorn`` runs.
+    """
+    try:
+        from app.core.config import get_settings
+
+        value = getattr(get_settings(), name, "") or ""
+    except Exception:
+        value = ""
+    return value.strip() or (os.getenv(name) or None)
+
+
 def _reset_shared_client_for_tests() -> None:
     """Reset the in-memory Qdrant singleton (test isolation only)."""
     global _client
@@ -48,11 +63,21 @@ def _get_shared_client(
     url: str | None,
     api_key: str | None,
 ) -> QdrantClient:
+    """Return the process-wide Qdrant client.
+
+    A single client is cached for both deployment modes:
+
+    * ``QDRANT_URL`` set  -> a server-backed client, so uploaded vectors
+      survive a backend restart (persistent storage lives on the Qdrant side).
+    * ``QDRANT_URL`` unset -> an in-process ``:memory:`` client, which is
+      volatile and intended for tests / throwaway runs.
+
+    Caching matters for the server mode: constructing a client per call would
+    open a fresh connection on every read and write.
+    """
     global _client
-    if url:
-        return QdrantClient(url=url, api_key=api_key)
     if _client is None:
-        _client = QdrantClient(":memory:")
+        _client = QdrantClient(url=url, api_key=api_key) if url else QdrantClient(":memory:")
     return _client
 
 
@@ -65,15 +90,18 @@ class QdrantStore(BaseVectorStore):
         api_key: str | None = None,
     ) -> None:
         self.collection_name = (
-            collection_name or os.getenv("QDRANT_COLLECTION") or _DEFAULT_COLLECTION
+            collection_name
+            or _settings_value("qdrant_collection")
+            or os.getenv("QDRANT_COLLECTION")
+            or _DEFAULT_COLLECTION
         )
         self.vector_size = (
             vector_size
             or _settings_dim()
             or int(os.getenv("EMBEDDING_DIMENSION", _DEFAULT_VECTOR_SIZE))
         )
-        self._url = url or os.getenv("QDRANT_URL")
-        self._api_key = api_key or os.getenv("QDRANT_API_KEY")
+        self._url = url or _settings_value("qdrant_url")
+        self._api_key = api_key or _settings_value("qdrant_api_key")
         self._client_override = None
         try:
             self._ensure_collection()
