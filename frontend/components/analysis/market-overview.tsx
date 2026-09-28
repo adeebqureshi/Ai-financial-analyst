@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   EMPTY_VALUE,
@@ -11,7 +10,10 @@ import {
   formatRatio,
   formatRatioAsPercent,
 } from "@/components/ui/metric";
+import { SectionHeading } from "@/components/ui/page-header";
 import type { MarketData, StatementData } from "@/types/analysis";
+
+import { ChartFrame, ComparisonBars, RangePosition } from "./visuals";
 
 type Props = { market: MarketData; statement: StatementData };
 
@@ -19,11 +21,9 @@ function isMissing(value: number | null | undefined): boolean {
   return value === null || value === undefined || Number.isNaN(value);
 }
 
-
 const MILLIONS = 1_000_000;
 
 const NOT_PROVIDED = "Not provided by the market data provider";
-
 
 function formatShares(value: number | null | undefined): string {
   if (isMissing(value)) return EMPTY_VALUE;
@@ -38,13 +38,12 @@ function quoteTimestamp(asOf: string | null | undefined): string | null {
 
 function StatementRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border py-2.5 last:border-0">
+    <div className="flex items-baseline justify-between gap-4 border-b border-border py-2.5 last:border-0">
       <dt className="text-label text-muted-foreground">{label}</dt>
       <dd className="tnum text-label font-medium text-foreground">{value}</dd>
     </div>
   );
 }
-
 
 export function MarketOverview({ market, statement }: Props) {
   const quoteAvailable = !isMissing(market.current_price);
@@ -100,32 +99,37 @@ export function MarketOverview({ market, statement }: Props) {
     },
   ];
 
+  const incomeRows = [
+    { label: "Revenue", value: statement.revenue },
+    { label: "Operating income", value: statement.operating_income },
+    { label: "Net income", value: statement.net_income },
+    { label: "Free cash flow", value: statement.free_cash_flow },
+  ];
+
   return (
     <section
+      id="market"
       data-testid="market-overview"
       aria-labelledby="market-overview-heading"
+      className="space-y-5 scroll-mt-32"
     >
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="market-overview-heading" className="text-title text-foreground">
-            Market overview
-          </h2>
-          <p className="mt-1 text-label text-muted-foreground">
-            Latest quote and the company&apos;s reported financial statements.
-          </p>
-        </div>
+      <SectionHeading
+        id="market-overview-heading"
+        title="Market overview"
+        description="Latest quote plus the company's reported financial statements."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {market.stale && <Badge variant="warning">Quote may be stale</Badge>}
 
-        <div className="flex flex-wrap items-center gap-2">
-          {market.stale && <Badge variant="warning">Quote may be stale</Badge>}
-
-          {market.provider && (
-            <span className="text-caption text-subtle-foreground">
-              Source: {market.provider}
-              {quotesAsOf ? ` · ${quotesAsOf}` : ""}
-            </span>
-          )}
-        </div>
-      </div>
+            {market.provider && (
+              <span className="text-caption text-muted-foreground">
+                Source: {market.provider}
+                {quotesAsOf ? ` · ${quotesAsOf}` : ""}
+              </span>
+            )}
+          </div>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile) => (
@@ -133,56 +137,93 @@ export function MarketOverview({ market, statement }: Props) {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {[
-          {
-            title: "Balance sheet",
-            rows: [
-              ["Total assets", statement.total_assets],
-              ["Total liabilities", statement.total_liabilities],
-              ["Cash", statement.cash],
-              ["Total debt", statement.debt],
-            ] as const,
-            extra: (
-              <StatementRow
-                label="Shares outstanding"
-                value={formatShares(statement.shares_outstanding)}
-              />
-            ),
-          },
-          {
-            title: "Income statement",
-            rows: [
-              ["Revenue", statement.revenue],
-              ["Operating income", statement.operating_income],
-              ["Net income", statement.net_income],
-              ["Free cash flow", statement.free_cash_flow],
-            ] as const,
-            extra: null,
-          },
-        ].map((section) => (
-          <Card key={section.title}>
-            <CardHeader>
-              <CardTitle as="h3">{section.title}</CardTitle>
-              <span className="text-caption text-subtle-foreground">
-                Reported, in USD
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <ChartFrame
+          title="Reported income statement"
+          description="Latest fiscal year, in USD"
+          legend={
+            <>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="size-2 rounded-full bg-chart-1"
+                  aria-hidden="true"
+                />
+                Reported
               </span>
-            </CardHeader>
+            </>
+          }
+          footer="Values are the backend&apos;s reported statement figures."
+        >
+          <ComparisonBars
+            rows={incomeRows.map((row) => ({
+              ...row,
+              tone: row.value < 0 ? ("loss" as const) : ("brand" as const),
+            }))}
+            formatValue={(value) => formatCompactCurrency(dollars(value))}
+          />
+        </ChartFrame>
 
-            <CardBody>
+        <div className="space-y-4">
+          <ChartFrame
+            title="Price positioning"
+            description="Where the quote sits in the reported range"
+          >
+            <RangePosition
+              low={market.week_52_low}
+              high={market.week_52_high}
+              current={market.current_price}
+              formatValue={(value) => formatCurrency(value)}
+            />
+          </ChartFrame>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ChartFrame title="Balance sheet" description="Reported, in USD">
               <dl>
-                {section.rows.map(([label, value]) => (
-                  <StatementRow
-                    key={label}
-                    label={label}
-                    value={formatCompactCurrency(dollars(value))}
-                  />
-                ))}
-                {section.extra}
+                <StatementRow
+                  label="Total assets"
+                  value={formatCompactCurrency(dollars(statement.total_assets))}
+                />
+                <StatementRow
+                  label="Total liabilities"
+                  value={formatCompactCurrency(dollars(statement.total_liabilities))}
+                />
+                <StatementRow
+                  label="Cash"
+                  value={formatCompactCurrency(dollars(statement.cash))}
+                />
+                <StatementRow
+                  label="Total debt"
+                  value={formatCompactCurrency(dollars(statement.debt))}
+                />
+                <StatementRow
+                  label="Shares outstanding"
+                  value={formatShares(statement.shares_outstanding)}
+                />
               </dl>
-            </CardBody>
-          </Card>
-        ))}
+            </ChartFrame>
+
+            <ChartFrame title="Cash generation" description="Reported, in USD">
+              <dl>
+                <StatementRow
+                  label="Revenue"
+                  value={formatCompactCurrency(dollars(statement.revenue))}
+                />
+                <StatementRow
+                  label="Operating income"
+                  value={formatCompactCurrency(dollars(statement.operating_income))}
+                />
+                <StatementRow
+                  label="Net income"
+                  value={formatCompactCurrency(dollars(statement.net_income))}
+                />
+                <StatementRow
+                  label="Free cash flow"
+                  value={formatCompactCurrency(dollars(statement.free_cash_flow))}
+                />
+              </dl>
+            </ChartFrame>
+          </div>
+        </div>
       </div>
     </section>
   );

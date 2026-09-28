@@ -22,6 +22,10 @@ type Props = {
 
   placeholder?: string;
 
+  autoPrompt?: string | null;
+
+  sessionId?: string | null;
+
   readOnly?: boolean;
 };
 
@@ -40,14 +44,18 @@ export function ChatSurface({
   asOfDate,
   inputLabel = "Message the AI financial analyst",
   placeholder = "Ask a research question…",
+  autoPrompt = null,
+  sessionId = null,
   readOnly = false,
 }: Props) {
-  const { messages, isStreaming, error, send, retry, cancel, reset } =
+  const { messages, isStreaming, error, send, retry, cancel, reset, restoreSession } =
     useChatStream({ scope });
 
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const followRef = useRef(true);
+  const sentPromptRef = useRef<string | null>(null);
+  const restoredSessionRef = useRef<string | null>(null);
 
 
   useEffect(() => {
@@ -71,13 +79,33 @@ export function ChatSurface({
     setInput("");
   }
 
+  useEffect(() => {
+    const prompt = autoPrompt?.trim();
+
+    if (!prompt || isStreaming) return;
+    if (sentPromptRef.current === prompt) return;
+
+    sentPromptRef.current = prompt;
+    send(prompt, { ticker, documentId, asOfDate } satisfies SendOptions);
+  }, [asOfDate, autoPrompt, documentId, isStreaming, send, ticker]);
+
+  useEffect(() => {
+    const target = sessionId?.trim();
+
+    if (!target || isStreaming) return;
+    if (restoredSessionRef.current === target) return;
+
+    restoredSessionRef.current = target;
+    void restoreSession(target);
+  }, [isStreaming, restoreSession, sessionId]);
+
   const canRetry = Boolean(error) && !isStreaming;
 
   return (
     <section
       data-testid="ai-chat"
       aria-label="AI financial analyst chat"
-      className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card"
+      className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card"
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -177,10 +205,10 @@ export function ChatSurface({
                     submit();
                   }
                 }}
-                rows={1}
+                rows={2}
                 placeholder={placeholder}
                 aria-label={inputLabel}
-                className="max-h-40 min-h-10 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-label text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="max-h-40 min-h-[3.25rem] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-label text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
 
@@ -220,7 +248,7 @@ function ChatMessageRow({ message, isStreaming, isLast }: RowProps) {
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="whitespace-pre-wrap rounded-lg rounded-tr-sm bg-primary px-4 py-3 text-label text-primary-foreground">
+        <div className="whitespace-pre-wrap rounded-xl rounded-tr-sm bg-primary px-4 py-3 text-label text-primary-foreground">
           {message.content}
         </div>
       </div>
@@ -237,7 +265,7 @@ function ChatMessageRow({ message, isStreaming, isLast }: RowProps) {
           <Bot size={14} aria-hidden="true" />
         </div>
 
-        <div className="min-w-0 flex-1 rounded-lg rounded-tl-sm border border-border bg-background px-4 py-3">
+        <div className="min-w-0 flex-1 rounded-xl rounded-tl-sm border border-border bg-surface px-4 py-3">
           {message.content ? (
             <Markdown>{message.content}</Markdown>
           ) : waiting ? (

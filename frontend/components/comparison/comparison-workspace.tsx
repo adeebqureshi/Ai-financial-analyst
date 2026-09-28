@@ -5,16 +5,10 @@ import { useState } from "react";
 import { ComparisonToolbar } from "./comparison-toolbar";
 import { ComparisonTable } from "./comparison-table";
 
-const defaults = [
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "GOOGL",
-];
+const defaults = ["AAPL", "MSFT", "NVDA", "GOOGL"];
 
 export function ComparisonWorkspace() {
-  const [tickers, setTickers] =
-    useState<string[]>(defaults);
+  const [tickers, setTickers] = useState<string[]>(defaults);
 
   function addTicker(ticker: string) {
     const symbol = ticker.trim().toUpperCase();
@@ -31,24 +25,18 @@ export function ComparisonWorkspace() {
   }
 
   function removeTicker(ticker: string) {
-    setTickers((prev) =>
-      prev.filter((t) => t !== ticker)
-    );
+    setTickers((prev) => prev.filter((t) => t !== ticker));
   }
 
   return (
-    <div className="space-y-10">
-
+    <div className="space-y-6">
       <ComparisonToolbar
         tickers={tickers}
         onAdd={addTicker}
         onRemove={removeTicker}
       />
 
-      <ComparisonTable
-        tickers={tickers}
-      />
-
+      <ComparisonTable tickers={tickers} />
     </div>
   );
 }

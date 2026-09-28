@@ -4,7 +4,7 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/providers/theme-provider";
 import { Button } from "./button";
-
+import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
@@ -17,7 +17,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className={className}
+      className={cn("relative", className)}
       aria-label={label}
       title={label}
     >

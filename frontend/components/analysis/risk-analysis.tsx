@@ -3,20 +3,24 @@
 import { Loader2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard, formatRatio } from "@/components/ui/metric";
+import { SectionHeading } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { RiskAssessmentData } from "@/types/analysis";
 
-type Props = {
+import { ChartFrame } from "./visuals";
 
+type Props = {
   beta: number | null;
 
   risk: RiskAssessmentData | null;
+
   isLoading: boolean;
+
   isError: boolean;
+
   onRetry: () => void;
 };
-
 
 export function RiskAnalysis({
   beta,
@@ -37,7 +41,16 @@ export function RiskAnalysis({
       )
       .map(([label, value]) => ({
         label,
-        value: typeof value === "boolean" ? (value ? "Yes" : "No") : String(value),
+        value:
+          typeof value === "boolean"
+            ? value
+              ? "Yes"
+              : "No"
+            : typeof value === "number"
+              ? Number.isInteger(value)
+                ? value.toLocaleString("en-US")
+                : String(Number(value.toFixed(4)))
+              : String(value),
       }));
   }
 
@@ -45,17 +58,16 @@ export function RiskAnalysis({
 
   return (
     <section
+      id="risk"
       data-testid="risk-analysis"
       aria-labelledby="risk-heading"
+      className="space-y-5 scroll-mt-32"
     >
-      <div className="mb-4">
-        <h2 id="risk-heading" className="text-title text-foreground">
-          Risk analysis
-        </h2>
-        <p className="mt-1 text-label text-muted-foreground">
-          Quantitative risk and health assessment from the backend.
-        </p>
-      </div>
+      <SectionHeading
+        id="risk-heading"
+        title="Risk analysis"
+        description="Quantitative risk and health assessment from the backend."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
@@ -87,49 +99,49 @@ export function RiskAnalysis({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {(
           [
             ["Altman Z-Score", risk?.altman],
             ["Beneish M-Score", risk?.beneish],
           ] as const
         ).map(([title, detail]) => (
-          <Card key={title}>
-            <CardHeader>
-              <CardTitle as="h3">{title}</CardTitle>
-            </CardHeader>
-
-            <CardBody>
-              {detail ? (
-                <dl>
-                  {formatScoreDetail(detail).map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex items-center justify-between gap-4 border-b border-border py-2.5 last:border-0"
-                    >
-                      <dt className="text-label text-muted-foreground">
-                        {row.label}
-                      </dt>
-                      <dd className="tnum text-label font-medium text-foreground">
-                        {row.value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="text-label text-subtle-foreground">
-                  Detail unavailable.
-                </p>
-              )}
-            </CardBody>
-          </Card>
+          <ChartFrame key={title} title={title} description="Component detail">
+            {isLoading ? (
+              <div className="space-y-3" aria-hidden="true">
+                {[0, 1, 2].map((index) => (
+                  <Skeleton key={index} className="h-4 w-full" />
+                ))}
+              </div>
+            ) : detail ? (
+              <dl>
+                {formatScoreDetail(detail).map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-baseline justify-between gap-4 border-b border-border py-2.5 last:border-0"
+                  >
+                    <dt className="text-label text-muted-foreground">
+                      {row.label}
+                    </dt>
+                    <dd className="tnum text-label font-medium text-foreground">
+                      {row.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="text-label text-subtle-foreground">
+                Detail unavailable.
+              </p>
+            )}
+          </ChartFrame>
         ))}
       </div>
 
       {isLoading && (
         <p
           role="status"
-          className="mt-4 inline-flex items-center gap-2 text-label text-muted-foreground"
+          className="inline-flex items-center gap-2 text-label text-muted-foreground"
         >
           <Loader2
             size={16}
@@ -143,7 +155,7 @@ export function RiskAnalysis({
       {isError && (
         <div
           role="alert"
-          className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-loss/30 bg-loss-subtle px-4 py-3"
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-loss/30 bg-loss-subtle px-4 py-3"
         >
           <p className="text-label text-loss">
             Risk assessment is currently unavailable.

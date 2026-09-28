@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Star } from "lucide-react";
 
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeading } from "@/components/ui/page-header";
+import { TickerBadge } from "@/components/ui/badge";
 
 type Shortcut = {
   symbol: string;
   company: string;
 };
-
 
 const shortcuts: Shortcut[] = [
   { symbol: "AAPL", company: "Apple" },
@@ -17,47 +17,56 @@ const shortcuts: Shortcut[] = [
   { symbol: "NVDA", company: "NVIDIA" },
   { symbol: "AMZN", company: "Amazon" },
   { symbol: "TSLA", company: "Tesla" },
+  { symbol: "GOOGL", company: "Alphabet" },
 ];
 
 export function Watchlist() {
   return (
-    <Card aria-labelledby="shortcuts-heading">
-      <CardHeader>
-        <div>
-          <CardTitle as="h2" id="shortcuts-heading">
-            Shortcuts
-          </CardTitle>
-          <p className="mt-1 text-label text-muted-foreground">
-            Quick links to AI analysis for frequently researched companies.
-          </p>
-        </div>
-      </CardHeader>
+    <section aria-labelledby="watchlist-heading" className="space-y-4">
+      <SectionHeading
+        id="watchlist-heading"
+        title="Watchlist shortcuts"
+        description="One click from a symbol to the full AI analysis. Prices are not streamed in this workspace — every symbol opens its live analysis."
+        actions={
+          <Link
+            href="/watchlist"
+            className="rounded-md text-caption font-medium text-brand underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Open watchlist
+          </Link>
+        }
+      />
 
-      <CardBody>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shortcuts.map((shortcut) => (
+      <ul className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+        {shortcuts.map((shortcut) => (
+          <li key={shortcut.symbol} className="bg-card">
             <Link
-              key={shortcut.symbol}
               href={`/analysis/${shortcut.symbol}`}
-              className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors hover:border-border-strong hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group flex items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
-              <span className="min-w-0">
-                <span className="block font-mono text-label font-semibold text-foreground">
-                  {shortcut.symbol}
-                </span>
-                <span className="block truncate text-caption text-muted-foreground">
-                  {shortcut.company}
+              <span className="flex min-w-0 items-center gap-3">
+                <Star
+                  size={14}
+                  className="shrink-0 text-border-strong transition-colors group-hover:text-brand"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0">
+                  <TickerBadge symbol={shortcut.symbol} />
+                  <span className="mt-1 block truncate text-caption text-muted-foreground">
+                    {shortcut.company}
+                  </span>
                 </span>
               </span>
 
               <ArrowUpRight
-                className="size-4 shrink-0 text-muted-foreground transition group-hover:text-foreground"
+                size={15}
+                className="shrink-0 text-subtle-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
                 aria-hidden="true"
               />
             </Link>
-          ))}
-        </div>
-      </CardBody>
-    </Card>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

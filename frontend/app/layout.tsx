@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { QueryProvider } from "@/providers/query-provider";
-import {
-  DEFAULT_THEME,
-  THEME_STORAGE_KEY,
-  ThemeProvider,
-} from "@/providers/theme-provider";
+import { DEFAULT_THEME, ThemeProvider } from "@/providers/theme-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -27,12 +24,6 @@ export const metadata: Metadata = {
 };
 
 
-const themeScript = `(function(){try{var k=${JSON.stringify(
-  THEME_STORAGE_KEY
-)};var s=window.localStorage.getItem(k);var t=s==="light"||s==="dark"?s:${JSON.stringify(
-  DEFAULT_THEME
-)};var r=document.documentElement;r.classList.toggle("dark",t==="dark");r.style.colorScheme=t;}catch(e){}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -50,11 +41,12 @@ export default function RootLayout({
         .join(" ")}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
-
       <body>
+        <Script
+          id="theme-init"
+          src="/theme-init.js"
+          strategy="beforeInteractive"
+        />
         <ThemeProvider>
           <QueryProvider>
             {children}

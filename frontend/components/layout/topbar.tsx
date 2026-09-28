@@ -1,72 +1,128 @@
 "use client";
 
-import { Command, Menu, Search } from "lucide-react";
+import { useSyncExternalStore } from "react";
+import { Menu, Search, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { cn } from "@/lib/utils";
+
 import { CommandPalette } from "./command-palette";
-import { titleForPathname } from "./nav-items";
+import { useCopilot } from "./ai-copilot";
+import { sectionForPathname, titleForPathname } from "./nav-items";
 
 type Props = {
   onMenu: () => void;
 };
 
+const noopSubscribe = () => () => undefined;
+
+// `navigator.platform` is deprecated but remains the most reliable signal for
+// choosing the ⌘ vs Ctrl modifier glyph, so it is read lazily on the client.
+function getShortcutLabel(): string {
+  if (typeof navigator === "undefined") return "Ctrl K";
+
+  const platform =
+    (navigator as Navigator & { userAgentData?: { platform?: string } })
+      .userAgentData?.platform ||
+    navigator.platform ||
+    navigator.userAgent;
+
+  return /mac|iphone|ipad|ipod/i.test(platform) ? "⌘K" : "Ctrl K";
+}
+
 export function Topbar({ onMenu }: Props) {
   const pathname = usePathname();
   const title = titleForPathname(pathname);
+  const section = sectionForPathname(pathname);
+  const copilot = useCopilot();
+  const shortcutLabel = useSyncExternalStore(
+    noopSubscribe,
+    getShortcutLabel,
+    () => "Ctrl K"
+  );
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
-      <div className="flex min-w-0 items-center gap-3">
-        <button
-          type="button"
-          onClick={onMenu}
-          aria-label="Open navigation"
-          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-        >
-          <Menu size={20} aria-hidden="true" />
-        </button>
+    <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-[100rem] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onMenu}
+            aria-label="Open navigation"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          >
+            <Menu size={20} aria-hidden="true" />
+          </button>
 
-        <div className="min-w-0">
-          <h1 className="truncate text-title text-foreground">{title}</h1>
+          <div className="min-w-0">
+            <p className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle-foreground sm:block">
+              {section}
+            </p>
+            <h1 className="truncate text-subtitle text-foreground">{title}</h1>
+          </div>
         </div>
-      </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <CommandPalette>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <CommandPalette>
+            <button
+              type="button"
+              aria-label="Open command palette"
+              title="Search or ask AI (Ctrl+K)"
+              className={cn(
+                "group hidden h-9 items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left text-label text-muted-foreground",
+                "shadow-soft transition-colors hover:border-border-strong hover:text-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "md:inline-flex md:w-72 lg:w-80"
+              )}
+            >
+              <Search
+                size={15}
+                className="shrink-0 text-subtle-foreground transition-colors group-hover:text-brand"
+                aria-hidden="true"
+              />
+              <span className="flex-1 truncate">
+                Search or ask AI…
+              </span>
+              <kbd className="hidden shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:inline">
+                {shortcutLabel}
+              </kbd>
+            </button>
+          </CommandPalette>
+
+          <div className="md:hidden">
+            <CommandPalette>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Open command palette"
+              >
+                <Search size={18} aria-hidden="true" />
+              </Button>
+            </CommandPalette>
+          </div>
+
           <Button
             type="button"
-            variant="secondary"
+            variant={copilot.isOpen ? "subtle" : "secondary"}
             size="sm"
-            aria-label="Open command palette"
-            title="Open command palette (Ctrl+K)"
-            className="hidden min-w-64 justify-between text-muted-foreground md:inline-flex"
+            onClick={() => copilot.toggle()}
+            aria-expanded={copilot.isOpen}
+            aria-label="Toggle AI copilot"
+            className="hidden sm:inline-flex"
           >
-            <span className="inline-flex items-center gap-2">
-              <Search size={15} aria-hidden="true" />
-              Search or navigate…
-            </span>
-            <kbd className="rounded border border-border bg-background px-1.5 text-[11px] text-muted-foreground">
-              ⌘K
-            </kbd>
+            <Sparkles
+              size={15}
+              className="text-brand"
+              aria-hidden="true"
+            />
+            Ask AI
           </Button>
-        </CommandPalette>
 
-        <div className="md:hidden">
-          <CommandPalette>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Open command palette"
-            >
-              <Command size={17} aria-hidden="true" />
-            </Button>
-          </CommandPalette>
+          <ThemeToggle />
         </div>
-
-        <ThemeToggle />
       </div>
     </header>
   );

@@ -1,25 +1,24 @@
+import { PageHeader } from "@/components/ui/page-header";
 import { DocumentSearch } from "@/features/documents/document-search";
 
-export default function SearchPage() {
+type Props = {
+  searchParams: Promise<{ q?: string | string[] }>;
+};
+
+export default async function SearchPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const raw = params.q;
+  const initialQuery = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
+
   return (
-    <>
-      <section className="mb-10">
-        <p className="text-sm uppercase tracking-widest text-zinc-500">
-          Research
-        </p>
+    <div className="space-y-8 pb-8">
+      <PageHeader
+        eyebrow="Research & Reports"
+        title="Search the knowledge base"
+        description="Query every indexed filing, report and note using hybrid vector + keyword retrieval — the same knowledge the AI copilot uses to ground its research."
+      />
 
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-white lg:text-5xl">
-          Search your financial knowledge base
-        </h1>
-
-        <p className="mt-4 max-w-3xl text-lg text-zinc-400">
-          Query every indexed filing, report and note using hybrid vector +
-          keyword retrieval. These documents are the same knowledge the AI
-          financial agent uses to ground its research.
-        </p>
-      </section>
-
-      <DocumentSearch />
-    </>
+      <DocumentSearch initialQuery={initialQuery} />
+    </div>
   );
 }

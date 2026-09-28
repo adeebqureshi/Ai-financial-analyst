@@ -172,9 +172,9 @@ function validate(
 
 function DataRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-border py-2 last:border-0">
-      <dt className="text-caption text-subtle-foreground">{label}</dt>
-      <dd className="text-body font-medium text-foreground">{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 border-b border-border py-2.5 last:border-0">
+      <dt className="text-label text-muted-foreground">{label}</dt>
+      <dd className="tnum text-label font-medium text-foreground">{value}</dd>
     </div>
   );
 }
@@ -276,62 +276,66 @@ export function CriteriaCheck() {
       {}
       <section
         aria-labelledby="criteria-ticker-heading"
-        className="rounded-xl border border-border bg-card p-6"
+        className="scroll-mt-32 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-7"
       >
-        <h2
-          id="criteria-ticker-heading"
-          className="text-title font-semibold text-foreground"
-        >
-          1. Candidate company
-        </h2>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12">
+          <div className="min-w-0">
+            <h2
+              id="criteria-ticker-heading"
+              className="text-title text-foreground"
+            >
+              1. Candidate company
+            </h2>
 
-        <p className="mt-1 text-caption text-subtle-foreground">
-          The criteria check evaluates one company. Its real analysis data is
-          fetched from <code>/analyze</code> first.
-        </p>
+            <p className="mt-1.5 text-label text-muted-foreground">
+              The criteria check evaluates one company. Its real analysis data is
+              fetched from <code className="rounded bg-muted px-1 font-mono text-caption">/analyze</code> first.
+            </p>
 
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <Field
-            label="Ticker"
-            htmlFor="criteria-ticker"
-            error={tickerError ?? undefined}
-            required
-            className="w-40"
-          >
-            <TickerInput
-              id="criteria-ticker"
-              value={ticker}
-              onValueChange={(value) => {
-                setTicker(value);
-                setTickerError(null);
-              }}
-              aria-invalid={tickerError ? true : undefined}
-              placeholder="AAPL"
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  fetchAnalysis();
-                }
-              }}
-            />
-          </Field>
+            <div className="mt-5 flex flex-wrap items-end gap-3">
+              <Field
+                label="Ticker"
+                htmlFor="criteria-ticker"
+                error={tickerError ?? undefined}
+                required
+                className="w-44"
+              >
+                <TickerInput
+                  id="criteria-ticker"
+                  value={ticker}
+                  onValueChange={(value) => {
+                    setTicker(value);
+                    setTickerError(null);
+                  }}
+                  aria-invalid={tickerError ? true : undefined}
+                  placeholder="AAPL"
+                  className="h-11"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      fetchAnalysis();
+                    }
+                  }}
+                />
+              </Field>
 
-          <Button
-            onClick={fetchAnalysis}
-            disabled={analysisMutation.isPending}
-          >
-            {analysisMutation.isPending ? (
-              <Loader2
-                size={16}
-                className="motion-safe:animate-spin"
-                aria-hidden="true"
-              />
-            ) : (
-              <Search size={16} aria-hidden="true" />
-            )}
-            {analysisMutation.isPending ? "Fetching…" : "Fetch analysis"}
-          </Button>
-        </div>
+              <Button
+                size="lg"
+                onClick={fetchAnalysis}
+                disabled={analysisMutation.isPending}
+              >
+                {analysisMutation.isPending ? (
+                  <Loader2
+                    size={16}
+                    className="motion-safe:animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Search size={16} aria-hidden="true" />
+                )}
+                {analysisMutation.isPending ? "Fetching…" : "Fetch analysis"}
+              </Button>
+            </div>
 
         {analysisMutation.isError && (
           <div className="mt-4">
@@ -343,7 +347,7 @@ export function CriteriaCheck() {
         )}
 
         {analysis && (
-          <dl className="mt-6 grid gap-x-8 sm:grid-cols-2" data-testid="criteria-company-data">
+          <dl className="mt-6 grid gap-x-8 gap-y-1 sm:grid-cols-2" data-testid="criteria-company-data">
             <div>
               <p className="mb-2 text-caption font-medium uppercase tracking-wide text-subtle-foreground">
                 Company data (from /analyze)
@@ -378,8 +382,54 @@ export function CriteriaCheck() {
                 value={`${analysis.health.score}/100 · ${analysis.health.rating}`}
               />
             </div>
-          </dl>
-        )}
+            </dl>
+            )}
+          </div>
+
+          <aside className="min-w-0 rounded-xl border border-border bg-surface/60 p-5">
+            <p className="text-caption font-semibold uppercase tracking-[0.1em] text-subtle-foreground">
+              How the check works
+            </p>
+
+            <ol className="mt-3 space-y-3">
+              {[
+                {
+                  title: "Load real company data",
+                  body: "Market quote and reported statements come from the analysis endpoint — nothing is assumed.",
+                },
+                {
+                  title: "Set your criteria",
+                  body: "Thresholds for Piotroski, Altman, Beneish and minimum upside.",
+                },
+                {
+                  title: "Supply valuation assumptions",
+                  body: "Growth, discount-rate and terminal inputs are yours. Beta and price are prefilled when the provider returns them.",
+                },
+                {
+                  title: "Read the verdict",
+                  body: "The backend scores the candidate and reports whether every criterion is met.",
+                },
+              ].map((step, index) => (
+                <li key={step.title} className="flex gap-3">
+                  <span
+                    className="tnum mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-border bg-card text-[11px] font-medium text-subtle-foreground"
+                    aria-hidden="true"
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-label font-medium text-foreground">
+                      {step.title}
+                    </span>
+                    <span className="mt-0.5 block text-caption leading-relaxed text-muted-foreground">
+                      {step.body}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        </div>
       </section>
 
       {}
@@ -387,11 +437,11 @@ export function CriteriaCheck() {
         <>
           <section
             aria-labelledby="criteria-heading"
-            className="rounded-xl border border-border bg-card p-6"
+            className="scroll-mt-32 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-7"
           >
             <h2
               id="criteria-heading"
-              className="text-title font-semibold text-foreground"
+              className="text-title text-foreground"
             >
               2. Screening criteria
             </h2>
@@ -401,7 +451,7 @@ export function CriteriaCheck() {
               endpoint&apos;s documented defaults.
             </p>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field
                 label="Min Piotroski F-Score"
                 htmlFor="criteria-min-piotroski"
@@ -492,11 +542,11 @@ export function CriteriaCheck() {
 
           <section
             aria-labelledby="assumptions-heading"
-            className="rounded-xl border border-border bg-card p-6"
+            className="scroll-mt-32 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-7"
           >
             <h2
               id="assumptions-heading"
-              className="text-title font-semibold text-foreground"
+              className="text-title text-foreground"
             >
               3. Valuation assumptions
             </h2>
@@ -508,7 +558,7 @@ export function CriteriaCheck() {
               you must enter them. Rate fields use decimals (0.08 = 8%).
             </p>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field
                 label="Beta"
                 htmlFor="assumption-beta"
@@ -721,12 +771,12 @@ export function CriteriaCheck() {
       {screenResult && (
         <section
           aria-labelledby="criteria-result-heading"
-          className="rounded-xl border border-border bg-card p-6"
+          className="scroll-mt-32 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-7"
           data-testid="criteria-result"
         >
           <h2
             id="criteria-result-heading"
-            className="text-title font-semibold text-foreground"
+            className="text-title text-foreground"
           >
             4. Financial criteria check result
           </h2>
@@ -739,7 +789,7 @@ export function CriteriaCheck() {
 
           {screenResult.results.length === 0 ? (
             <p
-              className="mt-6 rounded-lg border border-border bg-background px-4 py-3 text-body text-subtle-foreground"
+              className="mt-6 rounded-xl border border-dashed border-border-strong/70 bg-surface px-4 py-3.5 text-body text-muted-foreground"
               role="status"
             >
               No result — the candidate did not meet the criteria you set.
@@ -761,7 +811,7 @@ export function CriteriaCheck() {
 
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div>
-                    <p className="mb-2 text-caption font-medium uppercase tracking-wide text-subtle-foreground">
+                    <p className="mb-1 text-caption font-semibold uppercase tracking-[0.08em] text-subtle-foreground">
                       Actual scores (backend)
                     </p>
                     <dl>
@@ -776,7 +826,7 @@ export function CriteriaCheck() {
                   </div>
 
                   <div>
-                    <p className="mb-2 text-caption font-medium uppercase tracking-wide text-subtle-foreground">
+                    <p className="mb-1 text-caption font-semibold uppercase tracking-[0.08em] text-subtle-foreground">
                       Calculated valuation (backend)
                     </p>
                     <dl>
@@ -790,7 +840,7 @@ export function CriteriaCheck() {
                   </div>
 
                   <div>
-                    <p className="mb-2 text-caption font-medium uppercase tracking-wide text-subtle-foreground">
+                    <p className="mb-1 text-caption font-semibold uppercase tracking-[0.08em] text-subtle-foreground">
                       Criteria applied (your inputs)
                     </p>
                     <dl>
@@ -803,7 +853,7 @@ export function CriteriaCheck() {
                 </div>
 
                 <div
-                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-3"
+                  className="flex items-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3"
                   role="status"
                 >
                   {item.piotroski_score >= toNumber(criteria.min_piotroski)! &&

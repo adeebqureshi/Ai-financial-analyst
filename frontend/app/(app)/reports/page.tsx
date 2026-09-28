@@ -1,25 +1,16 @@
+import { PageHeader } from "@/components/ui/page-header";
 import { ReportWorkspace } from "@/components/reports/report-workspace";
 
 export default function ReportsPage() {
   return (
-      <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-5xl space-y-8 pb-8">
+      <PageHeader
+        eyebrow="Research & Reports"
+        title="AI investment reports"
+        description="Generate an LLM-powered research report for any public company, grounded in the same market data and documents the rest of the workspace uses."
+      />
 
-        <div className="mb-12">
-
-          <h1 className="text-5xl font-bold tracking-tight text-white">
-            AI Investment Reports
-          </h1>
-
-          <p className="mt-4 text-lg text-zinc-400">
-            Generate comprehensive, LLM-powered
-            research reports for any public company.
-          </p>
-
-        </div>
-
-        <ReportWorkspace />
-
-      </div>
-
+      <ReportWorkspace />
+    </div>
   );
 }

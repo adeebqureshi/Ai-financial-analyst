@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Building2, Sparkles } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,17 +13,23 @@ export default function CompanyPage() {
   const router = useRouter();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-8 pb-8">
       <PageHeader
-        eyebrow="Company"
+        eyebrow="Company & Valuation"
         title="Companies"
-        description="Browse and analyze public companies."
+        description="Look up a public company, review its profile, then run the full AI analysis."
       />
 
       <Card>
         <CardHeader>
-          <CardTitle as="h2">Look up a company</CardTitle>
+          <div>
+            <CardTitle as="h2">Look up a company</CardTitle>
+            <p className="mt-1 text-label text-muted-foreground">
+              Enter a ticker symbol to open its profile.
+            </p>
+          </div>
         </CardHeader>
+
         <CardBody>
           <TickerLookupForm
             submitLabel="Open profile"
@@ -33,9 +40,18 @@ export default function CompanyPage() {
       </Card>
 
       <EmptyState
-        icon={<Building2 size={28} aria-hidden="true" />}
-        title="Start with a ticker lookup"
-        description="There is no company directory in this workspace yet. Look up a symbol above to view its profile, then run an AI analysis from there."
+        icon={<Building2 size={20} aria-hidden="true" />}
+        title="No company directory in this workspace"
+        description="Look up a symbol above to view its profile, then run an AI analysis from there."
+        action={
+          <Link
+            href="/analysis"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-label font-medium text-foreground shadow-soft transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Sparkles size={15} aria-hidden="true" />
+            Go to analysis
+          </Link>
+        }
       />
     </div>
   );

@@ -12,7 +12,6 @@ export type DataTableColumn<T> = {
   key: string;
   header: React.ReactNode;
   align?: "left" | "center" | "right";
-
   sortable?: boolean;
   sortValue?: (row: T) => string | number | null | undefined;
   render: (row: T) => React.ReactNode;
@@ -24,7 +23,6 @@ type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
   rows: T[];
   getRowKey: (row: T, index: number) => string;
-
   caption: string;
   initialSortKey?: string;
   initialSortDirection?: SortDirection;
@@ -32,7 +30,7 @@ type DataTableProps<T> = {
   emptyDescription?: string;
   className?: string;
   testId?: string;
-
+  stickyHeader?: boolean;
   onRowClick?: (row: T) => void;
 };
 
@@ -41,7 +39,6 @@ const alignClassNames = {
   center: "text-center",
   right: "text-right",
 } as const;
-
 
 function compareValues(
   a: string | number | null | undefined,
@@ -70,6 +67,7 @@ export function DataTable<T>({
   emptyDescription,
   className,
   testId,
+  stickyHeader = true,
   onRowClick,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = React.useState<string | undefined>(initialSortKey);
@@ -105,16 +103,21 @@ export function DataTable<T>({
     <div
       data-testid={testId}
       className={cn(
-        "overflow-hidden rounded-lg border border-border bg-card shadow-card",
+        "overflow-hidden rounded-xl border border-border bg-card shadow-card",
         className
       )}
     >
-      <div className="overflow-x-auto">
+      <div className="max-h-[70vh] overflow-auto">
         <table className="w-full border-collapse text-label">
           <caption className="sr-only">{caption}</caption>
 
-          <thead>
-            <tr className="border-b border-border bg-muted/60">
+          <thead
+            className={cn(
+              "z-10 border-b border-border bg-surface/90 backdrop-blur-sm",
+              stickyHeader && "sticky top-0"
+            )}
+          >
+            <tr>
               {columns.map((column) => {
                 const isSorted = sortKey === column.key;
                 const canSort =
@@ -132,7 +135,7 @@ export function DataTable<T>({
                         : undefined
                     }
                     className={cn(
-                      "px-4 py-2.5 font-medium text-muted-foreground",
+                      "whitespace-nowrap px-4 py-2.5 text-caption font-semibold uppercase tracking-[0.07em] text-subtle-foreground",
                       alignClassNames[column.align ?? "left"],
                       column.headerClassName
                     )}
@@ -150,8 +153,7 @@ export function DataTable<T>({
                           "inline-flex items-center gap-1.5 rounded-sm transition-colors",
                           "hover:text-foreground",
                           "focus-visible:outline-none focus-visible:ring-2",
-                          "focus-visible:ring-ring focus-visible:ring-offset-2",
-                          "focus-visible:ring-offset-background",
+                          "focus-visible:ring-ring",
                           isSorted && "text-foreground"
                         )}
                       >
@@ -165,7 +167,7 @@ export function DataTable<T>({
                           )
                         ) : (
                           <ChevronsUpDown
-                            className="size-3.5 opacity-50"
+                            className="size-3.5 opacity-40"
                             aria-hidden="true"
                           />
                         )}
@@ -206,9 +208,9 @@ export function DataTable<T>({
                       : undefined
                   }
                   className={cn(
-                    "border-b border-border last:border-0",
+                    "border-b border-border/70 last:border-0",
                     onRowClick &&
-                      "cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      "cursor-pointer transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   )}
                 >
                   {columns.map((column) => (

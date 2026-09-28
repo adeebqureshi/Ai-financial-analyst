@@ -1,10 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, Building2, Landmark, Sparkles } from "lucide-react";
 
 import { api } from "@/services/api";
+import { Badge, TickerBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody } from "@/components/ui/card";
+import { StatBlock } from "@/components/ui/metric";
+import { SectionHeading } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
+
+function formatMarketCap(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return "—";
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 export default async function CompanyDetailPage({
   params,
@@ -30,91 +46,84 @@ export default async function CompanyDetailPage({
   }
 
   return (
-      <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20">
-              <Building2 size={36} className="text-blue-400" />
-            </div>
+    <div className="mx-auto max-w-6xl space-y-10 pb-8">
+      <header className="flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex min-w-0 items-start gap-5">
+          <span
+            className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand"
+            aria-hidden="true"
+          >
+            <Building2 size={24} />
+          </span>
 
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight text-white">
-                {company.name}
-              </h1>
+          <div className="min-w-0">
+            <p className="text-caption font-semibold uppercase tracking-[0.14em] text-brand">
+              Company profile
+            </p>
 
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm font-semibold text-blue-300">
-                  {company.ticker}
-                </span>
+            <h1 className="mt-2 text-balance text-display text-foreground">
+              {company.name}
+            </h1>
 
-                {company.sector && (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-zinc-300">
-                    {company.sector}
-                  </span>
-                )}
+            <div className="mt-3.5 flex flex-wrap items-center gap-2">
+              <TickerBadge symbol={company.ticker} className="px-2 py-1 text-body" />
 
-                {company.industry && (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-zinc-400">
-                    {company.industry}
-                  </span>
-                )}
-              </div>
+              {company.sector && (
+                <Badge variant="neutral">
+                  <Landmark size={13} aria-hidden="true" />
+                  {company.sector}
+                </Badge>
+              )}
+
+              {company.industry && (
+                <Badge variant="outline">{company.industry}</Badge>
+              )}
             </div>
           </div>
-
-          <Link
-            href={`/analysis/${company.ticker}`}
-            className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 font-medium text-black transition hover:scale-[1.02]"
-          >
-            Run AI Analysis
-            <ArrowRight size={18} />
-          </Link>
         </div>
 
-        <section className="mt-10 rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
-          <h2 className="text-2xl font-bold text-white">
-            Company Profile
-          </h2>
+        <Link href={`/analysis/${company.ticker}`} className="shrink-0">
+          <Button size="lg">
+            <Sparkles size={16} aria-hidden="true" />
+            Run AI analysis
+            <ArrowRight size={16} aria-hidden="true" />
+          </Button>
+        </Link>
+      </header>
 
-          <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-5">
-              <p className="text-sm text-zinc-500">Ticker</p>
-              <h3 className="mt-2 text-2xl font-bold text-white">
-                {company.ticker}
-              </h3>
-            </div>
+      <Card>
+        <CardBody>
+          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-4">
+            <StatBlock label="Ticker" value={company.ticker} />
+            <StatBlock label="Sector" value={company.sector ?? "—"} />
+            <StatBlock label="Industry" value={company.industry ?? "—"} />
+            <StatBlock
+              label="Market cap"
+              value={formatMarketCap(company.market_cap)}
+            />
+          </dl>
+        </CardBody>
+      </Card>
 
-            <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-5">
-              <p className="text-sm text-zinc-500">Sector</p>
-              <h3 className="mt-2 text-2xl font-bold text-white">
-                {company.sector ?? "N/A"}
-              </h3>
-            </div>
-
-            <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-5">
-              <p className="text-sm text-zinc-500">Industry</p>
-              <h3 className="mt-2 text-2xl font-bold text-white">
-                {company.industry ?? "N/A"}
-              </h3>
-            </div>
-
-            <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-5">
-              <p className="text-sm text-zinc-500">Market Cap</p>
-              <h3 className="mt-2 text-2xl font-bold text-white">
-                {company.market_cap
-                  ? `$${(company.market_cap / 1_000_000_000).toFixed(2)}B`
-                  : "N/A"}
-              </h3>
-            </div>
-          </div>
-
-          {company.description && (
-            <p className="mt-8 max-w-4xl leading-8 text-zinc-300">
-              {company.description}
-            </p>
-          )}
+      {company.description ? (
+        <section aria-labelledby="profile-heading" className="space-y-4">
+          <SectionHeading
+            id="profile-heading"
+            title="About"
+            description="Company profile returned by the backend."
+          />
+          <p className="max-w-3xl text-body leading-relaxed text-muted-foreground">
+            {company.description}
+          </p>
         </section>
-      </div>
-
+      ) : (
+        <section className="space-y-4">
+          <SectionHeading title="About" />
+          <p className="text-body text-muted-foreground">
+            The backend did not return a description for this company.
+          </p>
+        </section>
+      )}
+    </div>
   );
 }

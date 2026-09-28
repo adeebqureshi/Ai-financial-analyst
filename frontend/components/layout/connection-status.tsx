@@ -135,13 +135,13 @@ export function ConnectionStatus() {
     return (
       <span
         role="status"
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-caption text-muted-foreground"
+        className="inline-flex max-w-full items-center gap-2 truncate rounded-full border border-border bg-muted px-3 py-1.5 text-caption text-muted-foreground"
       >
         <span
-          className="h-1.5 w-1.5 animate-pulse rounded-full bg-subtle-foreground"
+          className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-subtle-foreground"
           aria-hidden="true"
         />
-        Checking backend…
+        <span className="truncate">Checking backend…</span>
       </span>
     );
   }
@@ -150,16 +150,14 @@ export function ConnectionStatus() {
     return (
       <span
         role="alert"
-        className="inline-flex items-center gap-1.5 rounded-full border border-loss/30 bg-loss-subtle px-3 py-1.5 text-caption"
+        title={state.message}
+        className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-loss/30 bg-loss-subtle px-3 py-1.5 text-caption"
       >
-        <span className="font-medium text-loss">Backend unavailable</span>
-        <span className="max-w-56 truncate text-loss/80" title={state.message}>
-          {state.message}
-        </span>
+        <span className="shrink-0 font-medium text-loss">Backend unavailable</span>
         <button
           type="button"
           onClick={retry}
-          className="rounded-sm font-medium text-loss underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+          className="shrink-0 rounded-sm font-medium text-loss underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
         >
           Retry
         </button>
@@ -180,23 +178,24 @@ export function ConnectionStatus() {
     <span
       role="status"
       title={detail}
-      className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-caption text-muted-foreground"
+      className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-caption text-muted-foreground"
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
           degraded ? "bg-warning" : "bg-gain"
         }`}
         aria-hidden="true"
       />
-      <span className="font-medium text-foreground">
+      {/* The version detail stays in the tooltip: the sidebar rail is far
+          narrower than the sm: viewport breakpoint that used to reveal it. */}
+      <span className="truncate font-medium text-foreground">
         Backend {degraded ? "degraded" : "connected"}
       </span>
-      <span className="hidden sm:inline">{detail}</span>
 
       {state.demoMode && (
         <span
           role="status"
-          className="rounded-full border border-warning/30 bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning"
+          className="shrink-0 rounded-full border border-warning/30 bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning"
         >
           DEMO MODE
         </span>

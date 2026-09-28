@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 import { api } from "@/services/api";
 import { ReportViewer } from "@/components/analysis/report-viewer";
@@ -10,16 +10,16 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { Field, TickerInput } from "@/components/ui/field";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonRows } from "@/components/ui/skeleton";
 
 import type { ApiResponse, ReportData } from "@/types/analysis";
 
-const suggestions = [
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "TSLA",
-  "AMZN",
+const suggestions = ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN"];
+
+const GENERATION_STEPS = [
+  "Gathering market data and filings",
+  "Running the valuation model",
+  "Writing the research narrative",
 ];
 
 export function ReportWorkspace() {
@@ -60,14 +60,12 @@ export function ReportWorkspace() {
 
   return (
     <div className="space-y-6">
-      <Card aria-labelledby="report-form-heading">
+      <Card>
         <CardHeader>
           <div>
-            <CardTitle as="h2" id="report-form-heading">
-              Generate a report
-            </CardTitle>
+            <CardTitle as="h2">Generate a report</CardTitle>
             <p className="mt-1 text-label text-muted-foreground">
-              The backend researches the company and writes the report; this can
+              The backend researches the company and writes the report. This can
               take a while.
             </p>
           </div>
@@ -85,23 +83,34 @@ export function ReportWorkspace() {
               label="Ticker symbol"
               htmlFor="report-ticker"
               required
-              className="sm:max-w-40"
+              className="sm:max-w-48"
             >
               <TickerInput
                 id="report-ticker"
                 value={ticker}
                 onValueChange={setTicker}
                 placeholder="AAPL"
+                className="h-11"
               />
             </Field>
 
-            <Button type="submit" disabled={!valid || generating}>
-              <Sparkles size={16} aria-hidden="true" />
+            <Button type="submit" size="lg" disabled={!valid || generating}>
+              {generating ? (
+                <Loader2
+                  size={16}
+                  className="motion-safe:animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Sparkles size={16} aria-hidden="true" />
+              )}
               {generating ? "Generating…" : "Generate report"}
             </Button>
           </form>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-caption text-subtle-foreground">Suggested</span>
+
             {suggestions.map((suggestion) => (
               <button
                 key={suggestion}
@@ -110,7 +119,7 @@ export function ReportWorkspace() {
                   setTicker(suggestion);
                   setReport(null);
                 }}
-                className="rounded-full border border-border bg-muted px-3 py-1 font-mono text-caption text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-full border border-border bg-surface px-3 py-1 font-mono text-caption font-medium tracking-[0.04em] text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {suggestion}
               </button>
@@ -124,28 +133,69 @@ export function ReportWorkspace() {
       )}
 
       {generating && (
-        <div role="status" aria-busy="true">
-          <SkeletonCard />
-          <span className="sr-only">Generating report…</span>
-        </div>
+        <Card role="status" aria-busy="true">
+          <CardBody className="space-y-5">
+            <div className="flex items-center gap-3">
+              <span
+                className="flex size-8 items-center justify-center rounded-lg bg-brand-subtle text-brand"
+                aria-hidden="true"
+              >
+                <Loader2
+                  size={16}
+                  className="motion-safe:animate-spin"
+                />
+              </span>
+              <p className="text-label font-medium text-foreground">
+                Researching {ticker.trim().toUpperCase()}…
+              </p>
+            </div>
+
+            <ol className="space-y-2.5">
+              {GENERATION_STEPS.map((step, index) => (
+                <li
+                  key={step}
+                  className="flex items-center gap-2.5 text-label text-muted-foreground"
+                >
+                  <span
+                    className="tnum flex size-5 items-center justify-center rounded-full border border-border bg-surface text-[11px] font-medium text-subtle-foreground"
+                    aria-hidden="true"
+                  >
+                    {index + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+
+            <SkeletonRows rows={3} />
+          </CardBody>
+        </Card>
       )}
 
       {!generating && error === null && !report && (
         <EmptyState
+          tone="brand"
           icon={<Sparkles size={20} aria-hidden="true" />}
           title="No report yet"
-          description="Enter a ticker symbol and generate a report to see the research here."
+          description="Enter a ticker symbol and generate a report to see the full research write-up here."
         />
       )}
 
       {report && (
-        <section aria-labelledby="report-title">
-          <h2 id="report-title" className="text-title text-foreground">
-            {report.title}
-          </h2>
-          <div className="mt-4">
-            <ReportViewer report={report.content} />
+        <section aria-labelledby="report-title" className="space-y-4">
+          <div>
+            <p className="text-caption font-semibold uppercase tracking-[0.12em] text-brand">
+              {report.ticker} · {report.format}
+            </p>
+            <h2
+              id="report-title"
+              className="mt-2 text-balance text-title text-foreground"
+            >
+              {report.title}
+            </h2>
           </div>
+
+          <ReportViewer report={report.content} />
         </section>
       )}
     </div>

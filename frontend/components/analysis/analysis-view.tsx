@@ -1,12 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/services/api";
 import { useAnalysis } from "@/hooks/use-analysis";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { SkeletonAnalysisView } from "@/components/ui/skeleton";
+import { SectionHeading } from "@/components/ui/page-header";
 
+import { AnalysisSectionNav } from "./section-nav";
 import { CompanyHeader } from "./company-header";
 import { ExecutiveSummary } from "./executive-summary";
 import { ValuationCards } from "./valuation-cards";
@@ -15,18 +18,22 @@ import { RiskAnalysis } from "./risk-analysis";
 import { MarketOverview } from "./market-overview";
 import { AIChat } from "./ai-chat";
 
-import type {
-  AnalyzeData,
-  ApiResponse,
-} from "@/types/analysis";
+import type { AnalyzeData, ApiResponse } from "@/types/analysis";
 
 type Props = {
   ticker: string;
 };
 
-export function AnalysisView({
-  ticker,
-}: Props) {
+const SECTIONS = [
+  { id: "summary", label: "Summary" },
+  { id: "market", label: "Market" },
+  { id: "valuation", label: "Valuation" },
+  { id: "health", label: "Health" },
+  { id: "risk", label: "Risk" },
+  { id: "insights", label: "AI Insights" },
+];
+
+export function AnalysisView({ ticker }: Props) {
   const { query } = useAnalysis(ticker);
 
   const result =
@@ -34,6 +41,7 @@ export function AnalysisView({
 
   const health = result?.health ?? null;
 
+  const sections = useMemo(() => SECTIONS, []);
 
   const riskQuery = useQuery({
     queryKey: [
@@ -76,17 +84,13 @@ export function AnalysisView({
     );
   }
 
-  const recommendation =
-    result.recommendation;
+  const recommendation = result.recommendation;
 
-  const valuation =
-    result.valuation;
+  const valuation = result.valuation;
 
-  const market =
-    result.market;
+  const market = result.market;
 
-  const statement =
-    result.statement;
+  const statement = result.statement;
 
   const company = {
     name: result.company.name,
@@ -97,52 +101,46 @@ export function AnalysisView({
   };
 
   return (
-
     <div className="space-y-10">
-
       <CompanyHeader
         company={company}
         recommendation={recommendation}
+        price={market.current_price}
+        upside={valuation.upside}
+        intrinsicValue={valuation.intrinsic_value}
+        stale={market.stale}
+        asOf={market.as_of}
       />
+
+      <AnalysisSectionNav sections={sections} />
 
       <ExecutiveSummary
         recommendation={recommendation}
-        summary={company.description ?? null}
+        summary={null}
         upside={valuation.upside}
         intrinsicValue={valuation.intrinsic_value}
         currentPrice={valuation.current_price}
+        healthScore={health!.score}
+        healthRating={health!.rating}
+        piotroski={health!.piotroski_score}
+        riskLevel={riskQuery.data?.data?.risk_level ?? null}
       />
 
-      <MarketOverview
-        market={market}
-        statement={statement}
-      />
+      <MarketOverview market={market} statement={statement} />
 
       <ValuationCards
-        intrinsicValue={
-          valuation.intrinsic_value
-        }
-        currentPrice={
-          valuation.current_price
-        }
+        intrinsicValue={valuation.intrinsic_value}
+        currentPrice={valuation.current_price}
         upside={valuation.upside}
-        discountRate={
-          valuation.discount_rate
-        }
+        discountRate={valuation.discount_rate}
       />
 
       <FinancialHealth
         score={health!.score}
         rating={health!.rating}
-        piotroski={
-          health!.piotroski_score
-        }
-        altman={
-          health!.altman_score
-        }
-        beneish={
-          health!.beneish_score
-        }
+        piotroski={health!.piotroski_score}
+        altman={health!.altman_score}
+        beneish={health!.beneish_score}
       />
 
       <RiskAnalysis
@@ -153,9 +151,16 @@ export function AnalysisView({
         onRetry={() => riskQuery.refetch()}
       />
 
-      <AIChat ticker={ticker} />
+      <section id="insights" className="space-y-5 scroll-mt-32">
+        <SectionHeading
+          title="AI insights"
+          description={`Ask about ${company.ticker} — the copilot uses the same filings, documents and statements as this analysis.`}
+        />
 
+        <div className="h-[32rem] xl:h-[38rem]">
+          <AIChat ticker={ticker} />
+        </div>
+      </section>
     </div>
-
   );
 }

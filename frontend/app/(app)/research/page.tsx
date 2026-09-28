@@ -1,63 +1,86 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Bot, Database } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, Database, Search } from "lucide-react";
 
 import { DocumentLibrary } from "@/features/documents/document-library";
+import { PageHeader } from "@/components/ui/page-header";
 
 const pipeline = [
-  { label: "Uploaded Documents", icon: BookOpen },
-  { label: "RAG Knowledge Base", icon: Database },
-  { label: "AI Financial Agent", icon: Bot },
+  {
+    label: "Uploaded documents",
+    hint: "PDF filings and reports",
+    icon: BookOpen,
+  },
+  {
+    label: "RAG knowledge base",
+    hint: "Parsed, chunked and embedded",
+    icon: Database,
+  },
+  {
+    label: "AI financial agent",
+    hint: "Retrieves and cites evidence",
+    icon: Bot,
+  },
 ];
 
 export default function ResearchPage() {
   return (
-    <>
-      <section className="mb-10">
-        <p className="text-sm uppercase tracking-widest text-zinc-500">
-          Research
-        </p>
-
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-white lg:text-5xl">
-          Upload and analyze financial documents with grounded AI
-        </h1>
-
-        <p className="mt-4 max-w-3xl text-lg text-zinc-400">
-          PDFs you upload here are parsed, chunked, embedded and indexed into
-          the knowledge base. The AI financial agent then retrieves and cites
-          them with page-level evidence.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          {pipeline.map((step, index) => {
-            const Icon = step.icon;
-
-            return (
-              <div key={step.label} className="flex items-center gap-3">
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3">
-                  <Icon size={18} className="text-blue-400" />
-                  <span className="text-sm font-medium text-zinc-200">
-                    {step.label}
-                  </span>
-                </div>
-
-                {index < pipeline.length - 1 && (
-                  <ArrowRight size={18} className="text-zinc-600" />
-                )}
-              </div>
-            );
-          })}
-
+    <div className="space-y-8 pb-8">
+      <PageHeader
+        eyebrow="Research & Reports"
+        title="Research workspace"
+        description="Upload financial PDFs, then question them with the copilot. Documents are parsed, chunked, embedded and cited with page-level evidence."
+        actions={
           <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-5 py-3 text-sm font-medium text-blue-300 transition hover:bg-blue-500/20"
+            href="/search"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-label font-medium text-foreground shadow-soft transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Ask AI about a document
-            <ArrowRight size={16} />
+            <Search size={15} aria-hidden="true" />
+            Search knowledge base
           </Link>
-        </div>
-      </section>
+        }
+      />
+
+      <ol className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
+        {pipeline.map((step, index) => {
+          const Icon = step.icon;
+
+          return (
+            <li
+              key={step.label}
+              className="flex items-center gap-3 bg-card px-4 py-3.5"
+            >
+              <span
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand"
+                aria-hidden="true"
+              >
+                <Icon size={15} />
+              </span>
+
+              <span className="min-w-0">
+                <span className="block truncate text-label font-medium text-foreground">
+                  <span className="tnum mr-1.5 text-subtle-foreground">
+                    {index + 1}.
+                  </span>
+                  {step.label}
+                </span>
+                <span className="mt-0.5 block truncate text-caption text-muted-foreground">
+                  {step.hint}
+                </span>
+              </span>
+
+              {index < pipeline.length - 1 && (
+                <ArrowRight
+                  size={14}
+                  className="ml-auto hidden shrink-0 text-border-strong sm:block"
+                  aria-hidden="true"
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
 
       <DocumentLibrary />
-    </>
+    </div>
   );
 }

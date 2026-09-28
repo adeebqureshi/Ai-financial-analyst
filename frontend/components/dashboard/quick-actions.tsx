@@ -2,114 +2,115 @@
 
 import Link from "next/link";
 import {
-  ArrowRight,
+  ArrowUpRight,
   BookOpenText,
+  Building2,
   Crosshair,
   FileText,
   GitCompare,
-  Search,
   SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
 
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeading } from "@/components/ui/page-header";
 
 type Action = {
   title: string;
   description: string;
   href: string;
   icon: LucideIcon;
+  primary?: boolean;
 };
-
 
 const actions: Action[] = [
   {
-    title: "Analyze a company",
-    description: "Run the AI pipeline for one ticker",
+    title: "Analyze company",
+    description: "Full AI pipeline for a ticker",
     href: "/analysis",
     icon: Crosshair,
+    primary: true,
+  },
+  {
+    title: "Company profile",
+    description: "Sector context and company details",
+    href: "/company",
+    icon: Building2,
+    primary: true,
   },
   {
     title: "Compare companies",
-    description: "Side-by-side valuation and health",
+    description: "Side-by-side metrics",
     href: "/compare",
     icon: GitCompare,
+    primary: true,
   },
   {
-    title: "Criteria check",
-    description: "Screen one candidate against your criteria",
-    href: "/screener",
-    icon: SlidersHorizontal,
-  },
-  {
-    title: "Generate a report",
-    description: "LLM research report for a company",
-    href: "/reports",
-    icon: FileText,
-  },
-  {
-    title: "Documents",
-    description: "Upload filings and ask grounded questions",
+    title: "Financial documents",
+    description: "Upload filings, ask questions",
     href: "/research",
     icon: BookOpenText,
   },
   {
-    title: "Search knowledge base",
-    description: "Hybrid vector + keyword retrieval",
-    href: "/search",
-    icon: Search,
+    title: "Generate report",
+    description: "LLM research write-up",
+    href: "/reports",
+    icon: FileText,
+  },
+  {
+    title: "Market screener",
+    description: "Check a candidate against criteria",
+    href: "/screener",
+    icon: SlidersHorizontal,
   },
 ];
 
 export function QuickActions() {
   return (
-    <Card aria-labelledby="quick-actions-heading">
-      <CardHeader>
-        <div>
-          <CardTitle as="h2" id="quick-actions-heading">
-            Quick actions
-          </CardTitle>
-          <p className="mt-1 text-label text-muted-foreground">
-            Launch common research workflows
-          </p>
-        </div>
-      </CardHeader>
+    <section aria-labelledby="quick-actions-heading" className="space-y-4">
+      <SectionHeading
+        id="quick-actions-heading"
+        title="Quick actions"
+        description="The research workflows this workspace exposes."
+      />
 
-      <CardBody>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {actions.map((action) => {
-            const Icon = action.icon;
+      <div className="grid gap-3 sm:grid-cols-2">
+        {actions.map((action) => {
+          const Icon = action.icon;
 
-            return (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="group flex items-start justify-between gap-3 rounded-lg border border-border bg-background p-4 transition-colors hover:border-border-strong hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          return (
+            <Link
+              key={action.title}
+              href={action.href}
+              className="group relative flex items-start gap-3.5 rounded-xl border border-border bg-card px-4 py-4 shadow-card transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span
+                className={
+                  action.primary
+                    ? "flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand"
+                    : "flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:text-foreground"
+                }
               >
-                <span className="flex min-w-0 items-start gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-brand">
-                    <Icon size={17} aria-hidden="true" />
-                  </span>
+                <Icon size={17} aria-hidden="true" />
+              </span>
 
-                  <span className="min-w-0">
-                    <span className="block text-label font-medium text-foreground">
-                      {action.title}
-                    </span>
-                    <span className="mt-0.5 block text-caption text-muted-foreground">
-                      {action.description}
-                    </span>
-                  </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-label font-semibold text-foreground">
+                  {action.title}
                 </span>
+                <span className="mt-1 block text-caption leading-relaxed text-muted-foreground">
+                  {action.description}
+                </span>
+              </span>
 
-                <ArrowRight
-                  className="mt-1 size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground"
-                  aria-hidden="true"
-                />
-              </Link>
-            );
-          })}
-        </div>
-      </CardBody>
-    </Card>
+              <ArrowUpRight
+                size={15}
+                className="mt-0.5 shrink-0 text-subtle-foreground transition-all duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
+                aria-hidden="true"
+              />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }

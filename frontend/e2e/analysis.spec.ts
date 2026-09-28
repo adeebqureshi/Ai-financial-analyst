@@ -52,8 +52,10 @@ test.describe("Dashboard workflow", () => {
     await page.goto("/dashboard");
 
     await expect(page.locator("text=Financial Workspace")).toBeVisible();
-    await expect(page.locator("text=Your financial data workspace")).toBeVisible();
-    await expect(page.locator("text=Watchlist")).toBeVisible();
+    await expect(page.locator("text=Financial Command Hub")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Watchlist shortcuts" })
+    ).toBeVisible();
     await expect(page.locator("text=Quick Actions")).toBeVisible();
 
 

@@ -1,9 +1,9 @@
 import {
   BookOpenText,
   Building2,
-  Crosshair,
   FileText,
   GitCompare,
+  LayoutDashboard,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -14,6 +14,8 @@ export type NavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
+  description?: string;
+  keywords?: string;
 };
 
 export type NavGroup = {
@@ -21,51 +23,118 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-
 export const navigationGroups: NavGroup[] = [
   {
-    label: "CO-PILOT",
+    label: "Dashboard",
     items: [
-      { title: "Ask AI", href: "/dashboard", icon: Sparkles },
-      { title: "Reports", href: "/reports", icon: FileText },
+      {
+        title: "Command Hub",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        description: "Start research, ask AI, jump to any workflow",
+        keywords: "home overview start",
+      },
     ],
   },
   {
-    label: "RESEARCH",
+    label: "Company & Valuation",
     items: [
-      { title: "Documents", href: "/research", icon: BookOpenText },
-      { title: "Search", href: "/search", icon: Search },
+      {
+        title: "Analyze",
+        href: "/analysis",
+        icon: Sparkles,
+        description: "Full AI pipeline for one ticker",
+        keywords: "valuation intrinsic value dcf risk health",
+      },
+      {
+        title: "Company",
+        href: "/company",
+        icon: Building2,
+        description: "Company profiles and sector context",
+        keywords: "profile sector industry lookup",
+      },
     ],
   },
   {
-    label: "MARKETS",
+    label: "Markets & Compare",
     items: [
-      { title: "Screener", href: "/screener", icon: SlidersHorizontal },
-      { title: "Compare", href: "/compare", icon: GitCompare },
+      {
+        title: "Screener",
+        href: "/screener",
+        icon: SlidersHorizontal,
+        description: "Screen a candidate against your criteria",
+        keywords: "screen filter piotroski altman beneish criteria",
+      },
+      {
+        title: "Compare",
+        href: "/compare",
+        icon: GitCompare,
+        description: "Side-by-side valuation and health",
+        keywords: "comparison peer relative",
+      },
     ],
   },
   {
-    label: "COMPANY",
+    label: "Research & Reports",
     items: [
-      { title: "Analyze", href: "/analysis", icon: Crosshair },
-      { title: "Profile", href: "/company", icon: Building2 },
+      {
+        title: "Research",
+        href: "/research",
+        icon: BookOpenText,
+        description: "Upload filings and query the knowledge base",
+        keywords: "documents upload pdf rag ingest",
+      },
+      {
+        title: "Search",
+        href: "/search",
+        icon: Search,
+        description: "Hybrid vector and keyword retrieval",
+        keywords: "search retrieval query knowledge base",
+      },
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: FileText,
+        description: "Generate an LLM research report",
+        keywords: "report generate research memo",
+      },
     ],
+  },
+];
+
+export const workspaceItems: NavItem[] = [
+  {
+    title: "Watchlist",
+    href: "/watchlist",
+    icon: Search,
+    keywords: "watchlist follow track",
+  },
+  {
+    title: "Portfolio",
+    href: "/portfolio",
+    icon: Building2,
+    keywords: "portfolio holdings positions",
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: SlidersHorizontal,
+    keywords: "settings preferences theme",
   },
 ];
 
 export type NavDestination = NavItem & { group: string };
 
-
-export const navigationDestinations: NavDestination[] = navigationGroups.flatMap(
-  (group) =>
+export const navigationDestinations: NavDestination[] = [
+  ...navigationGroups.flatMap((group) =>
     group.items.map((item) => ({ ...item, group: group.label }))
-);
-
+  ),
+  ...workspaceItems.map((item) => ({ ...item, group: "Workspace" })),
+];
 
 export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
-
 
 const secondaryTitles: Record<string, string> = {
   "/portfolio": "Portfolio",
@@ -80,4 +149,14 @@ export function titleForPathname(pathname: string): string {
   if (destination) return destination.title;
 
   return secondaryTitles[href] ?? "Workspace";
+}
+
+export function sectionForPathname(pathname: string): string {
+  const href = "/" + pathname.split("/").filter(Boolean)[0];
+
+  return (
+    navigationGroups.find((group) =>
+      group.items.some((item) => item.href === href)
+    )?.label ?? "Workspace"
+  );
 }

@@ -220,6 +220,59 @@ export function SkeletonList({
   );
 }
 
+export function SkeletonStatGrid({
+  count = 4,
+  className,
+  animate = true,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  count?: number;
+  animate?: boolean;
+}) {
+  return (
+    <div
+      className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-4", className)}
+      {...props}
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={index}
+          className="space-y-3 rounded-xl border border-border bg-card px-5 py-4"
+        >
+          <Skeleton animate={animate} className="h-3 w-24 rounded" />
+          <Skeleton animate={animate} className="h-6 w-20 rounded" />
+          <Skeleton animate={animate} className="h-3 w-28 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SkeletonRows({
+  rows = 4,
+  className,
+  animate = true,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  rows?: number;
+  animate?: boolean;
+}) {
+  return (
+    <div className={cn("space-y-3", className)} {...props}>
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className="space-y-2">
+          <Skeleton animate={animate} className="h-3 w-32 rounded" />
+          <Skeleton animate={animate} className="h-3.5 w-full rounded" />
+          <Skeleton
+            animate={animate}
+            className={index % 2 === 0 ? "h-3.5 w-2/3 rounded" : "h-3.5 w-5/6 rounded"}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SkeletonAnalysisView({
   className,
   ...props
