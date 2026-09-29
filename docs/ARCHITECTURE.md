@@ -21,8 +21,8 @@ This document describes the architecture of the AI Financial Analyst platform as
 │  │  CORS • Security Headers • Rate Limiting • Request Logging           │  │
 │  │  JWT Auth (opt-in) • Exception Handlers • OpenAPI Docs               │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
-│  Routers: /analyze  /chat  /report  /search  /company  /valuation         │
-│           /risk  /ratios  /health  /screen  /compare  /documents  /version │
+│  Routers: /analyze  /chat  /report  /search  /valuation                 │
+│           /health  /readiness  /version  /compare  /documents  /risk   │
 └──────────────────────────────┬─────────────────────────────────────────────┘
                                ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -94,9 +94,31 @@ Same pipeline but `FinancialAnalystAgent.stream_synthesize()` yields tokens → 
 | `calculate_risk` | Risk level + score breakdown |
 | `search_documents` | Hybrid RAG (semantic + BM25 + rerank) |
 | `run_calculation` | Sandboxed Python execution |
-| `get_news` | Financial news (optional) |
 | `compare_companies` | Multi-ticker comparison |
-| `screen_stocks` | Filter by health/valuation criteria |
+| `calculate_ratios` | D/E, ROA, ROE, operating and net margin |
+| `generate_report` | Structured investment research report |
+
+**Sandbox execution model.** `run_calculation` generates Python with the LLM,
+statically validates it (`SandboxValidator` — imports, dunder access, `eval`
+/ `exec` / `compile`, class and async definitions are all rejected), executes
+it with a restricted builtins allow-list, and runs it in a **separate worker
+process** with a parent-side timeout and kill escalation.
+
+OS resource limits (`RLIMIT_CPU`, `RLIMIT_AS`, `RLIMIT_NPROC`, `RLIMIT_NOFILE`,
+`RLIMIT_FSIZE`) are applied by the worker through the POSIX `resource` module
+and are therefore **POSIX-only**. On Windows that module is absent, so no
+RLIMITs are set and the sandbox relies on the remaining controls. The
+posture is reported programmatically as
+`app.sandbox.executor.RESOURCE_LIMITS` and a warning is logged whenever limits
+are unavailable, so the weaker Windows posture is never silently presented as
+full isolation. Deployments that require hard CPU/memory caps must run the
+worker on a POSIX host.
+
+The sandbox complements rather than replaces the deterministic engines: the
+core financial formulas (DCF, WACC, ratios, Piotroski/Altman/Beneish) are
+computed in `app/financial/` and remain the authoritative source. The sandbox
+covers what those engines do not model — NPV, IRR, CAGR, arbitrary arithmetic
+and hypothetical scenarios.
 
 ---
 
@@ -221,7 +243,7 @@ Same pipeline but `FinancialAnalystAgent.stream_synthesize()` yields tokens → 
 | **RAG** | Hybrid (dense + BM25 + rerank) | Pure semantic / pure keyword | Recall + precision vs. complexity |
 | **Auth** | JWT + PBKDF2 | OAuth2/OIDC, bcrypt/argon2 | Zero native deps, portable, standard |
 | **Market Data** | yfinance (unofficial) + FMP fallback | Bloomberg, Refinitiv, Polygon | Cost-free dev vs. no SLA, unofficial |
-| **Sandbox** | Subprocess + resource limits | WASM, gVisor, Firecracker | Simplicity vs. isolation strength |
+| **Sandbox** | Subprocess + POSIX resource limits (see note) | WASM, gVisor, Firecracker | Simplicity vs. isolation strength |
 | **Async** | Threaded blocking I/O (`asyncio.to_thread`) | Fully async drivers | Compatibility with sync libs (yfinance, sqlalchemy sync) |
 | **Config** | Pydantic Settings (frozen) | python-dotenv, raw os.environ | Validation, immutability, type safety |
 
@@ -259,37 +281,29 @@ This is a **final-year college project** demonstrating software engineering prin
 
 ## Appendix: Key Module Map
 
-```
 app/
-├── api/              # FastAPI routers, middleware, deps, exceptions
 ├── agents/           # Planner, Coordinator, Analyst, Auditor, ReportWriter, Tools
+├── api/              # FastAPI routers, middleware, deps, exceptions
 ├── auth/             # JWT, PBKDF2, user service, DB
-├── chat/             # Chat persistence (SQL + Redis cache)
+├── chat/             # Chat persistence (SQL + in-process cache)
 ├── core/             # Config, logging, exceptions, constants (innermost layer)
-├── data/             # yfinance wrapper, financial statements
-├── db/               # (empty — DB init in auth/chat modules)
+├── data/             # SEC HTTP gateway, financial statements
 ├── demo/             # Synthetic fixtures & providers for DEMO_MODE
 ├── embeddings/       # Embedding model abstraction
 ├── enums/            # StrEnum types (Environment, FilingType, etc.)
-├── evaluation/       # Synthetic reference evaluation entry point
-├── financial/        # DCF, WACC, Piotroski, Altman, Beneish, ratios, growth
+├── financial/        # DCF, WACC, Piotroski, Altman, Beneish, ratios, health
+├── infrastructure/   # Container (health checks), readiness probe, Postgres
 ├── ingestion/        # SEC EDGAR, FMP, PDF/XBRL/HTML parsers, document pipeline
-├── infrastructure/   # Container (health checks), provider factories
 ├── llm/              # OpenAIClient, provider factory, mock provider
 ├── models/           # SQLAlchemy ORM models (User, ChatSession, etc.)
-├── orchestrator/     # Legacy pipeline (FinancialPipeline) — retained for compat
+├── orchestrator/     # FinancialPipeline (SEC lookup, market data, analysis)
 ├── parsers/          # XBRL, HTML, table extraction
-├── portfolio/        # CAGR, Beta (simple financial math)
-├── rag/              # Hybrid retriever, BM25, cross-encoder, vector stores
-├── recommendation/   # Buy/Hold/Sell logic from valuation + health
-├── retrieval/        # Domain models for retrieval (RetrievedChunk, RetrievalContext)
-├── reports/          # Report models (InvestmentReport, markdown)
+├── retrieval/        # Hybrid/dense/BM25 retrieval, reranking, temporal metadata
 ├── sandbox/          # Subprocess code executor with resource limits
 ├── schemas/          # Pydantic request/response DTOs
-├── services/         # Use-case services (Analysis, Chat, Document, etc.)
-├── utils/            # Ticker normalization, helpers
-├── vectorstore/      # VectorStore abstraction + Qdrant/Chroma impl
-├── workflow/         # (legacy) workflow orchestration
+├── services/         # Use-case services (Analysis, Chat, Document, Report, etc.)
+├── utils/            # Ticker normalization, text encoding helpers
+├── vectorstore/      # VectorStore abstraction + Qdrant implementation
 └── main.py           # App factory, lifespan, middleware, router registration
 ```
 

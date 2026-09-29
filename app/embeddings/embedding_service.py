@@ -2,7 +2,9 @@ from __future__ import annotations
 import logging
 from app.core.config import get_settings
 from app.core.exceptions import RetrievalError
-from app.rag.sentence_transformer_model import SentenceTransformerEmbeddingModel
+from app.embeddings.sentence_transformer_model import (
+    SentenceTransformerEmbeddingModel,
+)
 
 logger = logging.getLogger(__name__)
 

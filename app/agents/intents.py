@@ -1,6 +1,5 @@
 from __future__ import annotations
 import re
-from dataclasses import dataclass, field
 from enum import Enum
 class AgentIntent(str, Enum):
     MARKET_DATA = "MARKET_DATA"
@@ -38,10 +37,6 @@ _CONTRACTIONS = {
 }
 _POSSESSIVE_RE = re.compile(r"([a-z0-9])'s\b")
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
-_LITERAL_GROUPS: dict[str, tuple[str, ...]] = {
-    "p/e ratio": ("p/e", "pe ratio", "price to earnings"),
-    "document": ("10-k", "10k", "10-q", "10q", "20-f", "8-k", "vs."),
-}
 def _tokenize(text: str) -> list[str]:
     return [token for token in text.split() if token]
 def _tokens_match(query_token: str, phrase_token: str) -> bool:
@@ -302,39 +297,6 @@ def _matches_any(text: str, phrases: tuple[str, ...]) -> bool:
         _phrase_matches(norm_tokens, tuple(_tokenize(normalize_query(p))))
         for p in phrases
     )
-def _literal_contains(text: str, group_key: str) -> bool:
-    for phrase in _LITERAL_GROUPS[group_key]:
-        norm_phrase = re.sub(r"[^a-z0-9]", " ", phrase.lower()).strip()
-        norm_phrase = f" {norm_phrase} "
-        if norm_phrase in text:
-            return True
-    return False
-def _phrase_weight(phrases: tuple[str, ...], text: str) -> int:
-    weight = 0
-    for phrase in phrases:
-        phrase_tokens = tuple(_tokenize(f" {phrase} "))
-        if _phrase_matches(_tokenize(text), phrase_tokens):
-            weight += len(phrase_tokens)
-    return weight
-def _has_financial_intent(text: str) -> bool:
-    return any(
-        _matches_any(text, phrases)
-        for phrases in (
-            _VALUATION_PHRASES,
-            _HEALTH_PHRASES,
-            _RISK_PHRASES,
-            _COMPARISON_PHRASES,
-            _ANALYSIS_PHRASES,
-            _REPORT_PHRASES,
-            _PORTFOLIO_PHRASES,
-            _CALCULATION_PHRASES,
-        )
-    )
-@dataclass
-class IntentMatch:
-    intent: AgentIntent
-    score: int
-    ambiguous: bool = False
 class IntentClassifier:
     def classify(
         self,
@@ -388,55 +350,3 @@ class IntentClassifier:
         if not intents:
             intents.append(AgentIntent.COMPANY_RESEARCH)
         return intents
-    def classify_with_scores(
-        self,
-        query: str,
-        document_id: str | None = None,
-    ) -> list[IntentMatch]:
-        text = normalize_query(query)
-        is_price = _matches_any(text, _PRICE_PHRASES)
-        is_document = bool(document_id) or _matches_any(text, _DOCUMENT_PHRASES)
-        if is_price and not _has_financial_intent(text) and not is_document:
-            return [IntentMatch(AgentIntent.MARKET_DATA, 1)]
-        if is_document and not _matches_any(text, _DOCUMENT_GATE_PHRASES):
-            return [IntentMatch(AgentIntent.DOCUMENT_RESEARCH, 1)]
-        matches: list[IntentMatch] = []
-        seen: set[AgentIntent] = set()
-        def _add(intent: AgentIntent, phrases: tuple[str, ...]) -> None:
-            if intent in seen:
-                return
-            if _matches_any(text, phrases):
-                seen.add(intent)
-                matches.append(IntentMatch(intent, _phrase_weight(phrases, text)))
-        _add(AgentIntent.COMPARISON, _COMPARISON_PHRASES)
-        if is_document:
-            seen.add(AgentIntent.DOCUMENT_RESEARCH)
-            matches.append(IntentMatch(AgentIntent.DOCUMENT_RESEARCH, 1))
-        _add(AgentIntent.VALUATION, _VALUATION_PHRASES)
-        _add(AgentIntent.FINANCIAL_ANALYSIS, _HEALTH_PHRASES)
-        _add(AgentIntent.RISK_ANALYSIS, _RISK_PHRASES)
-        _add(AgentIntent.PORTFOLIO_ANALYSIS, _PORTFOLIO_PHRASES)
-        _add(AgentIntent.REPORT_GENERATION, _REPORT_PHRASES)
-        if (
-            _matches_any(text, _ANALYSIS_PHRASES)
-            and AgentIntent.FINANCIAL_ANALYSIS not in seen
-        ):
-            seen.add(AgentIntent.FINANCIAL_ANALYSIS)
-            matches.append(IntentMatch(AgentIntent.FINANCIAL_ANALYSIS, 1))
-        _add(AgentIntent.CALCULATION, _CALCULATION_PHRASES)
-        if not matches:
-            matches.append(IntentMatch(AgentIntent.COMPANY_RESEARCH, 0))
-        analytical = {
-            AgentIntent.VALUATION,
-            AgentIntent.FINANCIAL_ANALYSIS,
-            AgentIntent.RISK_ANALYSIS,
-            AgentIntent.COMPARISON,
-            AgentIntent.PORTFOLIO_ANALYSIS,
-            AgentIntent.REPORT_GENERATION,
-        }
-        high_evidence = [
-            m for m in matches if m.intent in analytical and m.score >= 2
-        ]
-        for m in matches:
-            m.ambiguous = len(high_evidence) >= 2
-        return matches

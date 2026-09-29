@@ -203,16 +203,6 @@ describe("services/api.ts", () => {
       expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/version`, expect.any(Object));
     });
 
-    it("company calls correct endpoint with ticker", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await api.company("AAPL");
-      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/company/AAPL`, expect.any(Object));
-    });
-
     it("analyze calls correct endpoint with POST and body", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

@@ -4,30 +4,15 @@ from app.financial.models import FinancialStatement
 from app.orchestrator.pipeline import FinancialPipeline
 @patch("app.orchestrator.pipeline.SECService")
 @patch("app.orchestrator.pipeline.MarketService")
-@patch("app.orchestrator.pipeline.PlannerAgent")
-@patch("app.orchestrator.pipeline.RetrieverAgent")
 @patch("app.orchestrator.pipeline.FinancialAnalystAgent")
-@patch("app.orchestrator.pipeline.AuditorAgent")
 def test_pipeline(
-    mock_auditor,
     mock_analyst,
-    mock_retriever,
-    mock_planner,
     mock_market,
     mock_sec,
 ):
-    planner = MagicMock()
-    planner.plan.return_value = ["task"]
-    mock_planner.return_value = planner
-    retriever = MagicMock()
-    retriever.retrieve.return_value = "context"
-    mock_retriever.return_value = retriever
     analyst = MagicMock()
     analyst.analyze.return_value = "analysis"
     mock_analyst.return_value = analyst
-    auditor = MagicMock()
-    auditor.audit.return_value = True
-    mock_auditor.return_value = auditor
     sec = MagicMock()
     sec.get_company.return_value = "company"
     mock_sec.return_value = sec
@@ -62,6 +47,4 @@ def test_pipeline(
         beneish_score=-2.4,
     )
     assert result["company"] == "company"
-    assert result["context"] == "context"
     assert result["analysis"] == "analysis"
-    assert result["audited"] is True

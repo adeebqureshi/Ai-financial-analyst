@@ -254,11 +254,6 @@ def get_endpoint_config(
             requests_per_hour=settings.rate_limit_analyze_per_hour,
             key_prefix="ratelimit:analyze",
         ),
-        "analyze-company": RateLimitConfig(
-            requests_per_minute=settings.rate_limit_analyze_per_minute,
-            requests_per_hour=settings.rate_limit_analyze_per_hour,
-            key_prefix="ratelimit:analyze",
-        ),
         "documents": RateLimitConfig(
             requests_per_minute=settings.rate_limit_documents_per_minute,
             requests_per_hour=settings.rate_limit_documents_per_hour,

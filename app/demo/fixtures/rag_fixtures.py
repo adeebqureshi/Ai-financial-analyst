@@ -1,6 +1,39 @@
 from __future__ import annotations
-from app.rag.embedding import Embedding
-from app.rag.memory_store import MemoryVectorStore
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass(slots=True)
+class DemoEmbedding:
+    """A demo-only embedded chunk.
+
+    Demo mode never talks to Qdrant, so it keeps its own tiny in-memory
+    store here rather than depending on a second retrieval implementation.
+    """
+
+    text: str
+    vector: list[float]
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+class DemoVectorStore:
+    """Minimal in-memory store used only by the demo fixtures."""
+
+    def __init__(self) -> None:
+        self._items: list[DemoEmbedding] = []
+
+    def add(self, embedding: DemoEmbedding) -> None:
+        self._items.append(embedding)
+
+    @property
+    def items(self) -> list[DemoEmbedding]:
+        return list(self._items)
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+
 DEMO_FILING_CHUNKS: dict[str, list[dict[str, str]]] = {
     "AAPL": [
         {
@@ -255,15 +288,16 @@ DEMO_FILING_CHUNKS: dict[str, list[dict[str, str]]] = {
         },
     ],
 }
-def create_demo_vector_store() -> MemoryVectorStore:
-    store = MemoryVectorStore()
-    from app.embeddings.embedding_service import _fallback_vector, EmbeddingService
+def create_demo_vector_store() -> DemoVectorStore:
+    store = DemoVectorStore()
+    from app.embeddings.embedding_service import EmbeddingService
+
     embedder = EmbeddingService()
     for ticker, chunks in DEMO_FILING_CHUNKS.items():
         for i, chunk_data in enumerate(chunks):
             text = chunk_data["text"]
             vector = embedder.embed_text(text)
-            embedding = Embedding(
+            embedding = DemoEmbedding(
                 text=text,
                 vector=vector,
                 metadata={

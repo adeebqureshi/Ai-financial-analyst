@@ -167,15 +167,15 @@ export function CopilotFab() {
       aria-label="Open AI copilot"
       title="Ask the AI copilot (Ctrl+K)"
       className={cn(
-        "fixed bottom-5 right-5 z-30 inline-flex h-12 items-center gap-2 rounded-full",
-        "border border-border bg-primary px-4 text-label font-medium text-primary-foreground",
+        "fixed bottom-5 right-5 z-30 inline-flex h-10 items-center gap-2 rounded-lg",
+        "border border-border bg-card px-3.5 text-label font-medium text-foreground",
         "shadow-overlay transition-[transform,opacity] duration-150",
-        "hover:scale-[1.02] active:scale-[0.99]",
+        "hover:bg-muted",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         isOpen ? "pointer-events-none scale-95 opacity-0" : "opacity-100"
       )}
     >
-      <Sparkles size={17} aria-hidden="true" />
+      <Sparkles size={16} className="shrink-0 text-brand" aria-hidden="true" />
       <span className="hidden sm:inline">Ask AI</span>
     </button>
   );

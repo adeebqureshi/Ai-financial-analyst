@@ -148,3 +148,41 @@ export function TickerBadge({
     </span>
   );
 }
+
+/**
+ * Selectable ticker token.
+ *
+ * A token, not a CTA: small, flat, low-contrast until hovered. Shared so every
+ * ticker shortcut (analysis, reports, search examples, dashboard) looks and
+ * behaves identically instead of being re-styled per page.
+ */
+export function TickerChip({
+  value,
+  onClick,
+  title,
+  className,
+}: {
+  value: string;
+  onClick: () => void;
+  title?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "tnum inline-flex min-h-8 items-center rounded-md border border-border bg-surface",
+        "px-2.5 font-mono text-caption font-medium tracking-[0.04em] text-muted-foreground",
+        "transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        className
+      )}
+    >
+      {value}
+    </button>
+  );
+}
+

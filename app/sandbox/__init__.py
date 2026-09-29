@@ -4,7 +4,6 @@ from app.sandbox.executor import (
     MAX_CODE_LENGTH,
     PythonSandbox,
     SandboxResult,
-    SandboxSecurityError,
 )
 __all__ = [
     "CodeAgentResult",
@@ -12,5 +11,4 @@ __all__ = [
     "MAX_CODE_LENGTH",
     "PythonSandbox",
     "SandboxResult",
-    "SandboxSecurityError",
 ]

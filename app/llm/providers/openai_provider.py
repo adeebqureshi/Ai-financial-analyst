@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Iterator
+import re
 
 import openai
 from openai import OpenAI
@@ -27,6 +27,31 @@ _MISSING_KEY_MESSAGE = (
     "OpenAI-compatible) or OPENAI_API_KEY before enabling the openai "
     "provider, or keep LLM_PROVIDER=mock for offline use."
 )
+
+# Some OpenAI-compatible gateways (e.g. Gemini) do not send a Retry-After
+# header, but they do state the wait in the error body, for example
+# "Please retry in 17.663192334s."
+_RETRY_HINT = re.compile(r"retry in\s+([0-9]+(?:\.[0-9]+)?)\s*s", re.IGNORECASE)
+
+
+def extract_retry_after(exc: BaseException) -> float | None:
+    """Best-effort read of how long the provider wants us to wait."""
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    if headers is not None:
+        raw = headers.get("retry-after") or headers.get("Retry-After")
+        if raw:
+            try:
+                return max(0.0, float(raw))
+            except (TypeError, ValueError):
+                pass
+    match = _RETRY_HINT.search(str(exc))
+    if match:
+        try:
+            return max(0.0, float(match.group(1)))
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 class OpenAIProvider(BaseLLMProvider):
@@ -82,7 +107,8 @@ class OpenAIProvider(BaseLLMProvider):
 
             except openai.RateLimitError as exc:
                 raise RateLimitError(
-                    "LLM provider rate limit exceeded."
+                    "LLM provider rate limit exceeded.",
+                    retry_after=extract_retry_after(exc),
                 ) from exc
 
             except openai.APITimeoutError as exc:
@@ -121,12 +147,3 @@ class OpenAIProvider(BaseLLMProvider):
             )
 
         return self.retry.execute(call)
-
-    def stream(
-        self,
-        request: LLMRequest,
-    ) -> Iterator[str]:
-        response = self.generate(request)
-
-        for token in response.text.split():
-            yield token + " "

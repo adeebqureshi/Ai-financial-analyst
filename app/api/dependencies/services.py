@@ -6,15 +6,10 @@ from app.core.config import Settings
 from app.services.analysis_service import AnalysisService
 from app.services.chat_service import ChatService
 from app.services.compare_service import CompareService
-from app.services.company_service import CompanyService
 from app.services.document_service import DocumentService
-from app.services.filing_service import FilingService
 from app.services.health_service import HealthService
-from app.services.market_service import MarketService
-from app.services.ratios_service import RatiosService
 from app.services.report_service import ReportService
 from app.services.risk_service import RiskService
-from app.services.screen_service import ScreenService
 from app.services.search_service import SearchService
 from app.services.valuation_service import ValuationService
 from app.services.version_service import VersionService
@@ -38,11 +33,6 @@ def get_search_service(
 ) -> Iterator[SearchService]:
     service = SearchService(settings)
     yield service
-def get_company_service(
-    settings: Settings = Depends(get_settings_dep),
-) -> Iterator[CompanyService]:
-    service = CompanyService(settings)
-    yield service
 def get_valuation_service(
     settings: Settings = Depends(get_settings_dep),
 ) -> Iterator[ValuationService]:
@@ -52,11 +42,6 @@ def get_chat_service(
     settings: Settings = Depends(get_settings_dep),
 ) -> Iterator[ChatService]:
     service = ChatService(settings)
-    yield service
-def get_ratios_service(
-    settings: Settings = Depends(get_settings_dep),
-) -> Iterator[RatiosService]:
-    service = RatiosService(settings)
     yield service
 def get_risk_service(
     settings: Settings = Depends(get_settings_dep),
@@ -73,23 +58,8 @@ def get_compare_service(
 ) -> Iterator[CompareService]:
     service = CompareService(settings)
     yield service
-def get_screen_service(
-    settings: Settings = Depends(get_settings_dep),
-) -> Iterator[ScreenService]:
-    service = ScreenService(settings)
-    yield service
 def get_document_service(
     settings: Settings = Depends(get_settings_dep),
 ) -> Iterator[DocumentService]:
     service = DocumentService(settings)
-    yield service
-def get_filing_service(
-    settings: Settings = Depends(get_settings_dep),
-) -> Iterator[FilingService]:
-    service = FilingService(settings)
-    yield service
-def get_market_service(
-    settings: Settings = Depends(get_settings_dep),
-) -> Iterator[MarketService]:
-    service = MarketService(settings)
     yield service

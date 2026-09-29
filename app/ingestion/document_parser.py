@@ -11,6 +11,7 @@ from typing import Final
 from app.core.exceptions import ParserError
 from app.core.logging import get_logger
 from app.parsers.table_parser import ParsedTable, TableParser
+from app.utils.text_encoding import looks_like_mojibake, repair_mojibake
 
 logger = get_logger(__name__)
 
@@ -55,6 +56,31 @@ class BaseDocumentParser(ABC):
             pass
 
 
+
+
+def _repair_result_encoding(result: DocumentParseResult) -> DocumentParseResult:
+    """Repair mojibake across a parsed document before it is chunked.
+
+    Whichever parser produced the text (LlamaParse, Marker, PyMuPDF) the
+    result is normalised here, so the chunker, the vector store and the
+    LLM prompt only ever see correctly decoded characters.
+    """
+    if not looks_like_mojibake(result.text):
+        return result
+
+    logger.info(
+        "Repairing character encoding for parsed document '%s'.",
+        result.filename or "<unnamed>",
+    )
+
+    return DocumentParseResult(
+        text=repair_mojibake(result.text),
+        parser_used=result.parser_used,
+        pages=[repair_mojibake(page) for page in result.pages],
+        tables=result.tables,
+        filename=result.filename,
+        warnings=result.warnings,
+    )
 
 
 def _split_markdown_pages(markdown: str) -> list[str]:
@@ -426,7 +452,7 @@ class UnifiedDocumentParser:
                 len(result.tables),
             )
 
-            return result
+            return _repair_result_encoding(result)
 
         raise ParserError(
             message=(

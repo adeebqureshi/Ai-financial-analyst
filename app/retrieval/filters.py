@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import date
-from app.rag.temporal_metadata import TemporalMetadata
+from app.retrieval.temporal_metadata import TemporalMetadata
 from app.retrieval.models import RetrievedChunk
 class MetadataFilter:
     def filter(

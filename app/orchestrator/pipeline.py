@@ -1,17 +1,11 @@
 from __future__ import annotations
-from app.agents.auditor import AuditorAgent
 from app.agents.financial_analyst import FinancialAnalystAgent
-from app.agents.planner import PlannerAgent
-from app.agents.retriever import RetrieverAgent
 from app.financial.models import FinancialStatement
 from app.ingestion.services.market_service import MarketService
 from app.ingestion.services.sec_service import SECService
 class FinancialPipeline:
     def __init__(self) -> None:
-        self.planner = PlannerAgent()
-        self.retriever = RetrieverAgent()
         self.analyst = FinancialAnalystAgent()
-        self.auditor = AuditorAgent()
         self.sec = SECService()
         self.market = MarketService()
     def analyze_company(
@@ -28,10 +22,8 @@ class FinancialPipeline:
         altman_score: float,
         beneish_score: float,
     ):
-        tasks = self.planner.plan(query)
         company = self.sec.get_company(ticker)
         market = self.market.get_market_data(ticker)
-        context = self.retriever.retrieve(query)
         analysis = self.analyst.analyze(
             statement=statement,
             current_price=market.current_price,
@@ -44,14 +36,8 @@ class FinancialPipeline:
             altman_score=altman_score,
             beneish_score=beneish_score,
         )
-        audited = self.auditor.audit(
-            analysis,
-        )
         return {
             "company": company,
             "market": market,
-            "tasks": tasks,
-            "context": context,
             "analysis": analysis,
-            "audited": audited,
         }

@@ -122,13 +122,6 @@ class SearchResultData(BaseModel):
     hits: list[SearchHitData] = Field(default_factory=list, description="List of retrieval hits.")
     total: int = Field(..., ge=0, description="Number of hits returned.")
     retrieval_time_ms: float = Field(..., ge=0, description="Retrieval latency (ms).")
-class FinancialRatiosData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    debt_to_equity: float = Field(..., description="Debt-to-equity ratio.")
-    return_on_assets: float = Field(..., description="Return on assets (ROA).")
-    return_on_equity: float = Field(..., description="Return on equity (ROE).")
-    operating_margin: float = Field(..., description="Operating margin.")
-    net_margin: float = Field(..., description="Net margin.")
 class RiskAssessmentData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     health_score: int = Field(..., ge=0, le=100, description="Composite health score (0-100).")
@@ -232,11 +225,6 @@ class ValuationResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     ticker: str | None = Field(default=None, description="Optional ticker symbol.")
     valuation: ValuationResultData = Field(..., description="Valuation result.")
-class IntrinsicValueResponseData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    intrinsic_value: float = Field(..., description="Intrinsic value per share ($).")
-    current_price: float = Field(..., description="Current market price per share ($).")
-    upside: float = Field(..., description="Upside percentage.")
 class CompareItemData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     ticker: str = Field(..., description="Ticker symbol.")
@@ -249,19 +237,3 @@ class CompareResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     results: list[CompareItemData] = Field(default_factory=list, description="Per-ticker comparison results.")
     best: str = Field(..., description="Best ticker by upside.")
-class ScreenItemData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    ticker: str = Field(..., description="Ticker symbol.")
-    name: str | None = Field(default=None, description="Optional company name.")
-    piotroski_score: int = Field(..., ge=0, le=9, description="Piotroski F-Score.")
-    altman_score: float = Field(..., description="Altman Z-Score.")
-    beneish_score: float = Field(..., description="Beneish M-Score.")
-    health_score: int = Field(..., ge=0, le=100, description="Health score.")
-    health_rating: str = Field(..., description="Health rating.")
-    intrinsic_value: float = Field(..., description="Intrinsic value per share ($).")
-    upside: float = Field(..., description="Upside percentage.")
-    recommendation: str = Field(..., description="Recommendation string.")
-class ScreenResponseData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    results: list[ScreenItemData] = Field(default_factory=list, description="Screening results.")
-    total: int = Field(..., ge=0, description="Number of results returned.")

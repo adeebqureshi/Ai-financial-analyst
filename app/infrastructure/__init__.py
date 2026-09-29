@@ -1,10 +1,7 @@
-from .config import Settings
-from .environment import Environment
-from .health import HealthStatus
-from .logging import configure_logging
-__all__ = [
-    "Settings",
-    "Environment",
-    "HealthStatus",
-    "configure_logging",
-]
+"""Infrastructure adapters used by the running application.
+
+Only modules wired into a live path are re-exported here; the superseded
+lifespan/middleware/config duplicates were removed.
+"""
+
+__all__: list[str] = []

@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { ArrowRight, BookOpen, Bot, Database, Search } from "lucide-react";
 
 import { DocumentLibrary } from "@/features/documents/document-library";
 import { PageHeader } from "@/components/ui/page-header";
+import { TextAction } from "@/components/ui/button";
 
 const pipeline = [
   {
@@ -30,13 +30,9 @@ export default function ResearchPage() {
         title="Research workspace"
         description="Upload financial PDFs, then question them with the copilot. Documents are parsed, chunked, embedded and cited with page-level evidence."
         actions={
-          <Link
-            href="/search"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-label font-medium text-foreground shadow-soft transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Search size={15} aria-hidden="true" />
+          <TextAction href="/search" icon={<Search size={14} aria-hidden="true" />}>
             Search knowledge base
-          </Link>
+          </TextAction>
         }
       />
 

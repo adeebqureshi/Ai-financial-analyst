@@ -1,5 +1,4 @@
 from __future__ import annotations
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security.utils import get_authorization_scheme_param
@@ -90,31 +89,8 @@ class RateLimitDependency:
         return result
 rate_limit_chat = RateLimitDependency("chat")
 rate_limit_analyze = RateLimitDependency("analyze")
-rate_limit_analyze_company = RateLimitDependency("analyze-company")
 rate_limit_documents = RateLimitDependency("documents")
 rate_limit_search = RateLimitDependency("search")
-rate_limit_sandbox = RateLimitDependency("sandbox")
-rate_limit_default = RateLimitDependency("default")
-def get_rate_limit_dependency(endpoint: str) -> RateLimitDependency:
-    return RateLimitDependency(endpoint)
-class RateLimitHeadersMiddleware:
-    def __init__(self, app: Any) -> None:
-        self.app = app
-    async def __call__(
-        self,
-        scope: dict[str, Any],
-        receive: Any,
-        send: Any,
-    ) -> None:
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-        async def send_wrapper(message: dict[str, Any]) -> None:
-            if message["type"] == "http.response.start":
-                headers = list(message.get("headers", []))
-                message["headers"] = headers
-            await send(message)
-        await self.app(scope, receive, send_wrapper)
 def reset_rate_limits_for_testing() -> None:
     from app.api.rate_limiter import clear_all_rate_limits, reset_rate_limiter
     reset_rate_limiter()
@@ -123,13 +99,8 @@ __all__ = [
     "RateLimitDependency",
     "rate_limit_chat",
     "rate_limit_analyze",
-    "rate_limit_analyze_company",
     "rate_limit_documents",
     "rate_limit_search",
-    "rate_limit_sandbox",
-    "rate_limit_default",
-    "get_rate_limit_dependency",
-    "RateLimitHeadersMiddleware",
     "reset_rate_limits_for_testing",
     "get_client_identifier",
     "apply_anonymous_multiplier",

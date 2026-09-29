@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ArrowRight } from "lucide-react";
 
 import { Button } from "./button";
 import { Field, TickerInput } from "./field";
@@ -75,9 +74,16 @@ export function TickerLookupForm({
           />
         </Field>
 
-        <Button onClick={submit} disabled={!valid} className="sm:mb-0">
+        {/* Lookups are a short, repeatable step rather than the page's
+            headline CTA, so the submit stays a compact secondary control. */}
+        <Button
+          onClick={submit}
+          disabled={!valid}
+          variant="secondary"
+          size="md"
+          className="sm:mb-0"
+        >
           {submitLabel}
-          <ArrowRight className="size-4" aria-hidden="true" />
         </Button>
       </div>
     </div>

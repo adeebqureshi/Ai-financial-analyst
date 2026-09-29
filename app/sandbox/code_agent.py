@@ -173,12 +173,4 @@ def _json_default(value: Any) -> str:
 __all__ = [
     "CodeAgentResult",
     "FinancialCodeAgent",
-    "build_calculation_prompt",
 ]
-
-
-def build_calculation_prompt(
-    question: str,
-    context: dict[str, Any] | None,
-) -> str:
-    return _build_calculation_prompt(question, context)

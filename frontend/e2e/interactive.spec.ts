@@ -47,16 +47,4 @@ test.describe("Interactive Features Audit", () => {
     await page.waitForTimeout(3000);
   });
 
-  test("screener form validation", async ({ page }) => {
-    await page.goto("http://localhost:3000/screener");
-    await page.waitForLoadState("networkidle");
-    const tickerInput = page.locator("#criteria-ticker");
-    await expect(tickerInput).toBeVisible();
-
-
-
-    await tickerInput.fill("");
-    await page.getByRole("button", { name: /fetch analysis/i }).click();
-    await expect(page.getByText("Enter a ticker symbol.")).toBeVisible();
-  });
 });

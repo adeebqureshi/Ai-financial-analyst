@@ -64,11 +64,8 @@ test.describe("Console Error Audit", () => {
       "/compare",
       "/research",
       "/search",
-      "/screener",
       "/reports",
       "/settings",
-      "/portfolio",
-      "/watchlist",
     ];
 
     for (const path of pages) {

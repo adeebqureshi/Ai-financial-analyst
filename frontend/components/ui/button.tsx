@@ -3,9 +3,58 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+
+type TextActionProps = {
+  href: string;
+  children: ReactNode;
+  icon?: ReactNode;
+  /** Appends a small arrow that nudges right on hover. */
+  arrow?: boolean;
+  className?: string;
+};
+
+/**
+ * Tertiary navigation action — a quiet text link with no container.
+ *
+ * Use this instead of wrapping a <Link> in border/background/shadow classes
+ * for anything that is not the dominant action of a section. Keeping it in one
+ * place stops "pseudo-buttons" from accumulating across pages.
+ */
+export function TextAction({
+  href,
+  children,
+  icon,
+  arrow = false,
+  className,
+}: TextActionProps) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group/tac inline-flex items-center gap-1.5 rounded-sm text-label font-medium text-brand",
+        "underline-offset-4 transition-colors hover:text-foreground",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        className
+      )}
+    >
+      {icon}
+      {children}
+      {arrow && (
+        <ArrowRight
+          size={14}
+          className="shrink-0 text-subtle-foreground transition-transform duration-150 group-hover/tac:translate-x-0.5 group-hover/tac:text-brand"
+          aria-hidden="true"
+        />
+      )}
+    </Link>
+  );
+}
 
 export const buttonVariants = cva(
   [
@@ -23,7 +72,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary text-primary-foreground shadow-soft hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-soft hover:bg-primary/90 disabled:bg-muted disabled:text-subtle-foreground disabled:shadow-none",
         secondary:
           "border border-border-strong/70 bg-card text-foreground shadow-soft hover:bg-muted",
         subtle:
@@ -40,11 +89,12 @@ export const buttonVariants = cva(
       size: {
         sm: "h-8 rounded-md px-3 text-caption",
         md: "h-9 rounded-lg px-3.5 text-label",
-        lg: "h-11 rounded-lg px-5 text-body",
-        xl: "h-12 rounded-xl px-6 text-body",
+        // `lg` is the ceiling for primary CTAs — a compact, moderate-radius
+        // control. Larger sizes were removed so an oversized pill cannot be
+        // reintroduced by accident; pair `lg` with an adjacent input instead.
+        lg: "h-10 rounded-lg px-4 text-label",
         icon: "h-9 w-9 rounded-lg",
         "icon-sm": "h-8 w-8 rounded-md",
-        "icon-lg": "h-11 w-11 rounded-lg",
       },
     },
     defaultVariants: {

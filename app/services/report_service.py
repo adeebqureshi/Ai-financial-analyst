@@ -40,5 +40,3 @@ class ReportService:
             content=result.report.body,
             format="markdown",
         )
-    def generate(self, ticker: str, query: str = "") -> ReportData:
-        return self.generate_ticker_report(ticker, query)

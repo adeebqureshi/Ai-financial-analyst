@@ -3,13 +3,18 @@ import time
 from datetime import date
 from app.core.logging import get_logger
 from app.embeddings.embedding_service import EmbeddingService
-from app.rag.temporal_metadata import TemporalMetadata
+from app.retrieval.temporal_metadata import TemporalMetadata
 from app.retrieval.filters import apply_temporal_filter
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.retrieval.metadata_store import MetadataStore
 from app.retrieval.models import RetrievalContext, RetrievedChunk
 logger = get_logger(__name__)
 class RetrievalEngine:
+    # How many candidates to fetch per requested result when the
+    # cross-encoder reranker is active. Reranking a small pool is
+    # pointless, so the pool is widened and then trimmed back to `limit`.
+    _rerank_candidate_factor: int = 3
+
     def __init__(self) -> None:
         self.embedder = EmbeddingService()
         self.retriever = HybridRetriever()
@@ -29,13 +34,6 @@ class RetrievalEngine:
         self.retriever.build(
             ids,
             documents,
-        )
-    def add_chunks(
-        self,
-        chunks,
-    ) -> None:
-        self.metadata.add_many(
-            chunks,
         )
     def refresh(
         self,
@@ -101,7 +99,15 @@ class RetrievalEngine:
     ) -> RetrievalContext:
         start = time.perf_counter()
         vector = self.embedder.embed_text(query)
-        candidate_limit = limit * 3 if as_of_date is not None else limit
+
+        # A cross-encoder can only reorder what it is given, so the fusion
+        # stage must over-fetch whenever reranking is enabled. Without a
+        # wider pool the reranker would merely re-score the same five
+        # chunks and could not improve the ordering at all.
+        if self._reranker_enabled:
+            candidate_limit = limit * self._rerank_candidate_factor
+        else:
+            candidate_limit = limit * 3 if as_of_date is not None else limit
 
         similarity = self.retriever.dense.similarity_scores(
             vector=vector,
@@ -131,11 +137,19 @@ class RetrievalEngine:
                 as_of_date,
             )
             chunks = chunks[:limit]
+        # Apply the relevance floor to the fused candidates *before*
+        # reranking. Cosine similarity is a weak relevance signal, so using
+        # it to discard results would throw away exactly the chunks a
+        # cross-encoder would have promoted.
+        chunks = self._apply_relevance_floor(chunks, similarity)
         chunks = self._rerank(
             query,
             chunks,
         )
-        chunks = self._apply_relevance_floor(chunks, similarity)
+        # The reranker widened the candidate pool, so trim back to the
+        # number the caller actually asked for.
+        if self._reranker_enabled:
+            chunks = chunks[:limit]
         elapsed = (time.perf_counter() - start) * 1000
         logger.debug(
             "Retrieval completed: duration_ms=%.1f chunks=%d "

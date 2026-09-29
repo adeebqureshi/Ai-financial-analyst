@@ -4,6 +4,7 @@ import fitz
 from app.ingestion.document import FinancialDocument
 from app.ingestion.loader import DocumentLoader
 from app.ingestion.metadata import DocumentMetadata
+from app.utils.text_encoding import repair_mojibake
 class PDFLoader(DocumentLoader):
     def load(
         self,
@@ -12,7 +13,7 @@ class PDFLoader(DocumentLoader):
         pdf = fitz.open(path)
         pages: list[str] = []
         for page in pdf:
-            pages.append(page.get_text())
+            pages.append(repair_mojibake(page.get_text()))
         pdf.close()
         return FinancialDocument(
             text="\n".join(pages),

@@ -14,7 +14,7 @@ import tempfile
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 
 from app.core.logging import get_logger
 
@@ -28,10 +28,6 @@ SANDBOX_SOURCE_NAME: Final[str] = "<sandbox>"
 _DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
 
 _KILL_GRACE_SECONDS: Final[int] = 5
-
-
-class SandboxSecurityError(Exception):
-        pass
 
 
 class SandboxTimeoutError(TimeoutError):
@@ -447,6 +443,49 @@ def execute_untrusted(
     )
 
 
+class _ResourceLimitAvailability(NamedTuple):
+    """Reports which OS-level limits the sandbox worker can actually apply."""
+
+    available: bool
+    reason: str
+
+
+def _detect_resource_limits() -> _ResourceLimitAvailability:
+    """Probe whether the worker can apply OS resource limits on this platform.
+
+    The worker enforces memory and file/process limits through
+    :mod:`resource`, which is POSIX-only. On Windows the module is absent, so
+    ``worker._apply_resource_limits`` returns early and *no* RLIMITs are set.
+    Static validation, the builtins allow-list, the subprocess boundary and
+    the parent-side timeout still apply, but CPU/memory/fd caps do not.
+
+    This is surfaced explicitly so the weaker Windows posture is never
+    presented as full isolation.
+    """
+    if os.name != "posix":
+        return _ResourceLimitAvailability(
+            False,
+            "OS resource limits require the POSIX 'resource' module and are "
+            "unavailable on this platform; execution is still bounded by "
+            "static validation, the builtins allow-list, a subprocess "
+            "boundary and the parent-side timeout.",
+        )
+    try:
+        import resource  # noqa: F401
+    except ImportError:
+        return _ResourceLimitAvailability(
+            False,
+            "The 'resource' module is unavailable; OS resource limits are not "
+            "applied, leaving static validation, the builtins allow-list, the "
+            "subprocess boundary and the parent-side timeout.",
+        )
+    return _ResourceLimitAvailability(True, "OS resource limits are applied.")
+
+
+RESOURCE_LIMITS: Final[_ResourceLimitAvailability] = _detect_resource_limits()
+"""Whether the sandbox applies OS-level resource limits on this platform."""
+
+
 def _run_in_subprocess(
     *,
     code: str,
@@ -456,6 +495,12 @@ def _run_in_subprocess(
 ) -> SandboxResult:
     project_root = Path(__file__).resolve().parent.parent.parent
     worker_script = project_root / "app" / "sandbox" / "worker.py"
+
+    if not RESOURCE_LIMITS.available:
+        logger.warning(
+            "Sandbox running without OS resource limits: %s",
+            RESOURCE_LIMITS.reason,
+        )
 
     if os.name == "posix":
         worker_env: dict[str, str] | None = {

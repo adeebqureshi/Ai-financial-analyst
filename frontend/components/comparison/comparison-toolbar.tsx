@@ -90,8 +90,8 @@ export function ComparisonToolbar({ tickers, onAdd, onRemove }: Props) {
             </div>
           </Field>
 
-          <Button type="submit" size="lg">
-            <Plus size={16} aria-hidden="true" />
+          <Button type="submit">
+            <Plus size={15} aria-hidden="true" />
             Add
           </Button>
         </form>

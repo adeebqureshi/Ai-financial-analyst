@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\ASUS\Desktop\ai-financial-analyst\scripts\_check_inherit.py", line 18, in <module>
+    assert tokens == ["hello ", "world ", "foo "], tokens
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ['LLM_RESPONSE: ', 'hello ', 'world ', 'foo ']

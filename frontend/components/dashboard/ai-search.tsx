@@ -7,6 +7,7 @@ import { CornerDownLeft, Loader2, Search, Sparkles } from "lucide-react";
 import { useAnalysis } from "@/hooks/use-analysis";
 import { useCopilot } from "@/components/layout/ai-copilot";
 import { ErrorInline } from "@/components/ui/error-display";
+import { TickerChip } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const TICKER_PATTERN = /^[A-Z]{1,5}$/;
@@ -151,24 +152,26 @@ export function AISearch() {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-caption text-subtle-foreground">Try</span>
 
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion.label}
-              type="button"
-              onClick={() => setQuery(suggestion.label)}
-              title={suggestion.hint}
-              className="rounded-full border border-border bg-surface px-3 py-1 text-caption text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span
-                className={cn(
-                  suggestion.label.length <= 5 &&
-                    "font-mono font-medium tracking-[0.04em]"
-                )}
+          {suggestions.map((suggestion) =>
+            suggestion.label.length <= 5 ? (
+              <TickerChip
+                key={suggestion.label}
+                value={suggestion.label}
+                title={suggestion.hint}
+                onClick={() => setQuery(suggestion.label)}
+              />
+            ) : (
+              <button
+                key={suggestion.label}
+                type="button"
+                onClick={() => setQuery(suggestion.label)}
+                title={suggestion.hint}
+                className="max-w-full truncate rounded-md border border-border bg-surface px-2.5 py-1.5 text-caption text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {suggestion.label}
-              </span>
-            </button>
-          ))}
+              </button>
+            )
+          )}
         </div>
 
         {error !== null && (

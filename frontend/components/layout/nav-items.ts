@@ -59,13 +59,6 @@ export const navigationGroups: NavGroup[] = [
     label: "Markets & Compare",
     items: [
       {
-        title: "Screener",
-        href: "/screener",
-        icon: SlidersHorizontal,
-        description: "Screen a candidate against your criteria",
-        keywords: "screen filter piotroski altman beneish criteria",
-      },
-      {
         title: "Compare",
         href: "/compare",
         icon: GitCompare,
@@ -104,18 +97,6 @@ export const navigationGroups: NavGroup[] = [
 
 export const workspaceItems: NavItem[] = [
   {
-    title: "Watchlist",
-    href: "/watchlist",
-    icon: Search,
-    keywords: "watchlist follow track",
-  },
-  {
-    title: "Portfolio",
-    href: "/portfolio",
-    icon: Building2,
-    keywords: "portfolio holdings positions",
-  },
-  {
     title: "Settings",
     href: "/settings",
     icon: SlidersHorizontal,
@@ -137,8 +118,6 @@ export function isActivePath(pathname: string, href: string) {
 }
 
 const secondaryTitles: Record<string, string> = {
-  "/portfolio": "Portfolio",
-  "/watchlist": "Watchlist",
   "/settings": "Settings",
 };
 

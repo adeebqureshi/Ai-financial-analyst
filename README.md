@@ -49,7 +49,6 @@ The project follows Clean Architecture principles, where dependencies flow inwar
 app/
 ├── __init__.py              # Package marker, version, architecture docs
 ├── main.py                  # FastAPI application factory + entry point
-├── application.py           # Application setup (lifespan, middleware, routes)
 ├── core/                    # Cross-cutting concerns (innermost layer)
 │   ├── __init__.py          # Re-exports public API of core modules
 │   ├── config.py            # Pydantic Settings configuration + singleton
@@ -59,26 +58,20 @@ app/
 ├── api/                     # FastAPI routers and middleware
 │   ├── dependencies/        # FastAPI dependency injection
 │   ├── middleware/          # Custom middleware (CORS, rate limiting, etc.)
-│   ├── routes/              # Route modules
 │   └── routers/             # APIRouter instances
 ├── services/                # Application use-case orchestration
 ├── models/                  # Domain entities and ORM models
 ├── schemas/                 # Pydantic request/response DTOs
-├── db/                      # Database connection and session management
 ├── ingestion/               # Data ingestion pipelines (SEC EDGAR, FMP)
 ├── parsers/                 # Financial document parsers (XBRL, HTML)
-├── retrieval/               # Vector store retrieval components
+├── retrieval/               # Hybrid/dense/BM25 retrieval, reranking
+├── data/                    # SEC HTTP gateway & financial statements
+├── demo/                    # Synthetic fixtures & providers for DEMO_MODE
 ├── agents/                  # LLM agent definitions and orchestration
 ├── sandbox/                 # Code execution sandbox for analysis
-├── evaluation/              # Evaluation and benchmarking utilities
 ├── financial/               # Financial calculation engines (Piotroski, Altman, etc.)
-├── rag/                     # RAG pipeline (embeddings, reranking, hybrid search)
 ├── auth/                    # Authentication & authorization
 ├── chat/                    # Chat persistence & session management
-├── comparison/              # Company comparison & ranking
-├── portfolio/               # Portfolio analytics (Sharpe, CAGR, drawdown)
-├── recommendation/          # Investment recommendation engine
-├── reports/                 # Report generation (Markdown, structured)
 ├── embeddings/              # Embedding models & providers
 ├── enums/                   # Shared enumerations
 ├── infrastructure/          # Infrastructure adapters (Redis, Postgres, health)
@@ -86,7 +79,6 @@ app/
 ├── orchestrator/            # Workflow orchestration (LangGraph)
 ├── utils/                   # Shared helper functions
 ├── vectorstore/             # Vector store implementations (Qdrant, Chroma)
-└── workflow/                # Workflow engine (nodes, edges, state)
 
 tests/                       # Comprehensive unit tests (organized by module)
 ├── conftest.py              # Shared pytest fixtures
@@ -95,7 +87,6 @@ tests/                       # Comprehensive unit tests (organized by module)
 ├── auth/                    # Authentication tests
 ├── chat/                    # Chat persistence tests
 ├── clients/                 # External client tests
-├── comparison/              # Comparison tests
 ├── core/                    # Core module tests (config, logging)
 ├── data/                    # Data model tests
 ├── embeddings/              # Embedding tests
@@ -106,17 +97,12 @@ tests/                       # Comprehensive unit tests (organized by module)
 ├── models/                  # ORM model tests
 ├── orchestrator/            # Orchestrator tests
 ├── parsers/                 # Parser tests
-├── portfolio/               # Portfolio analytics tests
-├── rag/                     # RAG pipeline tests
-├── recommendation/          # Recommendation engine tests
-├── reports/                 # Report generation tests
 ├── retrieval/               # Retrieval tests
 ├── sandbox/                 # Sandbox tests
 ├── security/                # Security tests
 ├── services/                # Service tests
 ├── storage/                 # Storage tests
-├── vectorstore/             # Vector store tests
-└── workflow/                # Workflow engine tests
+└── vectorstore/             # Vector store tests
 
 configs/                     # YAML/JSON configuration files
 docs/                        # Project documentation
@@ -124,6 +110,7 @@ storage/                     # Persistent storage (gitignored)
 ├── raw/                     # Raw downloaded filings
 ├── parsed/                  # Parsed/structured filing output
 ├── embeddings/              # Vector embeddings and indices
+├── demo/                    # Synthetic fixtures & providers for DEMO_MODE
 └── logs/                    # Rotating log files
 ```
 

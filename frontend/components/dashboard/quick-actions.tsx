@@ -56,12 +56,6 @@ const actions: Action[] = [
     href: "/reports",
     icon: FileText,
   },
-  {
-    title: "Market screener",
-    description: "Check a candidate against criteria",
-    href: "/screener",
-    icon: SlidersHorizontal,
-  },
 ];
 
 export function QuickActions() {
@@ -73,7 +67,7 @@ export function QuickActions() {
         description="The research workflows this workspace exposes."
       />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2 sm:gap-x-10">
         {actions.map((action) => {
           const Icon = action.icon;
 
@@ -81,30 +75,30 @@ export function QuickActions() {
             <Link
               key={action.title}
               href={action.href}
-              className="group relative flex items-start gap-3.5 rounded-xl border border-border bg-card px-4 py-4 shadow-card transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group -mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span
                 className={
                   action.primary
-                    ? "flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand"
-                    : "flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:text-foreground"
+                    ? "flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand"
+                    : "flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors group-hover:text-foreground"
                 }
               >
-                <Icon size={17} aria-hidden="true" />
+                <Icon size={16} aria-hidden="true" />
               </span>
 
               <span className="min-w-0 flex-1">
-                <span className="block text-label font-semibold text-foreground">
+                <span className="block text-label font-medium text-foreground">
                   {action.title}
                 </span>
-                <span className="mt-1 block text-caption leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 block truncate text-caption text-muted-foreground">
                   {action.description}
                 </span>
               </span>
 
               <ArrowUpRight
-                size={15}
-                className="mt-0.5 shrink-0 text-subtle-foreground transition-all duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
+                size={14}
+                className="shrink-0 text-subtle-foreground transition-all duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
                 aria-hidden="true"
               />
             </Link>

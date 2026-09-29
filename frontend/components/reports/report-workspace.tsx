@@ -10,6 +10,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { Field, TickerInput } from "@/components/ui/field";
+import { TickerChip } from "@/components/ui/badge";
 import { SkeletonRows } from "@/components/ui/skeleton";
 
 import type { ApiResponse, ReportData } from "@/types/analysis";
@@ -94,7 +95,7 @@ export function ReportWorkspace() {
               />
             </Field>
 
-            <Button type="submit" size="lg" disabled={!valid || generating}>
+            <Button type="submit" disabled={!valid || generating}>
               {generating ? (
                 <Loader2
                   size={16}
@@ -112,17 +113,15 @@ export function ReportWorkspace() {
             <span className="text-caption text-subtle-foreground">Suggested</span>
 
             {suggestions.map((suggestion) => (
-              <button
+              <TickerChip
                 key={suggestion}
-                type="button"
+                value={suggestion}
+                title={`Use ${suggestion}`}
                 onClick={() => {
                   setTicker(suggestion);
                   setReport(null);
                 }}
-                className="rounded-full border border-border bg-surface px-3 py-1 font-mono text-caption font-medium tracking-[0.04em] text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {suggestion}
-              </button>
+              />
             ))}
           </div>
         </CardBody>

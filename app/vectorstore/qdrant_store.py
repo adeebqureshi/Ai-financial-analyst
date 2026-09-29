@@ -162,17 +162,6 @@ class QdrantStore(BaseVectorStore):
             )
 
     @staticmethod
-    def _document_filter(document_id: str) -> Filter:
-        return Filter(
-            must=[
-                FieldCondition(
-                    key="document_id",
-                    match=MatchValue(value=document_id),
-                )
-            ]
-        )
-
-    @staticmethod
     def _tenant_filter(tenant_id: str) -> FieldCondition:
         if not isinstance(tenant_id, str) or not tenant_id:
             raise RetrievalError(

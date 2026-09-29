@@ -4,17 +4,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.utils.tickers import normalize_ticker
 def _validate_ticker(value: str) -> str:
     return normalize_ticker(value)
-def _validate_positive(value: float, field_name: str) -> float:
-    if value <= 0:
-        raise ValueError(f"{field_name} must be positive.")
-    return value
 def _validate_percentage(value: float, field_name: str) -> float:
     if not 0.0 <= value <= 1.0:
         raise ValueError(f"{field_name} must be between 0.0 and 1.0.")
-    return value
-def _validate_int_in_range(value: int, low: int, high: int, field_name: str) -> int:
-    if not low <= value <= high:
-        raise ValueError(f"{field_name} must be between {low} and {high}.")
     return value
 class FinancialStatementInput(BaseModel):
     model_config = ConfigDict(
@@ -42,14 +34,7 @@ class FinancialStatementInput(BaseModel):
     debt: float = Field(..., ge=0, description="Total debt (in $M).")
     shares_outstanding: float = Field(..., gt=0, description="Shares outstanding (in M).")
     free_cash_flow: float = Field(..., description="Free cash flow (in $M).")
-    @field_validator("total_liabilities")
-    @classmethod
-    def validate_liabilities(cls, v: float) -> float:
-        return v
-    @field_validator("revenue", "total_assets", "shares_outstanding")
-    @classmethod
-    def ensure_positive(cls, v: float) -> float:
-        return v
+
 class ValuationParams(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -145,17 +130,7 @@ class SearchRequest(BaseModel):
             "date, preventing look-ahead bias."
         ),
     )
-class CompanyRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    ticker: str = Field(..., min_length=1, max_length=5, description="Ticker symbol (1-5 letters).")
 class ValuationRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_schema_extra={"example": {"statement": {}, "params": {}}},
-    )
-    statement: FinancialStatementInput = Field(..., description="Financial statement data.")
-    params: ValuationParams = Field(..., description="Valuation parameters.")
-class IntrinsicValueRequest(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
         json_schema_extra={"example": {"statement": {}, "params": {}}},
@@ -193,12 +168,6 @@ class ChatRequest(BaseModel):
         if v is None:
             return None
         return _validate_ticker(v)
-class FinancialRatiosRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_schema_extra={"example": {"statement": {}}},
-    )
-    statement: FinancialStatementInput = Field(..., description="Financial statement data.")
 class RiskAnalysisRequest(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -207,22 +176,6 @@ class RiskAnalysisRequest(BaseModel):
     piotroski_score: int = Field(..., ge=0, le=9, description="Piotroski F-Score (0-9).")
     altman_score: float = Field(..., description="Altman Z-Score.")
     beneish_score: float = Field(..., description="Beneish M-Score.")
-class ReportRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_schema_extra={"example": {"ticker": "AAPL", "query": "Should I buy Apple?"}},
-    )
-    ticker: str = Field(..., min_length=1, max_length=5, description="Ticker symbol (1-5 letters).")
-    query: str = Field(..., min_length=1, max_length=2000, description="Analysis query for the report.")
-    statement: FinancialStatementInput = Field(..., description="Financial statement data.")
-    valuation: ValuationParams = Field(..., description="Valuation parameters.")
-    piotroski_score: int = Field(..., ge=0, le=9, description="Piotroski F-Score (0-9).")
-    altman_score: float = Field(..., description="Altman Z-Score.")
-    beneish_score: float = Field(..., description="Beneish M-Score.")
-    @field_validator("ticker")
-    @classmethod
-    def validate_ticker_symbol(cls, v: str) -> str:
-        return _validate_ticker(v)
 class CompareRequest(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -249,15 +202,3 @@ class CompareRequest(BaseModel):
         if len(result) < 2:
             raise ValueError("At least 2 distinct tickers are required.")
         return result
-class ScreenRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_schema_extra={"example": {"min_piotroski": 7, "min_altman": 3.0, "max_results": 10}},
-    )
-    min_piotroski: int = Field(default=0, ge=0, le=9, description="Minimum Piotroski F-Score (0-9).")
-    min_altman: float = Field(default=0.0, ge=0, description="Minimum Altman Z-Score.")
-    max_beneish: float = Field(default=100.0, description="Maximum Beneish M-Score (lower is better).")
-    min_upside: float = Field(default=-100.0, description="Minimum upside percentage.")
-    max_results: int = Field(default=10, ge=1, le=100, description="Max results (1-100).")
-    statement: FinancialStatementInput = Field(..., description="Financial statement data of the candidate.")
-    valuation: ValuationParams = Field(..., description="Valuation parameters for the candidate.")

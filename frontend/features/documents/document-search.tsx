@@ -121,7 +121,6 @@ export function DocumentSearch({ initialQuery = "" }: { initialQuery?: string })
 
               <Button
                 type="submit"
-                size="lg"
                 disabled={!query.trim() || searchMutation.isPending}
               >
                 {searchMutation.isPending ? (
@@ -146,7 +145,7 @@ export function DocumentSearch({ initialQuery = "" }: { initialQuery?: string })
                 key={example}
                 type="button"
                 onClick={() => setQuery(example)}
-                className="max-w-full truncate rounded-full border border-border bg-surface px-3 py-1 text-caption text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="max-w-full truncate rounded-md border border-border bg-surface px-2.5 py-1.5 text-caption text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {example}
               </button>

@@ -119,6 +119,30 @@ def test_resource_limits_wiring_in_worker():
         pytest.skip("resource module unavailable on this platform")
     from app.sandbox.worker import _apply_resource_limits
     _apply_resource_limits(cpu_seconds=None, memory_mb=None)
+def test_resource_limit_availability_matches_platform() -> None:
+    """The advertised isolation posture must match the real platform.
+
+    The sandbox must never *claim* OS resource limits on a platform that
+    cannot apply them (``resource`` is POSIX-only), so the reported flag has
+    to agree with what the worker can actually do.
+    """
+    import os
+
+    from app.sandbox.executor import RESOURCE_LIMITS
+
+    resource_importable = True
+    try:
+        import resource  # noqa: F401
+    except ImportError:
+        resource_importable = False
+
+    if os.name == "posix" and resource_importable:
+        assert RESOURCE_LIMITS.available is True
+    else:
+        assert RESOURCE_LIMITS.available is False
+    assert RESOURCE_LIMITS.reason
+
+
 def test_memory_hog_aborts_instead_of_hanging():
     limited = PythonSandbox(memory_limit_mb=64)
     result = limited.run(

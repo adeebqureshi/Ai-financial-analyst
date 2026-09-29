@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Sparkles } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { TickerLookupForm } from "@/components/ui/ticker-lookup";
+import { TextAction } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function CompanyPage() {
@@ -44,13 +44,13 @@ export default function CompanyPage() {
         title="No company directory in this workspace"
         description="Look up a symbol above to view its profile, then run an AI analysis from there."
         action={
-          <Link
+          <TextAction
             href="/analysis"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-label font-medium text-foreground shadow-soft transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            icon={<Sparkles size={14} aria-hidden="true" />}
+            arrow
           >
-            <Sparkles size={15} aria-hidden="true" />
             Go to analysis
-          </Link>
+          </TextAction>
         }
       />
     </div>

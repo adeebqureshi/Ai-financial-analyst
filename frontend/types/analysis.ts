@@ -88,14 +88,6 @@ export interface SearchResultData {
   retrieval_time_ms: number;
 }
 
-export interface FinancialRatiosData {
-  debt_to_equity: number;
-  return_on_assets: number;
-  return_on_equity: number;
-  operating_margin: number;
-  net_margin: number;
-}
-
 export interface RiskAssessmentData {
   health_score: number;
   health_rating: string;
@@ -132,16 +124,6 @@ export interface AgentToolExecution {
   detail?: string;
 }
 
-export interface ChatData {
-  message: string;
-  ticker: string | null;
-  model: string | null;
-  sources: DocumentCitation[];
-
-  plan?: string[];
-  tools_used?: AgentToolExecution[];
-}
-
 export interface DocumentCitation {
   document_id: string;
   filename: string;
@@ -164,36 +146,6 @@ export interface DocumentListData {
   total: number;
 }
 
-export interface ScreenItemData {
-  ticker: string;
-  name: string | null;
-  piotroski_score: number;
-  altman_score: number;
-  beneish_score: number;
-  health_score: number;
-  health_rating: string;
-  intrinsic_value: number;
-  upside: number;
-  recommendation: string;
-}
-
-export interface ScreenData {
-  results: ScreenItemData[];
-  total: number;
-}
-
-
-export interface ScreenRequestData {
-  min_piotroski: number;
-  min_altman: number;
-  max_beneish: number;
-  min_upside: number;
-  max_results: number;
-  statement: FinancialStatementInput;
-  valuation: ValuationParams;
-}
-
-
 export interface ErrorDetail {
   field: string | null;
   message: string;
@@ -212,28 +164,4 @@ export interface ApiResponse<T> {
   data: T | null;
   errors: ErrorDetail[] | null;
   metadata: ResponseMetadata;
-}
-
-export interface FinancialStatementInput {
-  revenue: number;
-  operating_income: number;
-  net_income: number;
-  total_assets: number;
-  total_liabilities: number;
-  cash: number;
-  debt: number;
-  shares_outstanding: number;
-  free_cash_flow: number;
-}
-
-export interface ValuationParams {
-  current_price: number;
-  growth_rate: number;
-  risk_free_rate: number;
-  beta: number;
-  market_return: number;
-  tax_rate: number;
-  cost_of_debt?: number;
-  terminal_growth?: number;
-  years?: number;
 }

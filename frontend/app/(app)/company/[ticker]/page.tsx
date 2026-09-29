@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Building2, Landmark, Sparkles } from "lucide-react";
+import { Building2, Landmark, Sparkles } from "lucide-react";
 
 import { api } from "@/services/api";
 import { Badge, TickerBadge } from "@/components/ui/badge";
@@ -34,13 +34,15 @@ export default async function CompanyDetailPage({
   let company;
 
   try {
-    const response = await api.company(symbol);
+    const response = await api.analyze(symbol);
 
-    if (!response?.data) {
+    const profile = response?.data?.company;
+
+    if (!profile) {
       throw new Error("Company not found");
     }
 
-    company = response.data;
+    company = profile;
   } catch {
     notFound();
   }
@@ -83,10 +85,9 @@ export default async function CompanyDetailPage({
         </div>
 
         <Link href={`/analysis/${company.ticker}`} className="shrink-0">
-          <Button size="lg">
-            <Sparkles size={16} aria-hidden="true" />
+          <Button size="md">
+            <Sparkles size={15} aria-hidden="true" />
             Run AI analysis
-            <ArrowRight size={16} aria-hidden="true" />
           </Button>
         </Link>
       </header>

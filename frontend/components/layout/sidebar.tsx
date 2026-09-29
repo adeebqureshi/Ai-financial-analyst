@@ -253,7 +253,8 @@ export function Sidebar({
             href="/dashboard"
             onClick={onClose}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-lg bg-brand-subtle px-3 py-2 text-caption font-medium text-brand transition-colors hover:bg-brand/15",
+              "flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-caption font-medium text-brand",
+              "transition-colors hover:bg-brand-subtle",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
               collapsed && "md:hidden"
             )}

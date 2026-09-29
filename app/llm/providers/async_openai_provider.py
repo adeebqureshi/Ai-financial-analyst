@@ -14,6 +14,7 @@ from app.llm.exceptions import (
 )
 from app.llm.models import LLMRequest, LLMResponse
 from app.llm.provider_config import ProviderConfig
+from app.llm.providers.openai_provider import extract_retry_after
 from app.llm.retry import RetryPolicy
 from app.llm.usage import TokenUsage
 logger = get_logger("app.llm.openai")
@@ -61,7 +62,10 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
                 "(invalid or missing API key)."
             ) from exc
         if isinstance(exc, openai.RateLimitError):
-            raise RateLimitError("LLM provider rate limit exceeded.") from exc
+            raise RateLimitError(
+                "LLM provider rate limit exceeded.",
+                retry_after=extract_retry_after(exc),
+            ) from exc
         if isinstance(exc, openai.APITimeoutError):
             raise TimeoutError("LLM provider request timed out.") from exc
         if isinstance(exc, openai.APIConnectionError):
@@ -71,6 +75,25 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
             detail = f" with status {status}" if status else ""
             raise ProviderError(f"LLM provider API error{detail}.") from exc
         raise exc
+
+    async def _create(self, client: AsyncOpenAI, request: LLMRequest) -> object:
+        """Call the provider, mapping transport errors *inside* the retry.
+
+        The retry policy only recognises our own exception types, so the
+        mapping has to happen before the policy sees the failure -
+        otherwise rate limits and timeouts are never retried.
+        """
+        try:
+            return await client.chat.completions.create(
+                model=self.config.model,
+                messages=self._messages(request),
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            )
+        except Exception as exc:
+            self._map_error(exc)
+            raise
+
     async def generate(
         self,
         request: LLMRequest,
@@ -79,12 +102,7 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
         start = time.perf_counter()
         try:
             completion = await self._retry.execute_async(
-                lambda: client.chat.completions.create(
-                    model=self.config.model,
-                    messages=self._messages(request),
-                    temperature=self.config.temperature,
-                    max_tokens=self.config.max_tokens,
-                )
+                lambda: self._create(client, request)
             )
         except Exception as exc:
             self._log_failure("generate", exc, start)

@@ -96,10 +96,6 @@ def _stub_llm(monkeypatch):
         "app.agents.financial_analyst.OpenAIClient",
         _StubClient,
     )
-    monkeypatch.setattr(
-        "app.llm.report_generator.OpenAIClient",
-        _StubClient,
-    )
 
     import app.services.chat_service as chat_service_module
 

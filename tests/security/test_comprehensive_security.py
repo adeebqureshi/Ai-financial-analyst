@@ -277,10 +277,8 @@ class TestAuthorizationBoundaries:
             ("POST", "/analyze", {"ticker": "AAPL"}),
             ("POST", "/report", {"ticker": "AAPL"}),
             ("POST", "/valuation", {}),
-            ("POST", "/financial-ratios", {}),
             ("POST", "/risk-analysis", {}),
             ("POST", "/compare", {"tickers": ["AAPL", "MSFT"]}),
-            ("POST", "/screen", {}),
         ]
         for method, path, json_data in endpoints:
             func = getattr(auth_client, method.lower())

@@ -2,16 +2,12 @@ import type {
   AgentToolExecution,
   AnalyzeData,
   ApiResponse,
-  ChatData,
   CompareData,
-  CompanyData,
   DocumentCitation,
   DocumentData,
   DocumentListData,
-  FinancialRatiosData,
   ReportData,
   RiskAssessmentData,
-  ScreenData,
   SearchResultData,
 } from "@/types/analysis";
 
@@ -388,12 +384,6 @@ export const api = {
     return request("/version");
   },
 
-  company(
-    ticker: string
-  ): Promise<ApiResponse<CompanyData>> {
-    return request(`/company/${ticker}`);
-  },
-
   analyze(
     ticker: string
   ): Promise<ApiResponse<AnalyzeData>> {
@@ -402,33 +392,6 @@ export const api = {
       body: JSON.stringify({
         ticker,
       }),
-    });
-  },
-
-  valuation(
-    body: unknown
-  ): Promise<ApiResponse<unknown>> {
-    return request("/valuation", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  },
-
-  intrinsicValue(
-    body: unknown
-  ): Promise<ApiResponse<unknown>> {
-    return request("/intrinsic-value", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  },
-
-  financialRatios(
-    body: unknown
-  ): Promise<ApiResponse<FinancialRatiosData>> {
-    return request("/financial-ratios", {
-      method: "POST",
-      body: JSON.stringify(body),
     });
   },
 
@@ -461,15 +424,6 @@ export const api = {
     });
   },
 
-  chat(
-    body: unknown
-  ): Promise<ApiResponse<ChatData>> {
-    return request("/chat", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  },
-
   chatStream(
     body: unknown,
     handlers: ChatStreamHandlers,
@@ -490,17 +444,6 @@ export const api = {
     );
   },
 
-  deleteChatSession(
-    sessionId: string
-  ): Promise<ApiResponse<{ deleted: boolean }>> {
-    return request(
-      `/chat/sessions/${encodeURIComponent(sessionId)}`,
-      {
-        method: "DELETE",
-      }
-    );
-  },
-
   search(
     query: string
   ): Promise<ApiResponse<SearchResultData>> {
@@ -509,15 +452,6 @@ export const api = {
       body: JSON.stringify({
         query,
       }),
-    });
-  },
-
-  screen(
-    body: unknown
-  ): Promise<ApiResponse<ScreenData>> {
-    return request("/screen", {
-      method: "POST",
-      body: JSON.stringify(body),
     });
   },
 

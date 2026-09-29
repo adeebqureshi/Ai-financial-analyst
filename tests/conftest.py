@@ -15,6 +15,19 @@ _default_chat_db = os.path.join(
 os.environ.setdefault("CHAT_DATABASE_URL", f"sqlite:///{_default_chat_db}")
 os.environ.setdefault("QDRANT_URL", "")
 
+# The test suite must never reach a real LLM endpoint. Several tests build a
+# CoordinatorAgent from ambient settings, which previously constructed a live
+# OpenAI-compatible client and blocked on a real HTTP call. Forcing the mock
+# provider keeps the suite hermetic and fast; tests that exercise a specific
+# provider inject it explicitly instead of relying on the environment.
+os.environ["LLM_PROVIDER"] = "mock"
+os.environ.pop("OPENAI_API_KEY", None)
+os.environ.pop("FREELLMAPI_API_KEY", None)
+
+# Keep model-dependent components off the network during tests.
+os.environ.setdefault("ENABLE_RERANKER", "false")
+os.environ.setdefault("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+
 import pytest
 
 

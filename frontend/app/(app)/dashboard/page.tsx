@@ -1,6 +1,5 @@
 import { AISearch } from "@/components/dashboard/ai-search";
 import { StatusStrip } from "@/components/dashboard/status-strip";
-import { Watchlist } from "@/components/dashboard/watchlist";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { RecentInsights } from "@/components/dashboard/recent-insights";
 import { PageHeader } from "@/components/ui/page-header";
@@ -27,10 +26,6 @@ export default function DashboardPage() {
           <RecentInsights />
         </div>
       </div>
-
-      <section aria-label="Watchlist shortcuts">
-        <Watchlist />
-      </section>
     </div>
   );
 }

@@ -34,20 +34,12 @@ _TAGS_METADATA: list[dict[str, str]] = [
         "description": "Semantic search over the retrieval engine.",
     },
     {
-        "name": "Company",
-        "description": "Company profile information by ticker symbol.",
-    },
-    {
         "name": "Valuation",
         "description": "Discounted cash flow (DCF) valuation and intrinsic value calculations.",
     },
     {
         "name": "Chat",
         "description": "Conversational AI financial analyst chat.",
-    },
-    {
-        "name": "Financial Ratios",
-        "description": "Financial ratio calculations from financial statements.",
     },
     {
         "name": "Risk",
@@ -60,10 +52,6 @@ _TAGS_METADATA: list[dict[str, str]] = [
     {
         "name": "Compare",
         "description": "Multi-company comparison using common valuation parameters.",
-    },
-    {
-        "name": "Screen",
-        "description": "Stock screening based on financial health and valuation criteria.",
     },
     {
         "name": "Documents",
