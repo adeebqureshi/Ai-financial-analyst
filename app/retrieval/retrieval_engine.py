@@ -80,8 +80,8 @@ class RetrievalEngine:
             return None
         if self._reranker is None and not self._reranker_failed:
             try:
-                from app.retrieval.reranker import Reranker
-                self._reranker = Reranker()
+                from app.retrieval.reranker import get_reranker
+                self._reranker = get_reranker()
             except Exception as exc:
                 self._reranker_failed = True
                 logger.warning(

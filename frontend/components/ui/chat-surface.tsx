@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Loader2, RotateCcw, Send, X } from "lucide-react";
+import { ArrowUpRight, Bot, Loader2, RotateCcw, Send, Sparkles, X } from "lucide-react";
 
 import { Markdown } from "@/components/ui/markdown";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,15 @@ type Props = {
   placeholder?: string;
 
   autoPrompt?: string | null;
+  /**
+   * Optional example questions rendered in the empty state. Clicking one sends
+   * it through the same `send()` path the composer uses. Omit to keep the
+   * original minimal empty state.
+   */
+  suggestions?: string[];
+  /** Title/description for the empty state when suggestions are supplied. */
+  emptyTitle?: string;
+  emptyDescription?: string;
 
   sessionId?: string | null;
 
@@ -45,6 +54,9 @@ export function ChatSurface({
   inputLabel = "Message the AI financial analyst",
   placeholder = "Ask a research question…",
   autoPrompt = null,
+  suggestions,
+  emptyTitle = "Ask about your documents",
+  emptyDescription = "Ask questions about financial filings, management commentary, performance, risks, or other indexed research.",
   sessionId = null,
   readOnly = false,
 }: Props) {
@@ -155,14 +167,64 @@ export function ChatSurface({
         className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
       >
         {messages.length === 0 && !isStreaming && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
-            <p className="text-label font-medium text-foreground">
-              Ask a research question
-            </p>
-            <p className="max-w-xs text-caption text-muted-foreground">
-              Grounded in SEC filings, uploaded documents and financial
-              statements.
-            </p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-2.5 py-6 text-center">
+            {suggestions && suggestions.length > 0 ? (
+              <>
+                <span
+                  className="flex size-10 items-center justify-center rounded-xl bg-brand-subtle text-brand"
+                  aria-hidden="true"
+                >
+                  <Sparkles size={18} />
+                </span>
+                <p className="text-label font-semibold text-foreground">
+                  {emptyTitle}
+                </p>
+                <p className="max-w-sm text-caption leading-relaxed text-muted-foreground">
+                  {emptyDescription}
+                </p>
+                <ul className="mt-1.5 grid w-full max-w-md gap-1.5">
+                  {suggestions.map((question) => (
+                    <li key={question}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isStreaming) return;
+                          setInput("");
+                          send(question, {
+                            ticker,
+                            documentId,
+                            asOfDate,
+                          } satisfies SendOptions);
+                        }}
+                        className="group flex w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-left text-caption text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Sparkles
+                          size={13}
+                          className="shrink-0 text-brand"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 flex-1">{question}</span>
+                        <ArrowUpRight
+                          size={13}
+                          className="shrink-0 text-subtle-foreground transition-transform duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <p className="text-label font-medium text-foreground">
+                  Ask a research question
+                </p>
+                <p className="max-w-xs text-caption text-muted-foreground">
+                  Grounded in SEC filings, uploaded documents and financial
+                  statements.
+                </p>
+              </>
+            )}
           </div>
         )}
 

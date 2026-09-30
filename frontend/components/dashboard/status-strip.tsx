@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { BookOpenText, CircleDot, Database, ServerCog } from "lucide-react";
+import { CircleDot, Database, ServerCog } from "lucide-react";
 
 import { useWorkspaceStatus } from "@/hooks/use-workspace-status";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -131,25 +130,6 @@ export function StatusStrip() {
           </div>
         );
       })}
-
-      <Link
-        href="/research"
-        className="flex items-center gap-3 bg-card px-4 py-3.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-      >
-        <BookOpenText
-          size={15}
-          className="shrink-0 text-brand"
-          aria-hidden="true"
-        />
-        <span className="min-w-0">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle-foreground">
-            Research
-          </span>
-          <span className="mt-0.5 block truncate text-label font-medium text-foreground">
-            Manage documents
-          </span>
-        </span>
-      </Link>
     </section>
   );
 }

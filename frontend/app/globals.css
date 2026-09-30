@@ -143,7 +143,9 @@
   --input: #e2d6c7;
   --ring: #8a6a05;
 
-  --brand: #8a6a05;
+  /* Slightly deeper than the previous #8a6a05 so gold text clears WCAG AA (4.5:1)
+     on the sidebar and brand-subtle surfaces (worst case 5.10:1). */
+  --brand: #7d6004;
   --brand-foreground: #fffdfb;
   --brand-subtle: #f6eeda;
 

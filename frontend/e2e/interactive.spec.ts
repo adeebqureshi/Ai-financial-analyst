@@ -4,11 +4,14 @@ test.describe("Interactive Features Audit", () => {
   test("dashboard AI search form works", async ({ page }) => {
     await page.goto("http://localhost:3000/dashboard");
     await page.waitForLoadState("networkidle");
-    const input = page.locator("input[placeholder*='Enter ticker']");
+    const input = page.locator(
+      "input[placeholder*='Ask about a company, market or document']"
+    );
     await expect(input).toBeVisible();
     await input.fill("TSLA");
     await input.press("Enter");
     await page.waitForTimeout(2000);
+    await expect(page).toHaveURL(/\/analysis\/TSLA$/);
   });
 
   test("analysis page ticker input validation", async ({ page }) => {

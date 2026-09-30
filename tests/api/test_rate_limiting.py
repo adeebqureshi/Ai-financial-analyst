@@ -215,13 +215,28 @@ class TestHybridRateLimiter:
         assert result.allowed is True
         assert result.current_minute == 1
 class TestRateLimitingIntegration:
+    @pytest.fixture()
+    def fixed_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pin the limiter clock so a fixed-window test cannot straddle a minute.
+
+        The limiter keys its counters on ``int(now // 60)``. Without pinning, a
+        run that begins near the end of a minute splits its requests across two
+        windows, the counter resets, and the expected 429 never fires. The
+        assertion itself is unchanged; only the window boundary is made
+        deterministic. Requested explicitly by the burst tests; the window-reset
+        test drives the clock itself and must not use this.
+        """
+        import app.api.rate_limiter as rate_limiter_module
+
+        monkeypatch.setattr(rate_limiter_module, "_clock", lambda: 1_700_000_000.0)
+
     def setup_method(self) -> None:
         reset_rate_limits_for_testing()
         app.dependency_overrides.clear()
     def teardown_method(self) -> None:
         app.dependency_overrides.clear()
         reset_rate_limits_for_testing()
-    def test_chat_endpoint_rate_limit_authenticated(self) -> None:
+    def test_chat_endpoint_rate_limit_authenticated(self, fixed_window: None) -> None:
         settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
         mock_chat = MagicMock()
@@ -256,7 +271,7 @@ class TestRateLimitingIntegration:
             json={"message": "Over limit", "ticker": "AAPL"},
         )
         assert response.status_code == 429
-    def test_analyze_endpoint_rate_limit(self) -> None:
+    def test_analyze_endpoint_rate_limit(self, fixed_window: None) -> None:
         settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
         mock_analysis = MagicMock()
@@ -273,7 +288,7 @@ class TestRateLimitingIntegration:
             json={"ticker": "AAPL"},
         )
         assert response.status_code == 429
-    def test_documents_endpoint_rate_limit(self) -> None:
+    def test_documents_endpoint_rate_limit(self, fixed_window: None) -> None:
         settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
         mock_doc = MagicMock()
@@ -284,7 +299,7 @@ class TestRateLimitingIntegration:
             assert response.status_code == 200, f"Request {i} failed: {response.text}"
         response = client.get("/documents")
         assert response.status_code == 429
-    def test_search_endpoint_rate_limit(self) -> None:
+    def test_search_endpoint_rate_limit(self, fixed_window: None) -> None:
         settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
         mock_search = MagicMock()
@@ -301,7 +316,7 @@ class TestRateLimitingIntegration:
             json={"query": "over limit"},
         )
         assert response.status_code == 429
-    def test_rate_limit_headers_present(self) -> None:
+    def test_rate_limit_headers_present(self, fixed_window: None) -> None:
         settings = make_settings(rate_limit_enabled=True, auth_enabled=True)
         user = User(id="test-user-123", email="test@example.com", hashed_password="hash", is_active=True)
         mock_chat = MagicMock()

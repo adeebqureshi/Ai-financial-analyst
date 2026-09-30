@@ -52,8 +52,15 @@ test.describe("Dashboard workflow", () => {
     await page.goto("/dashboard");
 
     await expect(page.locator("text=Financial Workspace")).toBeVisible();
-    await expect(page.locator("text=Financial Command Hub")).toBeVisible();
-    await expect(page.locator("text=Quick Actions")).toBeVisible();
+    await expect(
+      page.locator("main").getByRole("heading", { name: "Command Hub" })
+    ).toBeVisible();
+    await expect(page.locator("text=What do you want to do?")).toBeVisible();
+    await expect(
+      page
+        .locator("main")
+        .getByRole("heading", { name: "Knowledge base" })
+    ).toBeVisible();
 
 
     await expect(page.locator("text=Portfolio Value")).toHaveCount(0);
@@ -66,7 +73,9 @@ test.describe("Dashboard workflow", () => {
     await page.goto("/dashboard");
 
 
-    await expect(page.locator("text=Ask AI about any public company")).toBeVisible();
+    await expect(
+      page.locator("text=Ask about a company, market or document")
+    ).toBeVisible();
   });
 });
 

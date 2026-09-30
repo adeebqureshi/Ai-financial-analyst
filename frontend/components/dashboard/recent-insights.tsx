@@ -41,8 +41,8 @@ export function RecentInsights() {
     <section aria-labelledby="recent-insights-heading" className="space-y-4">
       <SectionHeading
         id="recent-insights-heading"
-        title="Recent AI insights"
-        description="Your latest copilot research sessions, restored from the workspace."
+        title="Recent work"
+        description="Your latest AI research sessions, restored from the workspace."
         actions={
           <Button
             variant="subtle"

@@ -259,6 +259,15 @@ def get_endpoint_config(
             requests_per_hour=settings.rate_limit_documents_per_hour,
             key_prefix="ratelimit:documents",
         ),
+        # Uploads parse, chunk, embed and index a PDF, so they get their own
+        # bucket. Previously they shared `ratelimit:documents` with the cheap
+        # read-only list/delete routes, whose automatic polling exhausted the
+        # hourly quota and blocked uploads (429, Retry-After 3600).
+        "documents_upload": RateLimitConfig(
+            requests_per_minute=settings.rate_limit_documents_per_minute,
+            requests_per_hour=settings.rate_limit_documents_per_hour,
+            key_prefix="ratelimit:documents:upload",
+        ),
         "search": RateLimitConfig(
             requests_per_minute=settings.rate_limit_search_per_minute,
             requests_per_hour=settings.rate_limit_search_per_hour,

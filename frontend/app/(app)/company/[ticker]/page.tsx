@@ -84,12 +84,12 @@ export default async function CompanyDetailPage({
           </div>
         </div>
 
-        <Link href={`/analysis/${company.ticker}`} className="shrink-0">
-          <Button size="md">
+        <Button asChild size="md" className="shrink-0">
+          <Link href={`/analysis/${company.ticker}`}>
             <Sparkles size={15} aria-hidden="true" />
             Run AI analysis
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </header>
 
       <Card>

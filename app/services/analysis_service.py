@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.financial.analysis import FinancialAnalysisEngine
@@ -10,7 +12,6 @@ from app.financial.data import FinancialDataService
 from app.financial.health import FinancialHealth
 from app.financial.models import FinancialStatement
 from app.financial.wacc import WACC
-from app.orchestrator.pipeline import FinancialPipeline
 from app.schemas.analysis import AnalyzeRequest, FinancialStatementInput, ValuationParams
 from app.schemas.responses import (
     AnalyzeResponseData,
@@ -20,6 +21,9 @@ from app.schemas.responses import (
     ValuationResultData,
 )
 from app.utils.tickers import normalize_ticker
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle guard
+    from app.orchestrator.pipeline import FinancialPipeline
 _demo_financial_data_service = None
 def _get_demo_financial_data_service():
     global _demo_financial_data_service
@@ -31,15 +35,22 @@ logger = get_logger(__name__)
 class AnalysisService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._pipeline: FinancialPipeline | None = None
+        # Annotated as a string so the module-level import of
+        # `FinancialPipeline` is not needed. Importing it eagerly closed a
+        # cycle: pipeline -> app.agents -> coordinator -> app.services ->
+        # analysis_service -> pipeline, which made `import
+        # app.orchestrator.pipeline` fail when it was the first import.
+        self._pipeline: "FinancialPipeline | None" = None
         self._engine = FinancialAnalysisEngine()
         if settings.is_demo_mode:
             self._financial_data = _get_demo_financial_data_service()
         else:
             self._financial_data = FinancialDataService()
         self._assumptions = get_financial_assumptions(settings)
-    def _get_pipeline(self) -> FinancialPipeline:
+    def _get_pipeline(self) -> "FinancialPipeline":
         if self._pipeline is None:
+            from app.orchestrator.pipeline import FinancialPipeline
+
             self._pipeline = FinancialPipeline()
         return self._pipeline
     @staticmethod

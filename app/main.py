@@ -167,17 +167,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _run_database_migrations(settings, app_logger)
         _run_chat_retention_cleanup(settings, app_logger)
 
-        if not (settings.is_test or settings.is_development or settings.is_demo_mode):
+        # Pre-warm in every non-test environment, including development. The
+        # frontend's reverse proxy drops a first request that takes longer than
+        # ~30s, and a cold reranker/embedding load is exactly that long.
+        if not (settings.is_test or settings.is_demo_mode):
             try:
                 import asyncio
                 import concurrent.futures
                 from app.embeddings.embedding_service import _get_model
+                from app.retrieval.reranker import get_reranker
                 loop = asyncio.get_event_loop()
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     await loop.run_in_executor(pool, _get_model)
                 app_logger.info("Embedding model pre-warmed successfully")
             except Exception as exc:
                 app_logger.warning("Embedding model pre-warm skipped: %s", exc)
+
+            # The cross-encoder reranker is otherwise loaded lazily on the first
+            # retrieval, which pushed the first chat request past the ~30s
+            # timeout of the frontend's reverse proxy and surfaced as an empty
+            # response. Warm it here, alongside the embedding model, so the
+            # first user request is served promptly.
+            try:
+                async def _warm_reranker() -> None:
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        await loop.run_in_executor(pool, get_reranker)
+
+                await _warm_reranker()
+                app_logger.info("Reranker pre-warmed successfully")
+            except Exception as exc:
+                app_logger.warning("Reranker pre-warm skipped: %s", exc)
 
         yield
         app_logger.info("Shutting down %s", APP_NAME)

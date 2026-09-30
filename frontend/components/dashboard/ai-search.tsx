@@ -80,7 +80,7 @@ export function AISearch() {
             id="ai-search-heading"
             className="text-title text-foreground"
           >
-            Ask AI about any public company
+            Ask about a company, market or document
           </h2>
         </div>
 
@@ -116,8 +116,8 @@ export function AISearch() {
                 setQuery(event.target.value);
                 setError(null);
               }}
-              placeholder="Enter ticker (AAPL, MSFT, NVDA…) or ask a research question"
-              aria-label="Ticker to analyze or question for the AI copilot"
+              placeholder="Ask about a company, market or document…"
+              aria-label="Ticker to analyze, or a question for the AI copilot"
               autoComplete="off"
               spellCheck={false}
               className="h-14 min-w-0 flex-1 bg-transparent text-body text-foreground outline-none placeholder:text-subtle-foreground"

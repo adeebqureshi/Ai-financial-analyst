@@ -1,5 +1,6 @@
 from __future__ import annotations
 from app.core.config import Settings
+from app.core.exceptions import ValidationError
 from app.core.logging import get_logger
 from app.financial.models import FinancialStatement
 from app.financial.valuation import ValuationEngine
@@ -37,6 +38,19 @@ class ValuationService:
             terminal_growth=request.params.terminal_growth,
             years=request.params.years,
         )
+
+        # `ValuationEngine.evaluate` returns None when the inputs cannot produce
+        # a valuation (e.g. non-positive equity, or a discount rate that cannot
+        # be derived). Dereferencing it raised AttributeError and surfaced as an
+        # unhandled 500; it is a client-input problem, so answer 422 instead.
+        if result is None:
+            raise ValidationError(
+                "The supplied statement and assumptions do not produce a "
+                "usable valuation (equity must be positive and the discount "
+                "rate derivable).",
+                error_code="VALUATION_NOT_COMPUTABLE",
+            )
+
         return ValuationResponseData(
             valuation=ValuationResultData(
                 intrinsic_value=result.intrinsic_value,

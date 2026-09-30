@@ -103,13 +103,32 @@ class DocumentService:
             overlap=settings.chunk_overlap,
         )
         self._embedder = EmbeddingService()
-        if settings.is_demo_mode:
-            self._store = _get_demo_vector_store()
-        else:
-            self._store = QdrantStore(
-                collection_name=collection_name,
-            )
-        self._engine = RetrievalEngine()
+        self._collection_name = collection_name
+        # The vector store and the retrieval engine each open a Qdrant
+        # connection and verify the collection on construction (~4s each on a
+        # cold socket). A `DocumentService` is built per request, so doing that
+        # eagerly made every read-only call - e.g. `GET /documents`, which only
+        # reads record JSON from disk - pay ~8s. They are now created on first
+        # use, so a request only pays for the subsystem it actually touches.
+        self._store: object | None = None
+        self._engine: RetrievalEngine | None = None
+
+    @property
+    def _vector_store(self):
+        if self._store is None:
+            if self._settings.is_demo_mode:
+                self._store = _get_demo_vector_store()
+            else:
+                self._store = QdrantStore(
+                    collection_name=self._collection_name,
+                )
+        return self._store
+
+    @property
+    def _retrieval_engine(self) -> RetrievalEngine:
+        if self._engine is None:
+            self._engine = RetrievalEngine()
+        return self._engine
 
     def _library_dir(self) -> Path:
         return self._paths.get_metadata_path() / "documents"
@@ -285,7 +304,7 @@ class DocumentService:
                 }
             )
 
-        self._store.upsert(
+        self._vector_store.upsert(
             ids=ids,
             vectors=vectors,
             payloads=payloads,
@@ -447,18 +466,21 @@ class DocumentService:
     ) -> dict:
         with _delete_lock:
             self._load_owned_record(document_id, owner_id)
-            self._store.delete_by_document_id(
+            self._vector_store.delete_by_document_id(
                 document_id,
                 owner_id=owner_id or "anonymous",
             )
             FileManager.delete(self._record_path(document_id))
-            self.refresh_engine(owner_id)
+            self.refresh_engine(owner_id or "anonymous")
         logger.info("Deleted document %s", document_id)
         return {"document_id": document_id}
 
     def refresh_engine(self, owner_id: str | None = None) -> None:
         try:
-            self._engine.refresh(self._store, owner_id=owner_id)
+            self._retrieval_engine.refresh(
+                self._vector_store,
+                owner_id=owner_id or "anonymous",
+            )
         except Exception as exc:
             logger.warning("Failed to refresh retrieval engine: %s", exc)
 
@@ -489,7 +511,7 @@ class DocumentService:
                     retrieval_time_ms=0.0,
                 )
 
-        return self._engine.retrieve(
+        return self._retrieval_engine.retrieve(
             query=query,
             limit=limit,
             document_id=document_id,

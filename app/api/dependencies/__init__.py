@@ -4,6 +4,7 @@ from app.api.dependencies.rate_limit import (
     rate_limit_chat,
     rate_limit_analyze,
     rate_limit_documents,
+    rate_limit_documents_upload,
     rate_limit_search,
     reset_rate_limits_for_testing,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "rate_limit_chat",
     "rate_limit_analyze",
     "rate_limit_documents",
+    "rate_limit_documents_upload",
     "rate_limit_search",
     "reset_rate_limits_for_testing",
 ]

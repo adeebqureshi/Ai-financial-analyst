@@ -90,6 +90,7 @@ class RateLimitDependency:
 rate_limit_chat = RateLimitDependency("chat")
 rate_limit_analyze = RateLimitDependency("analyze")
 rate_limit_documents = RateLimitDependency("documents")
+rate_limit_documents_upload = RateLimitDependency("documents_upload")
 rate_limit_search = RateLimitDependency("search")
 def reset_rate_limits_for_testing() -> None:
     from app.api.rate_limiter import clear_all_rate_limits, reset_rate_limiter
@@ -100,6 +101,7 @@ __all__ = [
     "rate_limit_chat",
     "rate_limit_analyze",
     "rate_limit_documents",
+    "rate_limit_documents_upload",
     "rate_limit_search",
     "reset_rate_limits_for_testing",
     "get_client_identifier",

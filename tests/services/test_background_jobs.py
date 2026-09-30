@@ -49,7 +49,11 @@ def _hermetic_embeddings(monkeypatch):
         "app.core.config.get_settings",
         lambda: _settings_with_no_similarity_floor(_real_get_settings()),
     )
-def _wait_until(predicate, timeout: float = 5.0) -> bool:
+# The job runs on a background thread that parses a PDF, so completion is
+# wall-clock dependent. 5s was tight enough to fail intermittently when the
+# full suite was also loading the embedding model. The assertion (job reached
+# "failed") is unchanged; only the wait budget is more tolerant of load.
+def _wait_until(predicate, timeout: float = 20.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():

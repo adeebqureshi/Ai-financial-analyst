@@ -1,7 +1,7 @@
 from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from app.api.dependencies import rate_limit_documents
+from app.api.dependencies import rate_limit_documents, rate_limit_documents_upload
 from app.api.dependencies.services import get_document_service
 from app.auth.dependencies import get_auth_settings, get_current_user
 from app.auth.exceptions import AuthenticationError
@@ -28,7 +28,7 @@ def _require_owner(
         "``background=true`` to queue large documents and poll "
         "``GET /documents/jobs/{job_id}`` for the indexing outcome."
     ),
-    dependencies=[Depends(rate_limit_documents)],
+    dependencies=[Depends(rate_limit_documents_upload)],
 )
 async def upload_document(
     file: UploadFile = File(...),
@@ -53,7 +53,7 @@ async def upload_document(
         "timestamps and error message (if any) for a background job. "
         "Jobs are only visible to their owner."
     ),
-    dependencies=[Depends(rate_limit_documents)],
+    dependencies=[Depends(rate_limit_documents_upload)],
 )
 async def get_job_status(
     job_id: str,
