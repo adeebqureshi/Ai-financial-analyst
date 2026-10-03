@@ -229,7 +229,11 @@ class DocumentService:
         owner_id: str | None = None,
     ) -> dict:
         filename = Path(file.filename or "").name
-        content = file.file.read()
+        # Read one byte past the limit rather than the whole stream: an
+        # unbounded `read()` buffers the entire upload in memory *before* the
+        # size check runs, so the 100 MB limit would not actually prevent memory
+        # exhaustion from a single oversized request.
+        content = file.file.read(_MAX_FILE_BYTES + 1)
         self._validate_pdf(filename, content)
         document_id = uuid.uuid4().hex
         tmp_path = self._write_temp(content)
@@ -352,7 +356,8 @@ class DocumentService:
         owner_id: str | None = None,
     ) -> dict:
         filename = Path(file.filename or "").name
-        content = file.file.read()
+        # Same bounded read as `upload` — see the note there.
+        content = file.file.read(_MAX_FILE_BYTES + 1)
         self._validate_pdf(filename, content)
         document_id = uuid.uuid4().hex
         job = self._jobs.create_job(

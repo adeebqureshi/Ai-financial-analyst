@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, AlertTriangle, AlertCircle, WifiOff, Lock } from "lucide-react";
+import { RefreshCw, AlertTriangle, AlertCircle, WifiOff, Lock, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api";
 
@@ -16,6 +16,16 @@ type ErrorDisplayProps = {
 
 function getErrorInfo(error: unknown) {
   if (error instanceof ApiError) {
+    // Our own timeout is not a server outage, so it must not be dressed up as
+    // one. Checked before `isServerError()`, which a 504 would otherwise match.
+    if (error.timedOut) {
+      return {
+        icon: Timer,
+        title: "Request Timed Out",
+        message: "This took longer than expected and was stopped. Please try again.",
+        isRetryable: true,
+      };
+    }
     if (error.isAuthError()) {
       return {
         icon: Lock,

@@ -149,6 +149,7 @@ describe("services/api.ts", () => {
       if (!(error instanceof ApiError)) throw new Error("Expected ApiError");
       expect(error.status).toBe(504);
       expect(error.message).toBe("The request timed out. Please try again.");
+      expect(error.timedOut).toBe(true);
       expect(error.isRetryable()).toBe(true);
       mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
       await expect(api.health()).resolves.toEqual({ ok: true });
@@ -254,6 +255,54 @@ describe("services/api.ts", () => {
       expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/documents/upload`, expect.objectContaining({
         method: "POST",
         body: expect.any(FormData),
+      }));
+    });
+
+    it("report survives past the default 30s timeout", async () => {
+      // Regression: `/report` runs the full valuation + LLM pipeline and takes
+      // ~60s end-to-end. Under the 30s default it was aborted before the
+      // backend replied, so the feature could never succeed. The response below
+      // lands at 60s — past the old budget, inside the long one.
+      vi.useFakeTimers();
+      mockFetch.mockImplementationOnce(
+        (_url, init) =>
+          new Promise((resolve, reject) => {
+            const timer = setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  status: 200,
+                  json: () => Promise.resolve({ data: { ticker: "NVDA", content: "# Report" } }),
+                }),
+              60_000
+            );
+            init?.signal?.addEventListener("abort", () => {
+              clearTimeout(timer);
+              reject(new DOMException("Aborted", "AbortError"));
+            });
+          })
+      );
+
+      const pending = api.report({ ticker: "NVDA" });
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      await expect(pending).resolves.toMatchObject({
+        data: { ticker: "NVDA", content: "# Report" },
+      });
+      vi.useRealTimers();
+    });
+
+    it("report posts the ticker to the correct endpoint", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+
+      await api.report({ ticker: "AAPL" });
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/report`, expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ ticker: "AAPL" }),
       }));
     });
 

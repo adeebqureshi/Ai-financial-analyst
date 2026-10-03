@@ -1,14 +1,10 @@
-import { PageHeader } from "@/components/ui/page-header";
+import { ComparisonHero } from "@/components/comparison/comparison-hero";
 import { ComparisonWorkspace } from "@/components/comparison/comparison-workspace";
 
 export default function ComparePage() {
   return (
-    <div className="mx-auto max-w-7xl space-y-8 pb-8">
-      <PageHeader
-        eyebrow="Markets & Compare"
-        title="Company comparison"
-        description="Compare multiple companies using AI valuation, financial health, risk analysis and intrinsic value."
-      />
+    <div className="mx-auto max-w-[100rem] space-y-6 pb-8">
+      <ComparisonHero />
 
       <ComparisonWorkspace />
     </div>

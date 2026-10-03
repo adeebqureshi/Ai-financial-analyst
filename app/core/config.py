@@ -530,6 +530,55 @@ class Settings(BaseSettings):
         description="Search endpoint requests per hour per user/IP.",
     )
 
+    rate_limit_report_per_minute: int = Field(
+        default=3,
+        description=(
+            "Report generation requests per minute per user/IP. Reports invoke "
+            "the LLM (analysis + narrative writing), so this is the tightest "
+            "bucket alongside chat; leaving it unlimited allowed unbounded "
+            "provider spend."
+        ),
+    )
+
+    rate_limit_report_per_hour: int = Field(
+        default=30,
+        description="Report generation requests per hour per user/IP.",
+    )
+
+    rate_limit_compare_per_minute: int = Field(
+        default=5,
+        description=(
+            "Compare requests per minute per user/IP. A single comparison "
+            "analyzes 2-10 companies, so it costs proportionally more than one "
+            "analysis request."
+        ),
+    )
+
+    rate_limit_compare_per_hour: int = Field(
+        default=50,
+        description="Compare requests per hour per user/IP.",
+    )
+
+    rate_limit_valuation_per_minute: int = Field(
+        default=10,
+        description="Valuation endpoint requests per minute per user/IP.",
+    )
+
+    rate_limit_valuation_per_hour: int = Field(
+        default=100,
+        description="Valuation endpoint requests per hour per user/IP.",
+    )
+
+    rate_limit_risk_per_minute: int = Field(
+        default=10,
+        description="Risk endpoint requests per minute per user/IP.",
+    )
+
+    rate_limit_risk_per_hour: int = Field(
+        default=100,
+        description="Risk endpoint requests per hour per user/IP.",
+    )
+
     rate_limit_sandbox_per_minute: int = Field(
         default=5,
         description="Sandbox execution requests per minute per user/IP.",

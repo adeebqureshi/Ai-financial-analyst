@@ -28,7 +28,14 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly endpoint: string,
-    public readonly originalError?: Error
+    public readonly originalError?: Error,
+    /**
+     * True when this request was aborted by the client-side timeout rather than
+     * failing on the server. The two need different wording — reporting our own
+     * timeout as a server outage sends users and support chasing the wrong
+     * problem.
+     */
+    public readonly timedOut = false
   ) {
     super(message);
     this.name = "ApiError";
@@ -148,7 +155,8 @@ async function request<T>(
         "The request timed out. Please try again.",
         504,
         endpoint,
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
+        true
       );
     }
 
@@ -407,10 +415,19 @@ export const api = {
   report(
     body: unknown
   ): Promise<ApiResponse<ReportData>> {
-    return request("/report", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    // Report generation gathers market data, runs the valuation model and then
+    // writes an LLM narrative. Measured end-to-end this takes ~60s, which is far
+    // past the 30s default: the request was aborted before the backend replied
+    // and the UI reported a generic "Server Error" for a call that actually
+    // succeeded. Same long timeout the document upload already uses.
+    return request(
+      "/report",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+      LONG_REQUEST_TIMEOUT_MS
+    );
   },
 
   compare(

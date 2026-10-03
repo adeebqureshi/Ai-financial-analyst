@@ -6,6 +6,10 @@ from app.api.dependencies.rate_limit import (
     rate_limit_documents,
     rate_limit_documents_upload,
     rate_limit_search,
+    rate_limit_report,
+    rate_limit_compare,
+    rate_limit_valuation,
+    rate_limit_risk,
     reset_rate_limits_for_testing,
 )
 from app.api.dependencies.services import (
@@ -37,5 +41,9 @@ __all__ = [
     "rate_limit_documents",
     "rate_limit_documents_upload",
     "rate_limit_search",
+    "rate_limit_report",
+    "rate_limit_compare",
+    "rate_limit_valuation",
+    "rate_limit_risk",
     "reset_rate_limits_for_testing",
 ]

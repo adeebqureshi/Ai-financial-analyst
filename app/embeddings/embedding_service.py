@@ -60,9 +60,18 @@ class EmbeddingService:
         return _validate_vector(list(vector), _expected_dimension())
 
     def embed_documents(self, documents: list[str]) -> list[list[float]]:
+        if not documents:
+            return []
         try:
             model = _get_model()
-            vectors = [list(model.embed(doc).vector) for doc in documents]
+            # Prefer a single batched encoder call; models that do not expose
+            # `embed_batch` (test doubles, the hash fallback) keep the
+            # previous per-document behaviour.
+            batch = getattr(model, "embed_batch", None)
+            if callable(batch):
+                vectors = [list(embedding.vector) for embedding in batch(documents)]
+            else:
+                vectors = [list(model.embed(doc).vector) for doc in documents]
         except Exception as exc:
             logger.error("Local batch embedding failed: %s", exc)
             raise RetrievalError(

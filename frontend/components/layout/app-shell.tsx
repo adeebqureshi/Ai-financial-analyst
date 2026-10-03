@@ -59,7 +59,7 @@ function Shell({ children }: Props) {
         <main
           id="workspace-main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-28 sm:px-6 sm:py-8 sm:pb-28 lg:px-8 lg:py-10 lg:pb-24"
+          className="mx-auto w-full max-w-[120rem] px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-24 lg:px-8 lg:py-6 lg:pb-10"
         >
           {children}
         </main>

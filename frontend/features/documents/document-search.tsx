@@ -14,7 +14,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, TickerBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { SkeletonList } from "@/components/ui/skeleton";
@@ -249,9 +249,10 @@ export function DocumentSearch({ initialQuery = "" }: { initialQuery?: string })
                 hit.document_id) && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                   {hit.ticker && (
-                    <span className="rounded-md border border-border-strong/70 bg-surface px-1.5 py-0.5 font-mono text-caption font-medium text-foreground">
-                      {hit.ticker}
-                    </span>
+                    /* Reuse the shared badge rather than a fourth hand-rolled
+                       ticker pill — it brings the logo and the one visual
+                       language with it. */
+                    <TickerBadge symbol={hit.ticker} />
                   )}
 
                   {hit.filing_type && (

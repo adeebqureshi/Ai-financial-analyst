@@ -3,6 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+import { CompanyLogo } from "@/components/company/company-logo";
+
 export const badgeVariants = cva(
   [
     "inline-flex items-center gap-1.5",
@@ -109,6 +111,7 @@ export function StatusBadge({
   return (
     <Badge
       variant={statusVariants[status.toLowerCase()] ?? "neutral"}
+      size="sm"
       className={className}
     >
       {label ?? status}
@@ -133,17 +136,22 @@ export function DemoBadge({
 export function TickerBadge({
   symbol,
   className,
+  showLogo = true,
 }: {
   symbol: string;
   className?: string;
+  showLogo?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "tnum inline-flex items-center rounded-md border border-border-strong/70 bg-surface px-1.5 py-0.5 font-mono text-caption font-semibold tracking-[0.06em] text-foreground",
+        "tnum inline-flex items-center gap-1.5 rounded-md border border-border-strong/70 bg-surface px-1.5 py-0.5 font-mono text-caption font-semibold tracking-[0.06em] text-foreground",
         className
       )}
     >
+      {/* Decorative: the symbol is right here, so an alt would just repeat it. */}
+      {showLogo && <CompanyLogo ticker={symbol} size="xs" decorative />}
+
       {symbol}
     </span>
   );
@@ -161,11 +169,13 @@ export function TickerChip({
   onClick,
   title,
   className,
+  showLogo = true,
 }: {
   value: string;
   onClick: () => void;
   title?: string;
   className?: string;
+  showLogo?: boolean;
 }) {
   return (
     <button
@@ -173,7 +183,7 @@ export function TickerChip({
       onClick={onClick}
       title={title}
       className={cn(
-        "tnum inline-flex min-h-8 items-center rounded-md border border-border bg-surface",
+        "tnum inline-flex min-h-8 items-center gap-1.5 rounded-md border border-border bg-surface",
         "px-2.5 font-mono text-caption font-medium tracking-[0.04em] text-muted-foreground",
         "transition-colors hover:border-border-strong hover:bg-muted hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -181,6 +191,8 @@ export function TickerChip({
         className
       )}
     >
+      {showLogo && <CompanyLogo ticker={value} size="xs" decorative />}
+
       {value}
     </button>
   );

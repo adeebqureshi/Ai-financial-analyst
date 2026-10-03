@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 
-import { TickerInput } from "@/components/ui/field";
-import { PageHeader } from "@/components/ui/page-header";
-import { Button, TextAction } from "@/components/ui/button";
+import { AnalysisDeliverables } from "@/components/analysis/analysis-deliverables";
+import { AnalysisHero } from "@/components/analysis/analysis-hero";
+import { RecentAnalyses } from "@/components/analysis/recent-analyses";
 import { TickerChip } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { TickerInput } from "@/components/ui/field";
+import {
+  POPULAR_TICKERS,
+  TickerExamplesMenu,
+} from "@/components/ui/ticker-lookup";
 
-const suggestions = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "TSLA"];
+const SYMBOL_PATTERN = /^[A-Z]{1,5}$/;
 
 export default function AnalysisPage() {
   const router = useRouter();
@@ -19,99 +25,106 @@ export default function AnalysisPage() {
   const valid = /^[A-Z]{1,5}$/.test(symbol);
 
   function submit() {
-    if (!/^[A-Z]{1,5}$/.test(symbol)) return;
+    if (!SYMBOL_PATTERN.test(symbol)) return;
 
     router.push(`/analysis/${symbol}`);
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-10 pb-8">
-      <PageHeader
-        eyebrow="Company & Valuation"
-        title="Company analysis"
-        description="Run the full AI pipeline for any public company — valuation, financial health, intrinsic value, risk and a grounded copilot."
-      />
+    <div className="mx-auto flex max-w-[84rem] flex-col gap-6 pb-8">
+      <AnalysisHero />
 
       <section
         aria-labelledby="analysis-lookup-heading"
-        className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+        className="rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6"
       >
-        <div className="px-5 py-6 sm:px-7 sm:py-7">
-          <h2
-            id="analysis-lookup-heading"
-            className="flex items-center gap-2 text-subtitle text-foreground"
-          >
-            <Sparkles size={16} className="text-brand" aria-hidden="true" />
-            Start with a ticker
-          </h2>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand"
+              aria-hidden="true"
+            >
+              <Search size={19} />
+            </span>
 
-          <p className="mt-2 max-w-xl text-label text-muted-foreground">
-            Enter a 1–5 letter symbol. The backend runs market data, the DCF
-            valuation and the health scores before the workspace renders.
-          </p>
-
-          <form
-            className="mt-6"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submit();
-            }}
-          >
-            {/* Input and action form a single surface: the field is the focus
-                of the workflow and the CTA sits inside its right edge. It
-                wraps below the input only when the viewport is too narrow. */}
-            <div className="flex flex-col gap-2 rounded-lg border border-input bg-background p-1.5 pl-4 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 sm:flex-row sm:items-center">
-              <div className="flex min-w-0 items-center gap-3">
-                <Search
-                  size={17}
-                  className="shrink-0 text-brand"
-                  aria-hidden="true"
-                />
-
-                <TickerInput
-                  value={ticker}
-                  onValueChange={setTicker}
-                  placeholder="Enter ticker (AAPL, MSFT, NVDA…)"
-                  aria-label="Ticker symbol to analyze"
-                  className="h-10 min-w-0 flex-1 border-0 bg-transparent px-0 text-body focus-visible:border-0 focus-visible:ring-0"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={!valid}
-                className="w-full shrink-0 sm:ml-auto sm:w-auto"
+            <div className="min-w-0">
+              <h2
+                id="analysis-lookup-heading"
+                className="text-subtitle text-foreground"
               >
-                Analyze
-                <ArrowRight size={15} aria-hidden="true" />
-              </Button>
+                Start with a ticker
+              </h2>
+              <p className="mt-1 max-w-xl text-label text-muted-foreground">
+                Enter a 1–5 letter symbol. The backend runs market data, the DCF
+                valuation and the health scores before the workspace renders.
+              </p>
             </div>
-          </form>
-
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className="text-caption text-subtle-foreground">Popular</span>
-
-            {suggestions.map((suggestion) => (
-              <TickerChip
-                key={suggestion}
-                value={suggestion}
-                onClick={() => setTicker(suggestion)}
-                title={`Use ${suggestion}`}
-              />
-            ))}
           </div>
+
+          <TickerExamplesMenu
+            onSelect={setTicker}
+            className="max-sm:hidden"
+          />
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 border-t border-border bg-surface/60 px-5 py-3 text-caption text-muted-foreground sm:px-7">
-          <span>Valuation, health, market and risk in one workspace</span>
-          <span aria-hidden="true" className="text-muted-foreground">
-            ·
+        <form
+          className="mt-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          {/* The field and the CTA share one surface: the symbol is the focus
+              of the workflow, so the primary action sits inside its right
+              edge and wraps below only when the viewport is too narrow. */}
+          <div className="flex flex-col gap-2 rounded-xl border border-input bg-background p-1.5 pl-4 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 items-center gap-3">
+              <Search
+                size={18}
+                className="shrink-0 text-brand"
+                aria-hidden="true"
+              />
+
+              <TickerInput
+                value={ticker}
+                onValueChange={setTicker}
+                placeholder="Enter ticker (e.g., AAPL, MSFT, NVDA)"
+                aria-label="Ticker symbol to analyze"
+                className="h-11 min-w-0 flex-1 border-0 bg-transparent px-0 pr-3 text-body focus-visible:border-0 focus-visible:ring-0"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={!valid}
+              className="h-11 w-full shrink-0 rounded-lg px-5 sm:ml-auto sm:w-auto"
+            >
+              Analyze
+              <ArrowRight size={16} aria-hidden="true" />
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-label font-medium text-muted-foreground">
+            Popular
           </span>
-          <TextAction href="/dashboard">
-            Or start from the Command Hub
-          </TextAction>
+
+          {POPULAR_TICKERS.map((suggestion) => (
+            <TickerChip
+              key={suggestion}
+              value={suggestion}
+              onClick={() => setTicker(suggestion)}
+              title={`Use ${suggestion}`}
+            />
+          ))}
         </div>
       </section>
+
+      <AnalysisDeliverables />
+
+      <RecentAnalyses />
     </div>
   );
 }

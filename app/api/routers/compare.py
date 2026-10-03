@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
+from app.api.dependencies import rate_limit_compare
 from app.api.dependencies.services import get_compare_service
 from app.schemas.base import APIResponse
 from app.schemas.responses import CompareResponseData
@@ -37,6 +38,7 @@ class CompareTickersRequest(BaseModel):
             "own real, company-specific financial data, market data and risk "
             "scores."
         ),
+    dependencies=[Depends(rate_limit_compare)],
     )
     async def compare(
         payload: CompareTickersRequest,

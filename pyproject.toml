@@ -57,7 +57,7 @@ testpaths = ["tests"]
 # --timeout-method=thread is mandatory on Windows: the default signal-based
 # method is unsupported there and the timeout is silently ignored, which is
 # how a test that blocked on a live LLM call previously hung the whole run.
-addopts = "--import-mode=importlib --timeout=60 --timeout-method=thread"
+addopts = '--import-mode=importlib --timeout=60 --timeout-method=thread -m "not integration"'
 markers = [
     "integration: tests that require real external services (opt-in via TEST_POSTGRES_URL / TEST_REDIS_URL)",
 ]

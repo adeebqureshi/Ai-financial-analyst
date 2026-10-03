@@ -3,7 +3,6 @@ import {
   Building2,
   FileText,
   GitCompare,
-  LayoutDashboard,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -24,18 +23,6 @@ export type NavGroup = {
 };
 
 export const navigationGroups: NavGroup[] = [
-  {
-    label: "Dashboard",
-    items: [
-      {
-        title: "Command Hub",
-        href: "/dashboard",
-        icon: LayoutDashboard,
-        description: "Start research, ask AI, jump to any workflow",
-        keywords: "home overview start",
-      },
-    ],
-  },
   {
     label: "Company & Valuation",
     items: [

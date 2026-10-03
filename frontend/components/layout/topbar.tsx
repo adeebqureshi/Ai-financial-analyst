@@ -45,8 +45,8 @@ export function Topbar({ onMenu }: Props) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[100rem] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="mx-auto flex h-14 max-w-[100rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
             onClick={onMenu}
@@ -56,8 +56,8 @@ export function Topbar({ onMenu }: Props) {
             <Menu size={20} aria-hidden="true" />
           </button>
 
-          <div className="min-w-0">
-            <p className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle-foreground sm:block">
+          <div className="hidden min-w-0 sm:block">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle-foreground">
               {section}
             </p>
             <h1 className="truncate text-subtitle text-foreground">{title}</h1>
@@ -71,10 +71,10 @@ export function Topbar({ onMenu }: Props) {
               aria-label="Open command palette"
               title="Search or ask AI (Ctrl+K)"
               className={cn(
-                "group hidden h-9 items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left text-label text-muted-foreground",
+                "group hidden h-10 min-w-0 items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left text-label text-muted-foreground",
                 "shadow-soft transition-colors hover:border-border-strong hover:text-foreground",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "md:inline-flex md:w-72 lg:w-80"
+                "md:inline-flex md:w-72 lg:w-96"
               )}
             >
               <Search
@@ -83,7 +83,7 @@ export function Topbar({ onMenu }: Props) {
                 aria-hidden="true"
               />
               <span className="flex-1 truncate">
-                Search or ask AI…
+                Search for a company, ask a question, or upload a document…
               </span>
               <kbd className="hidden shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:inline">
                 {shortcutLabel}

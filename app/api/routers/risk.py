@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends
+from app.api.dependencies import rate_limit_risk
 from app.api.dependencies.services import get_risk_service
 from app.schemas.analysis import RiskAnalysisRequest
 from app.schemas.base import APIResponse
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/risk-analysis", tags=["Risk"])
     response_model=APIResponse[RiskAssessmentData],
     summary="Risk analysis",
     description="Assesses financial risk using Piotroski, Altman, and Beneish scores.",
+    dependencies=[Depends(rate_limit_risk)],
 )
 async def risk_analysis(
     request: RiskAnalysisRequest,

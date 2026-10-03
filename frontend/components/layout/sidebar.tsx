@@ -84,7 +84,7 @@ export function Sidebar({
           )}
         >
           <Link
-            href="/dashboard"
+            href="/analysis"
             onClick={onClose}
             className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             aria-label="AI Financial Analyst home"
@@ -250,7 +250,7 @@ export function Sidebar({
           )}
         >
           <Link
-            href="/dashboard"
+            href="/analysis"
             onClick={onClose}
             className={cn(
               "flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-caption font-medium text-brand",

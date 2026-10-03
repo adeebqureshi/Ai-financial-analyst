@@ -194,6 +194,34 @@ and hypothetical scenarios.
 - **Anonymous access**: Allowed with reduced rate limits (10% of authenticated)
 
 ### Rate Limiting
+
+#### Trusted proxy / client IP (deployment requirement)
+
+Anonymous clients are identified for rate limiting by IP, taken from
+`X-Forwarded-For` when present and otherwise from the socket peer.
+
+The reference deployment (`docker/docker-compose.yml`) publishes the app
+directly on port 8000 with no reverse proxy in front of it. In that topology
+`X-Forwarded-For` is not set by any trusted intermediary, so it is only ever
+honoured when a proxy is actually deployed — but if the app is ever placed
+behind Nginx, Cloudflare or a cloud load balancer, that intermediary's
+appended client IP is what must be used.
+
+**Deployment requirement:** when running behind a proxy, ensure the proxy is the
+only component able to reach the app and that it *overwrites* (not appends to)
+`X-Forwarded-For`. If a proxy appends without sanitising, a client can prepend a
+forged address and evade its own anonymous rate limit. Until a
+trusted-proxy allow-list exists in configuration, treat this as an operational
+control rather than an application-enforced one.
+
+### Test isolation
+
+The default suite is hermetic: `tests/conftest.py` refuses outbound connections
+to anything other than loopback, so an accidental call to SEC EDGAR, Yahoo
+Finance, FMP or an LLM gateway fails fast with a clear message instead of
+blocking until `pytest-timeout` fires. Tests that genuinely require an external
+service are marked `@pytest.mark.integration` and excluded from the default run
+via `-m "not integration"` in `pyproject.toml`; run them with `pytest -m integration`.
 - **Algorithm**: Token bucket (Redis-backed, in-memory fallback)
 - **Tiers**: Per-endpoint limits (chat: 20/min, analyze: 10/min, sandbox: 5/min)
 - **Anonymous multiplier**: 0.1x authenticated limits

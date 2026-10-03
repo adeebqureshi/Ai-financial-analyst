@@ -47,35 +47,12 @@ test.describe("Analysis workflow", () => {
   });
 });
 
-test.describe("Dashboard workflow", () => {
-  test("renders dashboard without fabricated metrics", async ({ page }) => {
+test.describe("Retired Command Hub route", () => {
+  test("/dashboard redirects to the analysis workspace", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await expect(page.locator("text=Financial Workspace")).toBeVisible();
-    await expect(
-      page.locator("main").getByRole("heading", { name: "Command Hub" })
-    ).toBeVisible();
-    await expect(page.locator("text=What do you want to do?")).toBeVisible();
-    await expect(
-      page
-        .locator("main")
-        .getByRole("heading", { name: "Knowledge base" })
-    ).toBeVisible();
-
-
-    await expect(page.locator("text=Portfolio Value")).toHaveCount(0);
-    await expect(page.locator("text=Sharpe Ratio")).toHaveCount(0);
-    await expect(page.locator("text=Cash Available")).toHaveCount(0);
-    await expect(page.locator("text=Fear & Greed")).toHaveCount(0);
-  });
-
-  test("displays AI search component", async ({ page }) => {
-    await page.goto("/dashboard");
-
-
-    await expect(
-      page.locator("text=Ask about a company, market or document")
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/analysis$/);
+    await expect(page.locator("main")).toBeVisible();
   });
 });
 
@@ -83,10 +60,22 @@ test.describe("Comparison workflow", () => {
   test("renders comparison page with default tickers", async ({ page }) => {
     await page.goto("/comparison");
 
-    await expect(page.locator("text=Company Comparison")).toBeVisible();
-    await expect(page.locator("text=AAPL")).toBeVisible();
-    await expect(page.locator("text=MSFT")).toBeVisible();
-    await expect(page.locator("text=NVDA")).toBeVisible();
-    await expect(page.locator("text=GOOGL")).toBeVisible();
+    // `/comparison` is a legacy alias for the canonical `/compare` route.
+    await expect(page).toHaveURL(/\/compare$/);
+    await expect(
+      page.getByRole("heading", { name: /company comparison/i })
+    ).toBeVisible();
+
+    // Each default ticker is asserted through its remove control, which only
+    // exists for a ticker in the "Selected" group. A bare `text=AAPL` match is
+    // ambiguous: the symbol also appears in the "Popular" shortcut chips and in
+    // the comparison table, so it would pass even if nothing were selected.
+    for (const ticker of ["AAPL", "MSFT", "NVDA", "GOOGL"]) {
+      await expect(
+        page.getByRole("button", {
+          name: `Remove ${ticker} from the comparison`,
+        })
+      ).toBeVisible();
+    }
   });
 });

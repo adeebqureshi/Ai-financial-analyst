@@ -12,18 +12,18 @@ test.describe("Console Error Audit", () => {
     });
   });
 
-  test("dashboard loads without console errors", async ({ page }) => {
+  test("home route loads without console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
 
-    await page.goto("http://localhost:3000/dashboard");
+    await page.goto("http://localhost:3000/");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
-    console.log("Dashboard errors:", errors);
+    console.log("Home errors:", errors);
     expect(errors.length).toBeLessThan(5);
   });
 
@@ -59,7 +59,6 @@ test.describe("Console Error Audit", () => {
 
   test("all pages accessible without crash", async ({ page }) => {
     const pages = [
-      "/dashboard",
       "/analysis/AAPL",
       "/compare",
       "/research",

@@ -1,11 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Bot, Loader2, RotateCcw, Send, Sparkles, X } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  Check,
+  Loader2,
+  RotateCcw,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 import { Markdown } from "@/components/ui/markdown";
 import { Button } from "@/components/ui/button";
 import { useChatStream, type SendOptions } from "@/hooks/use-chat-stream";
+import { cn } from "@/lib/utils";
 import type { AgentToolExecution } from "@/types/analysis";
 
 type Props = {
@@ -36,7 +46,29 @@ type Props = {
   sessionId?: string | null;
 
   readOnly?: boolean;
+
+  /**
+   * Layout variant. `"research"` renders the panel without its own header (the
+   * caller supplies one) and lays the suggestions out as full-width rows.
+   * Defaults to the original self-contained panel used by the copilot drawer.
+   */
+  variant?: "default" | "research";
+
+  /** Whether to list what the assistant can cover in the empty state. */
+  showCapabilities?: boolean;
+
+  /** Keyboard hint under the composer; defaults to the full Enter/Shift hint. */
+  composerHint?: string;
 };
+
+/** Shown in the copilot's empty state to make its remit concrete. */
+const capabilities = [
+  "Financial performance",
+  "Risks & uncertainties",
+  "Management commentary",
+  "Outlook and guidance",
+  "Key financial metrics",
+];
 
 const toolStatusTone: Record<AgentToolExecution["status"], string> = {
   done: "text-gain",
@@ -59,6 +91,9 @@ export function ChatSurface({
   emptyDescription = "Ask questions about financial filings, management commentary, performance, risks, or other indexed research.",
   sessionId = null,
   readOnly = false,
+  variant = "default",
+  showCapabilities = true,
+  composerHint,
 }: Props) {
   const { messages, isStreaming, error, send, retry, cancel, reset, restoreSession } =
     useChatStream({ scope });
@@ -112,6 +147,7 @@ export function ChatSurface({
   }, [isStreaming, restoreSession, sessionId]);
 
   const canRetry = Boolean(error) && !isStreaming;
+  const idBase = "ai-chat-suggestions";
 
   return (
     <section
@@ -119,17 +155,42 @@ export function ChatSurface({
       aria-label="AI financial analyst chat"
       className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card"
     >
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
-            <Bot size={17} aria-hidden="true" />
-          </div>
+      <header
+        className={cn(
+          "flex shrink-0 items-center justify-between gap-3 border-b border-border bg-surface/40 px-4 py-3",
+          // The research card supplies its own heading, so only the New/Stop
+          // controls survive here — right-aligned in a slim bar.
+          variant === "research" &&
+            "justify-end border-b-0 bg-transparent px-0 py-0"
+        )}
+      >
+        <div className={cn("flex min-w-0 items-center gap-3", variant === "research" && "sr-only")}>
+          <span
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground"
+            aria-hidden="true"
+          >
+            <Bot size={18} />
+          </span>
           <div className="min-w-0">
-            <h2 className="truncate text-label font-semibold text-foreground">
+            <h2 className="truncate text-label font-semibold tracking-[-0.01em] text-foreground">
               AI Financial Analyst
             </h2>
-            <p className="truncate text-caption text-muted-foreground">
-              {isStreaming ? "Researching…" : "Research assistant"}
+            <p className="mt-0.5 flex items-center gap-1.5 truncate text-caption text-muted-foreground">
+              {isStreaming ? (
+                <>
+                  <Loader2
+                    size={11}
+                    className="motion-safe:animate-spin"
+                    aria-hidden="true"
+                  />
+                  Researching…
+                </>
+              ) : (
+                <>
+                  <span className="size-1.5 shrink-0 rounded-full bg-gain" aria-hidden="true" />
+                  Research Copilot
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -166,53 +227,102 @@ export function ChatSurface({
         onScroll={onScroll}
         className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
       >
+        {/* The empty state uses `my-auto` rather than `justify-center` so it
+            stays centred when it fits and top-aligned when it overflows; that
+            keeps the heading reachable on short viewports instead of clipping
+            it above the scroll area. */}
         {messages.length === 0 && !isStreaming && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2.5 py-6 text-center">
+          <div className="flex flex-1 flex-col overflow-y-auto py-6 text-center">
+            <div className="my-auto flex w-full flex-col items-center gap-2.5">
             {suggestions && suggestions.length > 0 ? (
               <>
-                <span
-                  className="flex size-10 items-center justify-center rounded-xl bg-brand-subtle text-brand"
-                  aria-hidden="true"
-                >
-                  <Sparkles size={18} />
-                </span>
-                <p className="text-label font-semibold text-foreground">
-                  {emptyTitle}
-                </p>
-                <p className="max-w-sm text-caption leading-relaxed text-muted-foreground">
-                  {emptyDescription}
-                </p>
-                <ul className="mt-1.5 grid w-full max-w-md gap-1.5">
-                  {suggestions.map((question) => (
-                    <li key={question}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isStreaming) return;
-                          setInput("");
-                          send(question, {
-                            ticker,
-                            documentId,
-                            asOfDate,
-                          } satisfies SendOptions);
-                        }}
-                        className="group flex w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-left text-caption text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <Sparkles
-                          size={13}
+                {/* The research card already renders the heading, so the inner
+                    icon + title block is only shown in the default variant. */}
+                {variant === "default" && (
+                  <>
+                    <span
+                      className="flex size-11 items-center justify-center rounded-xl bg-brand-subtle text-brand ring-1 ring-brand/15"
+                      aria-hidden="true"
+                    >
+                      <Sparkles size={20} />
+                    </span>
+
+                    <div className="space-y-1.5">
+                      <p className="text-subtitle font-semibold tracking-[-0.01em] text-foreground">
+                        {emptyTitle}
+                      </p>
+                      <p className="mx-auto max-w-md text-caption leading-relaxed text-muted-foreground">
+                        {emptyDescription}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {showCapabilities && (
+                  <ul className="w-full max-w-lg space-y-1.5 text-left text-caption text-muted-foreground">
+                    {capabilities.map((item) => (
+                      <li key={item} className="flex items-center gap-2">
+                        <Check
+                          size={12}
                           className="shrink-0 text-brand"
                           aria-hidden="true"
                         />
-                        <span className="min-w-0 flex-1">{question}</span>
-                        <ArrowUpRight
-                          size={13}
-                          className="shrink-0 text-subtle-foreground transition-transform duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="mt-1 w-full max-w-lg">
+                  <p
+                    id={`${idBase}-suggestions-label`}
+                    className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle-foreground"
+                  >
+                    Try asking
+                  </p>
+                  <ul
+                    aria-labelledby={`${idBase}-suggestions-label`}
+                    className={cn(
+                      "grid gap-1.5",
+                      variant === "research" ? "max-w-none space-y-2" : "sm:grid-cols-2"
+                    )}
+                  >
+                    {suggestions.map((question) => (
+                      <li key={question}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isStreaming) return;
+                            setInput("");
+                            send(question, {
+                              ticker,
+                              documentId,
+                              asOfDate,
+                            } satisfies SendOptions);
+                          }}
+                          className={cn(
+                            "group flex h-full w-full items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-2 text-left text-caption text-muted-foreground transition-colors hover:border-brand/40 hover:bg-brand-subtle/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            variant === "research" && "px-3.5 py-2.5 text-label"
+                          )}
+                        >
+                          {variant === "default" && (
+                            <Sparkles
+                              size={12}
+                              className="shrink-0 text-brand"
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span className="min-w-0 flex-1">{question}</span>
+                          <ArrowRight
+                            size={14}
+                            className="shrink-0 text-subtle-foreground transition-transform duration-150 group-hover:translate-x-0.5"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </>
             ) : (
               <>
@@ -225,6 +335,7 @@ export function ChatSurface({
                 </p>
               </>
             )}
+            </div>
           </div>
         )}
 
@@ -254,8 +365,8 @@ export function ChatSurface({
       )}
 
       {!readOnly && (
-        <footer className="shrink-0 border-t border-border p-3">
-          <div className="flex items-end gap-2">
+        <footer className="shrink-0 border-t border-border bg-surface/40 p-3">
+          <div className="flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
             <label className="min-w-0 flex-1">
               <span className="sr-only">{inputLabel}</span>
               <textarea
@@ -270,7 +381,7 @@ export function ChatSurface({
                 rows={2}
                 placeholder={placeholder}
                 aria-label={inputLabel}
-                className="max-h-40 min-h-[3.25rem] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-label text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="max-h-44 min-h-[3.5rem] w-full resize-none rounded-lg border-0 bg-transparent px-2.5 py-2 text-body text-foreground outline-none placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-0"
               />
             </label>
 
@@ -281,18 +392,23 @@ export function ChatSurface({
               onClick={submit}
               disabled={!input.trim() || isStreaming}
               aria-label="Send message"
+              className="size-10 rounded-lg"
             >
               {isStreaming ? (
                 <Loader2
-                  size={17}
+                  size={18}
                   className="motion-safe:animate-spin"
                   aria-hidden="true"
                 />
               ) : (
-                <Send size={17} aria-hidden="true" />
+                <Send size={18} aria-hidden="true" />
               )}
             </Button>
           </div>
+
+          <p className="mt-1.5 px-1 text-caption text-subtle-foreground">
+            {composerHint ?? "Enter to send · Shift + Enter for a new line"}
+          </p>
         </footer>
       )}
     </section>

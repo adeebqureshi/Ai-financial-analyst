@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
+from app.api.dependencies import rate_limit_report
+from app.api.exceptions import get_status_code_for_domain_error
 from app.api.dependencies.services import get_report_service
 from app.core.exceptions import FinancialAnalystError
 from app.core.logging import get_logger
@@ -41,6 +43,7 @@ class ReportTickerRequest(BaseModel):
     response_model=APIResponse[ReportData],
     summary="Generate a financial report",
     description="Generates a comprehensive LLM-powered financial report for a company.",
+    dependencies=[Depends(rate_limit_report)],
 )
 async def report(
     payload: ReportTickerRequest,
@@ -64,7 +67,14 @@ async def report(
             message=exc.message,
             errors=[ErrorDetail(message=exc.message, code=exc.error_code)],
         )
-        return JSONResponse(status_code=502, content=response.model_dump(mode="json"))
+        # Use the shared domain-exception mapping rather than a blanket 502:
+        # a quota exhaustion or a validation failure raised during generation
+        # must keep its own status (429 / 422) so clients and the frontend can
+        # react correctly instead of treating it as an upstream gateway fault.
+        return JSONResponse(
+            status_code=get_status_code_for_domain_error(exc),
+            content=response.model_dump(mode="json"),
+        )
         
     except Exception:
         logger.exception("Unexpected report generation failure for %s", payload.ticker)

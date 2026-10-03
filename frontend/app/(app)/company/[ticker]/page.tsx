@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Landmark, Sparkles } from "lucide-react";
+import { Landmark, Sparkles } from "lucide-react";
 
-import { api } from "@/services/api";
+import { CompanyLogo } from "@/components/company/company-logo";
+import { CompanyLoadError } from "@/components/company/company-load-error";
+
+import { api, ApiError } from "@/services/api";
 import { Badge, TickerBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -39,24 +42,43 @@ export default async function CompanyDetailPage({
     const profile = response?.data?.company;
 
     if (!profile) {
-      throw new Error("Company not found");
+      // A 2xx response that carries no company profile really is "no such
+      // company". Raising it as a 404 ApiError lets the branch below route it
+      // to `notFound()` instead of the generic error state.
+      throw new ApiError(
+        `No company profile was returned for ${symbol}.`,
+        404,
+        "/analyze"
+      );
     }
 
     company = profile;
-  } catch {
-    notFound();
+  } catch (error) {
+    // Only a genuine "this resource does not exist" is a 404. Everything else —
+    // an upstream provider failure (5xx), an invalid symbol (422), a backend
+    // that is down or unreachable (0/504) — previously fell into the same
+    // branch and rendered "This page could not be found", which told users the
+    // company does not exist when the real problem was an outage.
+    if (error instanceof ApiError && error.status === 404) {
+      notFound();
+    }
+
+    return <CompanyLoadError ticker={symbol} error={error} />;
   }
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 pb-8">
       <header className="flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex min-w-0 items-start gap-5">
-          <span
-            className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand"
-            aria-hidden="true"
-          >
-            <Building2 size={24} />
-          </span>
+          {/* Real brand mark in place of the generic Building2 tile; falls back
+              to a monogram for tickers with no registry entry. Decorative — the
+              company name and symbol are rendered right beside it. */}
+          <CompanyLogo
+            ticker={company.ticker}
+            companyName={company.name}
+            size="lg"
+            decorative
+          />
 
           <div className="min-w-0">
             <p className="text-caption font-semibold uppercase tracking-[0.14em] text-brand">

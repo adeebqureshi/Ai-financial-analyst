@@ -2,6 +2,7 @@
 
 import { Activity, Building2, Landmark, Sparkles } from "lucide-react";
 
+import { CompanyLogo } from "@/components/company/company-logo";
 import { Badge, DemoBadge, RecommendationBadge, TickerBadge } from "@/components/ui/badge";
 import { Delta, formatCurrency, formatPercent } from "@/components/ui/metric";
 import { cn } from "@/lib/utils";
@@ -75,13 +76,25 @@ export function CompanyHeader({
             {stale && <Badge variant="warning">Quote may be stale</Badge>}
           </div>
 
-          <h1
-            id="company-heading"
-            data-testid="company-name"
-            className="mt-4 text-balance text-display text-foreground"
-          >
-            {displayName}
-          </h1>
+          {/* The badge row carries category metadata; the logo belongs with the
+              identity itself, so it leads the name. Decorative because the
+              ticker badge and name are immediately adjacent. */}
+          <div className="mt-4 flex items-center gap-4">
+            <CompanyLogo
+              ticker={company.ticker}
+              companyName={displayName}
+              size="lg"
+              decorative
+            />
+
+            <h1
+              id="company-heading"
+              data-testid="company-name"
+              className="text-balance text-display text-foreground"
+            >
+              {displayName}
+            </h1>
+          </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <TickerBadge symbol={company.ticker} className="px-2 py-1 text-body" />

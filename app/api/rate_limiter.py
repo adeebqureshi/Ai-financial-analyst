@@ -273,6 +273,30 @@ def get_endpoint_config(
             requests_per_hour=settings.rate_limit_search_per_hour,
             key_prefix="ratelimit:search",
         ),
+        # Report generation runs the LLM end to end (financial analysis plus
+        # narrative writing), and comparison analyses 2-10 companies per call.
+        # Both were previously unbounded while far cheaper endpoints were
+        # limited, which let a client amplify provider cost arbitrarily.
+        "report": RateLimitConfig(
+            requests_per_minute=settings.rate_limit_report_per_minute,
+            requests_per_hour=settings.rate_limit_report_per_hour,
+            key_prefix="ratelimit:report",
+        ),
+        "compare": RateLimitConfig(
+            requests_per_minute=settings.rate_limit_compare_per_minute,
+            requests_per_hour=settings.rate_limit_compare_per_hour,
+            key_prefix="ratelimit:compare",
+        ),
+        "valuation": RateLimitConfig(
+            requests_per_minute=settings.rate_limit_valuation_per_minute,
+            requests_per_hour=settings.rate_limit_valuation_per_hour,
+            key_prefix="ratelimit:valuation",
+        ),
+        "risk": RateLimitConfig(
+            requests_per_minute=settings.rate_limit_risk_per_minute,
+            requests_per_hour=settings.rate_limit_risk_per_hour,
+            key_prefix="ratelimit:risk",
+        ),
         "sandbox": RateLimitConfig(
             requests_per_minute=settings.rate_limit_sandbox_per_minute,
             requests_per_hour=settings.rate_limit_sandbox_per_hour,

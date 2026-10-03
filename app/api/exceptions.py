@@ -34,6 +34,13 @@ def _get_status_code_for_domain_error(exc: FinancialAnalystError) -> int:
         if isinstance(exc, exc_type):
             return status_code
     return 500
+
+
+# Public alias: routers that handle a domain exception locally must use the same
+# mapping as the global handler. Hardcoding a single status there silently
+# mislabels every other domain error (for example returning 502 for a quota
+# exhaustion that should be 429).
+get_status_code_for_domain_error = _get_status_code_for_domain_error
 async def financial_anyst_error_handler(
     request: Request,
     exc: FinancialAnalystError,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends
+from app.api.dependencies import rate_limit_valuation
 from app.api.dependencies.services import get_valuation_service
 from app.schemas.analysis import ValuationRequest
 from app.schemas.base import APIResponse
@@ -12,6 +13,7 @@ router = APIRouter(tags=["Valuation"])
     response_model=APIResponse[ValuationResponseData],
     summary="Run DCF valuation",
     description="Runs a Discounted Cash Flow (DCF) valuation for a company.",
+    dependencies=[Depends(rate_limit_valuation)],
 )
 async def valuate(
     request: ValuationRequest,

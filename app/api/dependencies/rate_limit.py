@@ -92,6 +92,10 @@ rate_limit_analyze = RateLimitDependency("analyze")
 rate_limit_documents = RateLimitDependency("documents")
 rate_limit_documents_upload = RateLimitDependency("documents_upload")
 rate_limit_search = RateLimitDependency("search")
+rate_limit_report = RateLimitDependency("report")
+rate_limit_compare = RateLimitDependency("compare")
+rate_limit_valuation = RateLimitDependency("valuation")
+rate_limit_risk = RateLimitDependency("risk")
 def reset_rate_limits_for_testing() -> None:
     from app.api.rate_limiter import clear_all_rate_limits, reset_rate_limiter
     reset_rate_limiter()
@@ -103,6 +107,10 @@ __all__ = [
     "rate_limit_documents",
     "rate_limit_documents_upload",
     "rate_limit_search",
+    "rate_limit_report",
+    "rate_limit_compare",
+    "rate_limit_valuation",
+    "rate_limit_risk",
     "reset_rate_limits_for_testing",
     "get_client_identifier",
     "apply_anonymous_multiplier",

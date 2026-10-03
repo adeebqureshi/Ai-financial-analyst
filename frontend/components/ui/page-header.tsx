@@ -89,7 +89,12 @@ export function SectionHeading({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-end justify-between gap-x-6 gap-y-2",
+        // `items-center` (not `items-end`) so the action stays aligned with the
+        // title even when the title wraps to two lines. Combined with
+        // `sm:flex-nowrap`, this keeps the action on the title's own row instead
+        // of drifting to the baseline of a shorter wrapped block — and lets it
+        // wrap as a whole below only on genuinely narrow screens.
+        "flex flex-wrap items-center justify-between gap-x-6 gap-y-2 sm:flex-nowrap",
         className
       )}
     >
@@ -98,7 +103,7 @@ export function SectionHeading({
           {title}
         </Comp>
         {description && (
-          <p className="mt-1.5 max-w-2xl text-label text-muted-foreground">
+          <p className="mt-1 max-w-2xl text-label text-muted-foreground">
             {description}
           </p>
         )}

@@ -1,19 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Interactive Features Audit", () => {
-  test("dashboard AI search form works", async ({ page }) => {
-    await page.goto("http://localhost:3000/dashboard");
-    await page.waitForLoadState("networkidle");
-    const input = page.locator(
-      "input[placeholder*='Ask about a company, market or document']"
-    );
-    await expect(input).toBeVisible();
-    await input.fill("TSLA");
-    await input.press("Enter");
-    await page.waitForTimeout(2000);
-    await expect(page).toHaveURL(/\/analysis\/TSLA$/);
-  });
-
   test("analysis page ticker input validation", async ({ page }) => {
     await page.goto("http://localhost:3000/analysis");
     await page.waitForLoadState("networkidle");
@@ -32,12 +19,20 @@ test.describe("Interactive Features Audit", () => {
   test("comparison add tickers", async ({ page }) => {
     await page.goto("http://localhost:3000/compare");
     await page.waitForLoadState("networkidle");
-    const input = page.locator("input[placeholder='TSLA']");
+
+    // Located by accessible name: the placeholder text is illustrative
+    // ("Enter ticker (e.g., AAPL, MSFT, NVDA)") and is not a stable hook.
+    const input = page.getByLabel("Enter ticker");
     await expect(input).toBeVisible();
+
     await input.fill("AMD");
-    await page.click("button:has-text('Add')");
-    await page.waitForTimeout(500);
-    await expect(page.locator("text=AMD")).toBeVisible();
+    await page.getByRole("button", { name: "Add company" }).click();
+
+    // Assert AMD actually joined the selection rather than merely appearing
+    // somewhere on the page.
+    await expect(
+      page.getByRole("button", { name: "Remove AMD from the comparison" })
+    ).toBeVisible();
   });
 
   test("reports page generate flow", async ({ page }) => {

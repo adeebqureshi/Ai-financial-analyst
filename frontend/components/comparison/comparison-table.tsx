@@ -1,7 +1,5 @@
 "use client";
 
-import { Crown } from "lucide-react";
-
 import { useCompare } from "@/hooks/use-compare";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,53 +9,82 @@ import {
   formatPercent,
   formatRatio,
 } from "@/components/ui/metric";
-import { RecommendationBadge, TickerBadge } from "@/components/ui/badge";
+import { RecommendationBadge } from "@/components/ui/badge";
+import { CompanyLogo } from "@/components/company/company-logo";
 import { cn } from "@/lib/utils";
 
 import type { CompareItemData } from "@/types/analysis";
+import type { MetricTabId } from "./metric-tabs";
 
 type Props = {
   tickers: string[];
+  /** Restricts the rendered rows to the active metric tab. */
+  view?: MetricTabId;
 };
 
 type Row = {
   metric: string;
   cells: (string | null)[];
   align: "left" | "right";
+  badge?: boolean;
 };
 
-function toRows(results: CompareItemData[]): Row[] {
-  return [
-    {
-      metric: "Intrinsic value",
-      align: "right",
-      cells: results.map((company) => formatCurrency(company.intrinsic_value)),
-    },
-    {
-      metric: "Upside",
-      align: "right",
-      cells: results.map((company) => formatPercent(company.upside)),
-    },
-    {
-      metric: "Recommendation",
-      align: "left",
-      cells: results.map((company) => company.recommendation),
-    },
-    {
-      metric: "Health score",
-      align: "right",
-      cells: results.map((company) =>
-        company.health_score == null
-          ? null
-          : `${formatRatio(company.health_score)}/100`
-      ),
-    },
-  ];
+const ALL_ROWS: Record<MetricTabId, string[]> = {
+  "key-metrics": [
+    "Intrinsic value",
+    "Upside",
+    "Recommendation",
+    "Health score",
+  ],
+  "financial-health": ["Health score", "Recommendation"],
+  valuation: ["Intrinsic value", "Upside", "Recommendation"],
+  "comparison-table": [
+    "Intrinsic value",
+    "Upside",
+    "Recommendation",
+    "Health score",
+  ],
+};
+
+function buildRow(metric: string, results: CompareItemData[]): Row {
+  switch (metric) {
+    case "Intrinsic value":
+      return {
+        metric,
+        align: "right",
+        cells: results.map((company) => formatCurrency(company.intrinsic_value)),
+      };
+    case "Upside":
+      return {
+        metric,
+        align: "right",
+        cells: results.map((company) => formatPercent(company.upside)),
+      };
+    case "Recommendation":
+      return {
+        metric,
+        align: "left",
+        badge: true,
+        cells: results.map((company) => company.recommendation),
+      };
+    case "Health score":
+      return {
+        metric,
+        align: "right",
+        cells: results.map((company) =>
+          company.health_score == null
+            ? null
+            : `${formatRatio(company.health_score)}/100`
+        ),
+      };
+    default:
+      return { metric, align: "right", cells: results.map(() => null) };
+  }
 }
 
 const MISSING = "—";
 
-export function ComparisonTable({ tickers }: Props) {
+export function ComparisonTable({ tickers, view = "key-metrics" }: Props) {
   const { data, isLoading, error, refetch } = useCompare(tickers);
 
   if (tickers.length < 2) {
@@ -92,7 +119,7 @@ export function ComparisonTable({ tickers }: Props) {
 
   const result = data?.data?.results ?? [];
   const best = data?.data?.best;
-  const rows = toRows(result);
+  const rows = ALL_ROWS[view].map((metric) => buildRow(metric, result));
 
   if (result.length === 0) {
     return (
@@ -105,65 +132,14 @@ export function ComparisonTable({ tickers }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {result.map((company) => {
-          const isBest = best === company.ticker;
-
-          return (
-            <div
-              key={company.ticker}
-              className={cn(
-                "rounded-xl border bg-card px-4 py-4 shadow-card",
-                isBest ? "border-gain/40" : "border-border"
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <TickerBadge symbol={company.ticker} className="px-2 py-1 text-body" />
-
-                {isBest && (
-                  <span className="inline-flex items-center gap-1 text-caption font-medium text-gain">
-                    <Crown size={12} aria-hidden="true" />
-                    Best pick
-                  </span>
-                )}
-              </div>
-
-              <p className="mt-2 truncate text-caption text-muted-foreground">
-                {company.name ?? "Company name unavailable"}
-              </p>
-
-              <p className="tnum mt-3 text-metric text-foreground">
-                {formatCurrency(company.intrinsic_value)}
-              </p>
-              <p className="mt-0.5 text-caption text-subtle-foreground">
-                Intrinsic value per share
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <RecommendationBadge recommendation={company.recommendation} />
-                <span
-                  className={cn(
-                    "tnum text-caption font-medium",
-                    company.upside >= 0 ? "text-gain" : "text-loss"
-                  )}
-                >
-                  {formatPercent(company.upside)}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-        <div className="max-h-[70vh] overflow-auto">
-          <table className="w-full border-collapse text-label">
+    <div className="min-w-0 overflow-x-auto">
+      <div className="min-w-[36rem]">
+        <table className="w-full border-collapse text-label">
             <caption className="sr-only">
               Backend comparison of intrinsic value, upside, recommendation and
               health score for{" "}
               {result.map((company) => company.ticker).join(", ")}. The column the
-              backend scored highest is marked “best pick”.
+              backend scored highest is highlighted.
             </caption>
 
             <thead className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur-sm">
@@ -184,7 +160,14 @@ export function ComparisonTable({ tickers }: Props) {
                       best === company.ticker && "bg-gain-subtle"
                     )}
                   >
-                    {company.ticker}
+                    {/* Inline rather than stacked: a taller header would shift
+                        every row, and the mark stays decorative because the
+                        symbol is in the same cell. */}
+                    <span className="inline-flex items-center gap-1.5">
+                      <CompanyLogo ticker={company.ticker} size="xs" decorative />
+
+                      {company.ticker}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -209,7 +192,7 @@ export function ComparisonTable({ tickers }: Props) {
                         row.align === "right" ? "text-right" : "text-left"
                       )}
                     >
-                      {row.metric === "Recommendation" && cell ? (
+                      {row.badge && cell ? (
                         <RecommendationBadge recommendation={cell} />
                       ) : (
                         <span
@@ -228,7 +211,6 @@ export function ComparisonTable({ tickers }: Props) {
               ))}
             </tbody>
           </table>
-        </div>
       </div>
     </div>
   );
