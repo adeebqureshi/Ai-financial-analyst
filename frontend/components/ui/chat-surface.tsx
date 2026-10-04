@@ -16,7 +16,6 @@ import { Markdown } from "@/components/ui/markdown";
 import { Button } from "@/components/ui/button";
 import { useChatStream, type SendOptions } from "@/hooks/use-chat-stream";
 import { cn } from "@/lib/utils";
-import type { AgentToolExecution } from "@/types/analysis";
 
 type Props = {
 
@@ -69,14 +68,6 @@ const capabilities = [
   "Outlook and guidance",
   "Key financial metrics",
 ];
-
-const toolStatusTone: Record<AgentToolExecution["status"], string> = {
-  done: "text-gain",
-  running: "text-brand",
-  error: "text-loss",
-  skipped: "text-muted-foreground",
-};
-
 
 export function ChatSurface({
   scope = "default",
@@ -491,46 +482,6 @@ function ChatMessageRow({ message, isStreaming, isLast }: RowProps) {
             </div>
           )}
 
-          {message.plan && message.plan.length > 0 && (
-            <div className="mt-3 border-t border-border pt-2">
-              <p className="text-caption font-medium text-muted-foreground">
-                Research plan
-              </p>
-              <ol className="mt-1.5 space-y-1">
-                {message.plan.map((step, stepIndex) => (
-                  <li
-                    key={stepIndex}
-                    className="text-caption text-muted-foreground"
-                  >
-                    {stepIndex + 1}. {step}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {message.tools_used && message.tools_used.length > 0 && (
-            <div className="mt-3 border-t border-border pt-2">
-              <p className="text-caption font-medium text-muted-foreground">
-                Tools used
-              </p>
-              <ul className="mt-1.5 space-y-1">
-                {message.tools_used.map((tool, toolIndex) => (
-                  <li
-                    key={toolIndex}
-                    className="text-caption text-muted-foreground"
-                  >
-                    <span
-                      className={`font-medium ${toolStatusTone[tool.status]}`}
-                    >
-                      {tool.tool}
-                    </span>
-                    {tool.detail && ` — ${tool.detail}`}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       </div>
     </div>

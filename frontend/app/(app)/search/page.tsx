@@ -13,7 +13,7 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <div className="space-y-8 pb-8">
       <PageHeader
-        eyebrow="Research & Reports"
+        eyebrow="Research"
         title="Search the knowledge base"
         description="Query every indexed filing, report and note using hybrid vector + keyword retrieval — the same knowledge the AI copilot uses to ground its research."
       />

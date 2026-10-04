@@ -1,11 +1,12 @@
 import type {
-  AgentToolExecution,
+  AnalysisPdfRequest,
   AnalyzeData,
   ApiResponse,
   CompareData,
   DocumentCitation,
   DocumentData,
   DocumentListData,
+  PdfDownload,
   ReportData,
   RiskAssessmentData,
   SearchResultData,
@@ -88,6 +89,46 @@ async function parseSuccess<T>(
   }
 }
 
+/**
+ * Resolve the bearer token, fetching and caching one from the local auth route
+ * when the browser has none yet.
+ *
+ * Shared by the JSON and binary request paths so a PDF download is authorised
+ * exactly the same way as every other call.
+ */
+async function resolveAuthHeader(
+  headers: Record<string, string>
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (headers["Authorization"]) return;
+
+  let token = window.localStorage.getItem("access_token");
+
+  if (!token) {
+    try {
+      const authResponse = await fetch("/api/auth/token", {
+        method: "POST",
+        cache: "no-store",
+      });
+
+      if (authResponse.ok) {
+        const authData = await authResponse.json();
+        token = authData.access_token;
+
+        if (token) {
+          window.localStorage.setItem("access_token", token);
+        }
+      }
+    } catch {
+      // Fall through: an unauthenticated request will surface the real error.
+    }
+  }
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+}
+
 async function request<T>(
   endpoint: string,
   init?: RequestInit,
@@ -100,36 +141,58 @@ async function request<T>(
     ...(init?.headers as Record<string, string> | undefined),
   };
 
+  await resolveAuthHeader(headers);
 
-  if (typeof window !== "undefined") {
-    let token = window.localStorage.getItem("access_token");
+  return performRequest<T>(endpoint, init, headers, timeoutMs, (response) =>
+    parseSuccess<T>(response, endpoint)
+  );
+}
 
-    if (!token) {
+/**
+ * A request whose success body is binary rather than JSON — used for the PDF
+ * report, which must arrive as real PDF bytes rather than a JSON wrapper.
+ */
+async function requestBlob(
+  endpoint: string,
+  init?: RequestInit,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
+): Promise<{ blob: Blob; filename: string | null }> {
+  const headers: Record<string, string> = {
+    ...(init?.body instanceof FormData
+      ? {}
+      : { "Content-Type": "application/json" }),
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+
+  await resolveAuthHeader(headers);
+
+  return performRequest(endpoint, init, headers, timeoutMs, async (response) => {
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+    const plain = /filename="([^"]+)"/i.exec(disposition);
+
+    let filename = utf8?.[1] ?? plain?.[1] ?? null;
+
+    if (filename) {
       try {
-        const authResponse = await fetch("/api/auth/token", {
-          method: "POST",
-          cache: "no-store",
-        });
-
-        if (authResponse.ok) {
-          const authData = await authResponse.json();
-          token = authData.access_token;
-
-          if (token) {
-            window.localStorage.setItem("access_token", token);
-          }
-        }
+        filename = decodeURIComponent(filename);
       } catch {
-
-
+        // Keep the raw value if it is not valid percent-encoding.
       }
     }
 
-    if (token && !headers["Authorization"]) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
+    return { blob: await response.blob(), filename };
+  });
+}
 
+/** Shared transport: timeout, error mapping and response parsing. */
+async function performRequest<T>(
+  endpoint: string,
+  init: RequestInit | undefined,
+  headers: Record<string, string>,
+  timeoutMs: number,
+  parse: (response: Response) => Promise<T>
+): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(),
@@ -189,8 +252,6 @@ async function request<T>(
       }
     }
 
-
-
     if (response.status === 401 && typeof window !== "undefined") {
       window.localStorage.removeItem("access_token");
     }
@@ -198,14 +259,12 @@ async function request<T>(
     throw new ApiError(message, response.status, endpoint);
   }
 
-  return parseSuccess<T>(response, endpoint);
+  return parse(response);
 }
 
 export interface ChatStreamPlanData {
   tickers?: string[];
   intents?: string[];
-  steps?: string[];
-  tools_used?: AgentToolExecution[];
 }
 
 export interface ChatStreamDoneData {
@@ -213,8 +272,6 @@ export interface ChatStreamDoneData {
   model: string | null;
   tickers?: string[];
   sources?: DocumentCitation[];
-  steps?: string[];
-  tools_used?: AgentToolExecution[];
 }
 
 export interface ChatStreamHandlers {
@@ -430,9 +487,22 @@ export const api = {
     );
   },
 
-  compare(
-    tickers: string[]
-  ): Promise<ApiResponse<CompareData>> {
+  /**
+   * Download the analysis currently on screen as a PDF.
+   *
+   * The completed analysis result is posted to the renderer, so the document is
+   * built from the same numbers the workspace is displaying — no second market
+   * data call, valuation run or LLM request. Rendering a few pages of text is
+   * fast, so this uses the default timeout rather than the long-report one.
+   */
+  analysisPdf(body: AnalysisPdfRequest): Promise<PdfDownload> {
+    return requestBlob("/analysis/pdf-report", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  compare(tickers: string[]): Promise<ApiResponse<CompareData>> {
     return request("/compare", {
       method: "POST",
       body: JSON.stringify({

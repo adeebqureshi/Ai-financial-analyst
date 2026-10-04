@@ -85,11 +85,10 @@ test("compare interactive states", async ({ page }) => {
 test("all pages still render", async ({ page }) => {
   for (const path of [
     "/analysis",
-    "/company",
+    "/analysis/AAPL",
     "/compare",
     "/research",
     "/search",
-    "/reports",
   ]) {
     await page.goto(`http://localhost:3000${path}`);
     await page.waitForLoadState("networkidle");

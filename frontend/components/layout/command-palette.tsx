@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { isActivePath, navigationGroups, workspaceItems } from "./nav-items";
+import { isActivePath, navigationGroups } from "./nav-items";
 import { useCopilot } from "./ai-copilot";
 
 type CommandKind = "navigate" | "analyze" | "ask" | "search-docs" | "report";
@@ -126,25 +126,16 @@ export function CommandPalette({ children }: Props) {
       }
     }
 
-    const navigation: PaletteItem[] = [
-      ...navigationGroups.flatMap((group) =>
-        group.items.map((item) => ({
-          id: `nav-${item.href}`,
-          label: item.title,
-          hint: item.description,
-          group: group.label,
-          kind: "navigate" as const,
-          href: item.href,
-        }))
-      ),
-      ...workspaceItems.map((item) => ({
+    const navigation: PaletteItem[] = navigationGroups.flatMap((group) =>
+      group.items.map((item) => ({
         id: `nav-${item.href}`,
         label: item.title,
-        group: "Workspace",
+        hint: item.description,
+        group: group.label,
         kind: "navigate" as const,
         href: item.href,
-      })),
-    ];
+      }))
+    );
 
     return [...dynamic, ...navigation];
   }, [query]);

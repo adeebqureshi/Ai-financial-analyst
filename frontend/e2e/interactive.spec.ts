@@ -35,14 +35,23 @@ test.describe("Interactive Features Audit", () => {
     ).toBeVisible();
   });
 
-  test("reports page generate flow", async ({ page }) => {
-    await page.goto("http://localhost:3000/reports");
+  test("analysis page report generation flow", async ({ page }) => {
+    await page.goto("http://localhost:3000/analysis/AAPL");
     await page.waitForLoadState("networkidle");
-    const input = page.locator("#report-ticker");
-    await expect(input).toBeVisible();
-    await input.fill("AAPL");
-    await page.click("button:has-text('Generate report')");
-    await page.waitForTimeout(3000);
+
+    // Report generation now lives inside the analysis workspace, bound to the
+    // ticker already being analysed.
+    const section = page.locator("main section#report");
+    await expect(section).toBeVisible();
+    await expect(
+      section.getByRole("heading", { name: "Research report" })
+    ).toBeVisible();
+
+    await section.getByRole("button", { name: "Generate report" }).click();
+
+    // Generation takes ~60s server-side, so assert the in-flight state rather
+    // than waiting for the finished report.
+    await expect(section.getByText(/Researching AAPL/)).toBeVisible();
   });
 
 });

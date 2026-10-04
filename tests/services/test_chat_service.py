@@ -72,14 +72,28 @@ def test_chat_returns_sources():
     assert result.sources[0].document_id == "doc1"
     assert result.sources[0].filename == "Apple 10-K.pdf"
     assert result.sources[0].page == 42
-def test_chat_returns_tool_transparency_fields():
+def test_chat_never_returns_tool_transparency_fields():
+    """
+    The agent still runs its tools, but the trace must not be part of the
+    user-facing response: the UI renders these as "Research plan" and
+    "Tools used".
+    """
     service, coordinator = _chat_service()
     coordinator.run.return_value = _workflow_result()
     result = service.chat(ChatRequest(message="price"))
-    assert result.plan == ["Retrieved market data for AAPL"]
-    assert result.tools_used[0].tool == "get_market_data"
-    assert result.tools_used[0].status == "done"
-    assert result.tools_used[0].detail == "Retrieved market data for AAPL"
+
+    assert not hasattr(result, "plan")
+    assert not hasattr(result, "tools_used")
+
+    payload = result.model_dump()
+    assert "plan" not in payload
+    assert "tools_used" not in payload
+
+    # The underlying execution trace is still produced internally.
+    assert coordinator.run.return_value.plan == ["Retrieved market data for AAPL"]
+    assert (
+        coordinator.run.return_value.tools_used[0]["tool"] == "get_market_data"
+    )
 def test_chat_without_sources_returns_empty_citations():
     service, coordinator = _chat_service()
     coordinator.run.return_value = _workflow_result(sources=[])

@@ -118,10 +118,27 @@ export interface ReportData {
   format: string;
 }
 
-export interface AgentToolExecution {
-  tool: string;
-  status: "done" | "running" | "error" | "skipped";
-  detail?: string;
+/**
+ * The completed analysis handed to the PDF renderer.
+ *
+ * This is the result the workspace is already holding, not a request to
+ * recompute it, so the document can never disagree with the screen.
+ */
+export interface AnalysisPdfRequest {
+  ticker: string;
+  company: CompanyData;
+  market: MarketData;
+  statement: StatementData;
+  valuation: ValuationResultData;
+  health: HealthScoreData;
+  recommendation: string;
+  risk: RiskAssessmentData | null;
+}
+
+export interface PdfDownload {
+  blob: Blob;
+  /** From `Content-Disposition`, so the server owns the filename. */
+  filename: string | null;
 }
 
 export interface DocumentCitation {

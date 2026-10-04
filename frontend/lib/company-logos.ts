@@ -81,7 +81,7 @@ const COMPANY_REGISTRY: Record<string, CompanyMeta> = {
 /**
  * Normalise casing and punctuation, and strip provider suffixes.
  *
- * These components receive symbols from routes (`/company/brk.b`), chat tool
+ * These components receive symbols from routes (`/analysis/brk.b`), chat tool
  * payloads, stored session titles and history rows, so the symbol arrives in
  * several shapes: `aapl`, ` AAPL `, `brk.b`, `BF-B`. Folding them here keeps
  * every call site free of ad-hoc cleaning.

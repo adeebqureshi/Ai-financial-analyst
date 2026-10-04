@@ -43,7 +43,10 @@ def test_chat_turn_is_persisted_and_ownership_isolated(tmp_path):
         assert roles == ["user", "assistant", "user", "assistant"]
         assistant = msg_body["messages"][1]
         assert assistant["metadata"]["model"] == "fake-model"
-        assert assistant["metadata"]["plan"] == ["Retrieved market data for AAPL"]
+        # Execution traces are not persisted into user-facing message metadata;
+        # the messages endpoint returns this blob to the client.
+        assert "plan" not in assistant["metadata"]
+        assert "tools_used" not in assistant["metadata"]
         bob_listed = client.get("/chat/sessions", headers=_headers(token_b))
         assert bob_listed.json()["data"]["total"] == 0
         bob_messages = client.get("/chat/sessions/sess-a/messages", headers=_headers(token_b))

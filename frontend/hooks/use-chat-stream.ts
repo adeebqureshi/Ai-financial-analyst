@@ -7,7 +7,7 @@ import {
   type ChatStreamDoneData,
   type ChatStreamPlanData,
 } from "@/services/api";
-import type { AgentToolExecution, DocumentCitation } from "@/types/analysis";
+import type { DocumentCitation } from "@/types/analysis";
 
 export type ChatRole = "user" | "assistant";
 
@@ -18,8 +18,6 @@ export type ChatMessage = {
   model?: string | null;
   ticker?: string | null;
   sources?: DocumentCitation[];
-  plan?: string[];
-  tools_used?: AgentToolExecution[];
 
   error?: string | null;
 };
@@ -112,10 +110,8 @@ export function useChatStream({ scope = "default" }: Props = {}) {
           {
             onPlan: (data: ChatStreamPlanData) => {
               if (!isCurrent()) return;
-              if (data.steps?.length) partial.plan = data.steps;
-              if (data.tools_used?.length) {
-                partial.tools_used = data.tools_used;
-              }
+              // Only the resolved ticker is surfaced. Execution steps and tool
+              // names are server-side implementation detail.
               if (data.tickers?.length && !partial.ticker) {
                 partial.ticker = data.tickers[0];
               }
@@ -144,8 +140,6 @@ export function useChatStream({ scope = "default" }: Props = {}) {
                 partial.ticker ??
                 (data.tickers?.length ? data.tickers[0] : null);
               partial.sources = data.sources ?? undefined;
-              if (data.steps?.length) partial.plan = data.steps;
-              if (data.tools_used?.length) partial.tools_used = data.tools_used;
               setMessages((prev) => {
                 const next = [...prev];
                 next[next.length - 1] = { ...partial };

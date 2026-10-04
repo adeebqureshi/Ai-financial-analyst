@@ -8,11 +8,7 @@ import { ChevronsLeft, LineChart, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { ConnectionStatus } from "./connection-status";
-import {
-  isActivePath,
-  navigationGroups,
-  workspaceItems,
-} from "./nav-items";
+import { isActivePath, navigationGroups } from "./nav-items";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 type Props = {
@@ -187,60 +183,6 @@ export function Sidebar({
             </div>
           ))}
 
-          <div className="mb-5">
-            <p
-              className={cn(
-                "px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle-foreground transition-opacity",
-                collapsed && "md:hidden"
-              )}
-            >
-              Workspace
-            </p>
-
-            <ul className="space-y-0.5">
-              {workspaceItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActivePath(pathname, item.href);
-
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      aria-current={active ? "page" : undefined}
-                      title={collapsed ? item.title : undefined}
-                      className={cn(
-                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-label font-medium",
-                        "transition-colors duration-150",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                        collapsed && "md:justify-center md:px-0",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-                      )}
-                    >
-                      <Icon
-                        size={17}
-                        className={cn(
-                          "shrink-0",
-                          active ? "text-brand" : "text-sidebar-foreground/60"
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span
-                        className={cn(
-                          "truncate transition-opacity",
-                          collapsed && "md:hidden"
-                        )}
-                      >
-                        {item.title}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
         </nav>
 
         <div

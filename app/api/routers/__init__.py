@@ -1,6 +1,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends
 from app.api.routers.analysis import router as analysis_router
+from app.api.routers.analysis_pdf import router as analysis_pdf_router
 from app.api.routers.chat import router as chat_router
 from app.api.routers.compare import router as compare_router
 from app.api.routers.documents import router as documents_router
@@ -22,6 +23,7 @@ api_router.include_router(health_router)
 api_router.include_router(readiness_router, tags=["Health"])
 api_router.include_router(version_router)
 api_router.include_router(analysis_router, dependencies=_AUTH_GUARD)
+api_router.include_router(analysis_pdf_router, dependencies=_AUTH_GUARD)
 api_router.include_router(search_router, dependencies=_AUTH_GUARD)
 api_router.include_router(valuation_router, dependencies=_AUTH_GUARD)
 api_router.include_router(chat_router, dependencies=_AUTH_GUARD)
@@ -36,6 +38,7 @@ __all__ = [
     "health_router",
     "version_router",
     "analysis_router",
+    "analysis_pdf_router",
     "search_router",
     "valuation_router",
     "chat_router",

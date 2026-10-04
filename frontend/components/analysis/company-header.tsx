@@ -23,6 +23,13 @@ type Props = {
   intrinsicValue?: number | null;
   stale?: boolean;
   asOf?: string | null;
+
+  /**
+   * Rendered beneath the quote block. Only passed once an analysis has
+   * succeeded, so result-only actions such as the PDF download never appear on
+   * the page before there is anything to download.
+   */
+  actions?: React.ReactNode;
 };
 
 function isDemoData(name: string): boolean {
@@ -44,6 +51,7 @@ export function CompanyHeader({
   intrinsicValue,
   stale,
   asOf,
+  actions,
 }: Props) {
   const isDemo = isDemoData(company.name);
   const displayName = isDemo
@@ -186,6 +194,10 @@ export function CompanyHeader({
               </div>
             )}
           </div>
+
+          {actions && (
+            <div className="mt-4 border-t border-border pt-4">{actions}</div>
+          )}
         </aside>
       </div>
     </section>

@@ -14,7 +14,7 @@ describe("normalizeTicker", () => {
   });
 
   it("folds dot and dash separators to underscore", () => {
-    // `/company/brk.b` reaches the UI as a route segment.
+    // `/analysis/brk.b` reaches the UI as a route segment.
     expect(normalizeTicker("brk.b")).toBe("BRK_B");
     expect(normalizeTicker("BF-B")).toBe("BF_B");
   });

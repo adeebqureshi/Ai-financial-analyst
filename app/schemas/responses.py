@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.schemas.analysis import FinancialStatementInput
 class MarketDataResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -145,14 +145,10 @@ class ChatResponseData(BaseModel):
         default_factory=list,
         description="Grounding citations for the answer.",
     )
-    plan: list[str] = Field(
-        default_factory=list,
-        description="High-level execution steps the agent actually ran.",
-    )
-    tools_used: list[AgentToolExecutionData] = Field(
-        default_factory=list,
-        description="Tool-transparency metadata for the tools that ran.",
-    )
+    # NOTE: execution traces (plan steps, tool names, tool statuses) are
+    # deliberately absent. They remain available internally for logging and
+    # debugging, but must never reach the client, where they would be rendered
+    # as "Research plan" / "Tools used" sections next to the answer.
 class ChatSessionData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     session_id: str = Field(..., description="Client-supplied session identifier.")
@@ -163,6 +159,13 @@ class ChatSessionData(BaseModel):
     )
     created_at: datetime = Field(..., description="UTC creation timestamp.")
     updated_at: datetime = Field(..., description="UTC last-activity timestamp.")
+# Execution traces that earlier builds persisted into message metadata. The
+# client renders metadata as "Research plan" / "Tools used" panels, so these keys
+# are stripped on read. Filtering at serialization means legacy rows are covered
+# without a database migration, and historical messages are left untouched.
+INTERNAL_METADATA_KEYS = frozenset({"plan", "tools_used"})
+
+
 class ChatMessageData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: int = Field(..., description="Database row identifier.")
@@ -173,6 +176,25 @@ class ChatMessageData(BaseModel):
         description="Arbitrary per-message metadata (JSON).",
     )
     created_at: datetime = Field(..., description="UTC storage timestamp.")
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def _drop_internal_execution_metadata(cls, value: Any) -> Any:
+        """
+        Remove internal execution traces from any message, old or new.
+
+        Only the keys named in ``INTERNAL_METADATA_KEYS`` are dropped; every
+        other key, including citations and tickers, is passed through
+        untouched. Non-dict values are left alone rather than coerced.
+        """
+        if not isinstance(value, dict):
+            return value
+
+        return {
+            key: item
+            for key, item in value.items()
+            if key not in INTERNAL_METADATA_KEYS
+        }
 class ChatSessionListData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     sessions: list[ChatSessionData] = Field(
@@ -194,11 +216,6 @@ class DocumentCitation(BaseModel):
     page: int | None = Field(default=None, description="Page number of the cited text.")
     chunk_id: str | None = Field(default=None, description="Stable chunk identifier.")
     score: float | None = Field(default=None, description="Relevance score of the cited chunk.")
-class AgentToolExecutionData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    tool: str = Field(..., description="Tool name.")
-    status: str = Field(..., description="Execution status (done/error/running/skipped).")
-    detail: str | None = Field(default=None, description="Short human-readable summary.")
 class DocumentData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     document_id: str = Field(..., description="Unique document identifier.")

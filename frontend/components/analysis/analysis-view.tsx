@@ -11,14 +11,20 @@ import { SectionHeading } from "@/components/ui/page-header";
 
 import { AnalysisSectionNav } from "./section-nav";
 import { CompanyHeader } from "./company-header";
+import { DownloadReportButton } from "./download-report-button";
 import { ExecutiveSummary } from "./executive-summary";
 import { ValuationCards } from "./valuation-cards";
 import { FinancialHealth } from "./financial-health";
 import { RiskAnalysis } from "./risk-analysis";
 import { MarketOverview } from "./market-overview";
+import { ReportPanel } from "./report-panel";
 import { AIChat } from "./ai-chat";
 
-import type { AnalyzeData, ApiResponse } from "@/types/analysis";
+import type {
+  AnalyzeData,
+  ApiResponse,
+  RiskAssessmentData,
+} from "@/types/analysis";
 
 type Props = {
   ticker: string;
@@ -31,6 +37,7 @@ const SECTIONS = [
   { id: "health", label: "Health" },
   { id: "risk", label: "Risk" },
   { id: "insights", label: "AI Insights" },
+  { id: "report", label: "Report" },
 ];
 
 export function AnalysisView({ ticker }: Props) {
@@ -100,6 +107,22 @@ export function AnalysisView({ ticker }: Props) {
     description: result.company.description ?? undefined,
   };
 
+  /**
+   * The PDF renderer receives the result already in hand. Nothing is
+   * recomputed on download — no second market data call, valuation run or LLM
+   * request — so the document cannot disagree with what is on screen.
+   */
+  const pdfPayload = {
+    ticker: result.ticker,
+    company: result.company,
+    market: result.market,
+    statement: result.statement,
+    valuation: result.valuation,
+    health: result.health,
+    recommendation: result.recommendation,
+    risk: (riskQuery.data?.data as RiskAssessmentData | undefined) ?? null,
+  };
+
   return (
     <div className="space-y-10">
       <CompanyHeader
@@ -110,6 +133,9 @@ export function AnalysisView({ ticker }: Props) {
         intrinsicValue={valuation.intrinsic_value}
         stale={market.stale}
         asOf={market.as_of}
+        actions={
+          <DownloadReportButton key={pdfPayload.ticker} analysis={pdfPayload} />
+        }
       />
 
       <AnalysisSectionNav sections={sections} />
@@ -161,6 +187,10 @@ export function AnalysisView({ ticker }: Props) {
           <AIChat ticker={ticker} />
         </div>
       </section>
+
+      {/* Keyed by ticker so moving between companies never carries a previous
+          company's generated report across. */}
+      <ReportPanel key={ticker} ticker={ticker} />
     </div>
   );
 }

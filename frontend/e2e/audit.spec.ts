@@ -63,7 +63,6 @@ test.describe("Console Error Audit", () => {
       "/compare",
       "/research",
       "/search",
-      "/reports",
       "/settings",
     ];
 

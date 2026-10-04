@@ -70,7 +70,10 @@ async def test_stream_run_emits_plan_tokens_done():
     assert types == ["plan", "token", "token", "done"]
     plan_event = events[0]
     assert plan_event["tickers"] == ["AAPL"]
-    assert plan_event["steps"] == ["Retrieved market data for AAPL"]
+    # Execution traces must never reach the client: the UI renders them as
+    # "Research plan" / "Tools used" panels next to the answer.
+    assert "steps" not in plan_event
+    assert "tools_used" not in plan_event
     message = "".join(event["delta"] for event in events if event["type"] == "token")
     done_event = events[-1]
     assert done_event["type"] == "done"
@@ -78,6 +81,8 @@ async def test_stream_run_emits_plan_tokens_done():
     assert done_event["model"] == "fake-async-model"
     assert done_event["success"] is True
     assert done_event["message"] == message
+    assert "steps" not in done_event
+    assert "tools_used" not in done_event
 @pytest.mark.anyio
 async def test_stream_run_appends_auditor_note_when_audit_fails():
     coordinator = _build_coordinator(["answer"], audit_passed=False)

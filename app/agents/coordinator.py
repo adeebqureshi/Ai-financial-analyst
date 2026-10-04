@@ -201,10 +201,11 @@ class CoordinatorAgent:
             return
         yield {
             "type": "plan",
+            # Only the resolved context travels to the client. `steps` and
+            # `tools_used` stay server-side: they are execution traces, and the
+            # UI renders them as "Research plan" / "Tools used" panels.
             "tickers": plan.tickers,
             "intents": [intent.value for intent in plan.intents],
-            "steps": steps,
-            "tools_used": tools_used,
         }
         usable = {
             tool: results
@@ -249,8 +250,6 @@ class CoordinatorAgent:
             "tickers": plan.tickers,
             "intents": [intent.value for intent in plan.intents],
             "sources": sources,
-            "steps": steps,
-            "tools_used": tools_used,
         }
     def _execute(
         self,
