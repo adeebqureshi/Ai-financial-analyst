@@ -121,7 +121,11 @@ class FinancialAnalystAgent:
             import traceback
 
             logger.error(
-                "LLM synthesis FULL ERROR for query %s: %s\n%s",
+                "LLM synthesis FULL ERROR model=%s error_type=%s cause=%s "
+                "for query %s: %s\n%s",
+                _configured_model(self._client),
+                type(exc).__name__,
+                type(exc.__cause__).__name__ if exc.__cause__ is not None else "none",
                 query[:120],
                 exc,
                 traceback.format_exc(),
@@ -132,7 +136,9 @@ class FinancialAnalystAgent:
             import traceback
 
             logger.error(
-                "LLM synthesis UNEXPECTED ERROR: %s\n%s",
+                "LLM synthesis UNEXPECTED ERROR model=%s error_type=%s: %s\n%s",
+                _configured_model(self._client),
+                type(exc).__name__,
                 exc,
                 traceback.format_exc(),
             )
@@ -182,7 +188,11 @@ class FinancialAnalystAgent:
             import traceback
 
             logger.error(
-                "Streaming LLM synthesis LLMError for query %s: %s\n%s",
+                "Streaming LLM synthesis LLMError model=%s error_type=%s "
+                "cause=%s for query %s: %s\n%s",
+                _configured_model(self.ensure_async_client()),
+                type(exc).__name__,
+                type(exc.__cause__).__name__ if exc.__cause__ is not None else "none",
                 query[:120],
                 exc,
                 traceback.format_exc(),
@@ -193,12 +203,25 @@ class FinancialAnalystAgent:
             import traceback
 
             logger.error(
-                "Streaming LLM synthesis UNEXPECTED ERROR for query %s: %s\n%s",
+                "Streaming LLM synthesis UNEXPECTED ERROR model=%s "
+                "error_type=%s for query %s: %s\n%s",
+                _configured_model(self.ensure_async_client()),
+                type(exc).__name__,
                 query[:120],
                 exc,
                 traceback.format_exc(),
             )
             yield LLM_UNAVAILABLE_MESSAGE
+
+
+def _configured_model(client: Any) -> str:
+    """Model id the client is configured with — for logs only, never a secret.
+
+    ``getattr`` chains keep this safe for tests that inject stub clients
+    without a ``config`` attribute.
+    """
+    config = getattr(client, "config", None)
+    return str(getattr(config, "model", "unknown"))
 
 
 def _normalize_evidence(

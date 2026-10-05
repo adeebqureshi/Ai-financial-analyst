@@ -109,6 +109,12 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
+  /**
+   * Forwarded to the rendered element (or the Slot when `asChild`). Declared
+   * explicitly because React 19 passes `ref` through props, so the existing
+   * `...props` spread already forwards it at runtime.
+   */
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 export function Button({

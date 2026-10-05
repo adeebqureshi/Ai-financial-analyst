@@ -327,5 +327,79 @@ describe("services/api.ts", () => {
         method: "DELETE",
       }));
     });
+
+    describe("deleteChatSession", () => {
+      it("issues a DELETE against the encoded session endpoint", async () => {
+        mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: () => Promise.reject() });
+
+        await api.deleteChatSession("chat-123_abc");
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          `${API_URL}/chat/sessions/chat-123_abc`,
+          expect.objectContaining({ method: "DELETE" })
+        );
+      });
+
+      it("encodes a session id that would otherwise break the path", async () => {
+        mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: () => Promise.reject() });
+
+        await api.deleteChatSession("weird/id?x=1");
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          `${API_URL}/chat/sessions/weird%2Fid%3Fx%3D1`,
+          expect.objectContaining({ method: "DELETE" })
+        );
+      });
+
+      it("resolves on 204 without trying to parse an empty body", async () => {
+        // A 204 has no payload; parsing it as JSON would be an error.
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          json: () => Promise.reject(new Error("Unexpected end of JSON input")),
+        });
+
+        await expect(api.deleteChatSession("s1")).resolves.toBeUndefined();
+      });
+
+      it("raises a 404 ApiError when the session is gone", async () => {
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 404,
+          // The error path reads the body via `text()` to extract the message.
+          text: () => Promise.resolve(JSON.stringify({ message: "Session not found." })),
+        });
+
+        const error = await api.deleteChatSession("s1").catch((e) => e);
+
+        expect(error).toBeInstanceOf(ApiError);
+        expect(error.status).toBe(404);
+        expect(error.isNotFound()).toBe(true);
+      });
+
+      it("raises an ApiError carrying the server status on a 500", async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: () => Promise.resolve(JSON.stringify({ message: "boom" })),
+        });
+
+        await expect(api.deleteChatSession("s1")).rejects.toMatchObject({
+          status: 500,
+        });
+      });
+
+      it("raises a status-0 ApiError on a network failure", async () => {
+        mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+        try {
+          await api.deleteChatSession("s1");
+          throw new Error("expected a rejection");
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).status).toBe(0);
+        }
+      });
+    });
   });
 });

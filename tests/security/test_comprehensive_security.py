@@ -92,7 +92,13 @@ class TestCrossUserIsolation:
         auth_client.post("/chat", headers=_headers(token_a), json={"message": "Analyze AAPL", "session_id": "sess-a", "ticker": "AAPL"})
         assert auth_client.get("/chat/sessions", headers=_headers(token_b)).json()["data"]["total"] == 0
         assert auth_client.get("/chat/sessions/sess-a/messages", headers=_headers(token_b)).json()["data"]["total"] == 0
-        assert auth_client.delete("/chat/sessions/sess-a", headers=_headers(token_b)).json()["data"]["deleted"] is False
+        cross_owner = auth_client.delete("/chat/sessions/sess-a", headers=_headers(token_b))
+        # Non-ownership is reported as 404 so the endpoint cannot be used to
+        # discover which session ids exist on other accounts.
+        assert cross_owner.status_code == 404
+        assert cross_owner.json()["success"] is False
+        # And AAPL's session is still there.
+        assert auth_client.get("/chat/sessions", headers=_headers(token_a)).json()["data"]["total"] == 1
     def test_chat_stream_isolated(self, auth_client):
         token_a = _register_and_login(auth_client, "chat-stream-a@example.com")
         token_b = _register_and_login(auth_client, "chat-stream-b@example.com")
@@ -333,9 +339,18 @@ class TestChatOwnership:
         token_b = _register_and_login(auth_client, "chat-del-b@example.com")
         auth_client.post("/chat", headers=_headers(token_a), json={"message": "Hi", "session_id": "sess-del"})
         response = auth_client.delete("/chat/sessions/sess-del", headers=_headers(token_b))
-        assert response.json()["data"]["deleted"] is False
+        assert response.status_code == 404
+        assert response.json()["success"] is False
+        # The owner's session survived the attempt.
+        assert auth_client.get("/chat/sessions", headers=_headers(token_a)).json()["data"]["total"] == 1
+        # And the owner can delete it themselves.
+        own = auth_client.delete("/chat/sessions/sess-del", headers=_headers(token_a))
+        assert own.status_code == 204
+        assert auth_client.get("/chat/sessions", headers=_headers(token_a)).json()["data"]["total"] == 0
+        # Deleting it a second time is a 404, not a second success.
         response = auth_client.delete("/chat/sessions/sess-del", headers=_headers(token_a))
-        assert response.json()["data"]["deleted"] is True
+        assert response.status_code == 404
+        assert response.json()["success"] is False
     def test_chat_messages_enforces_ownership(self, auth_client):
         token_a = _register_and_login(auth_client, "chat-msg-a@example.com")
         token_b = _register_and_login(auth_client, "chat-msg-b@example.com")

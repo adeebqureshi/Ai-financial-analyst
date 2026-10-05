@@ -1,13 +1,37 @@
 from __future__ import annotations
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Any, Iterator
+from typing import Any, Iterator, Sequence
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from app.chat.cache import ChatSessionCache
 from app.chat.database import ChatPersistenceError, get_engine, init_db
 from app.chat.models import ChatMessage, ChatSession, _utcnow_naive, to_aware_utc
+
+# Long enough to identify a session at a glance, short enough to stay on one
+# line in the recent-sessions list.
+_TITLE_MAX_CHARS = 80
+
+
+def _title_from_message(content: str) -> str:
+    """Turn a raw user message into a single-line session title.
+
+    Collapses whitespace (a multi-line paste must not break the row layout) and
+    truncates on a word boundary so the label never ends mid-word.
+    """
+    collapsed = " ".join((content or "").split())
+    if not collapsed:
+        return ""
+    if len(collapsed) <= _TITLE_MAX_CHARS:
+        return collapsed
+
+    clipped = collapsed[: _TITLE_MAX_CHARS]
+    boundary = clipped.rfind(" ")
+    if boundary > _TITLE_MAX_CHARS // 2:
+        clipped = clipped[:boundary]
+    return f"{clipped.rstrip()}…"
+
 class ChatStore:
     def __init__(
         self,
@@ -180,6 +204,37 @@ class ChatStore:
             if session is None:
                 return None
             return self._session_dict(session)
+    @staticmethod
+    def _first_user_messages(db: Session, session_ids: Sequence[int]) -> dict[int, str]:
+        """Map each session PK to the text of its *first* user message.
+
+        One grouped query for the whole page — deliberately not a per-session
+        lookup, so listing stays a constant number of round trips.
+        """
+        if not session_ids:
+            return {}
+
+        first_ids = (
+            select(
+                ChatMessage.session_id.label("sid"),
+                func.min(ChatMessage.id).label("mid"),
+            )
+            .where(
+                ChatMessage.session_id.in_(list(session_ids)),
+                ChatMessage.role == "user",
+            )
+            .group_by(ChatMessage.session_id)
+            .subquery()
+        )
+
+        rows = db.execute(
+            select(first_ids.c.sid, ChatMessage.content).join(
+                ChatMessage, ChatMessage.id == first_ids.c.mid
+            )
+        ).all()
+
+        return {row.sid: (row.content or "") for row in rows}
+
     def list_sessions(
         self,
         owner_id: str | None,
@@ -200,7 +255,28 @@ class ChatStore:
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             ).all()
-            return [self._session_dict(row) for row in rows], total or 0
+
+            # `title` is never written on the chat write path, so a stored title
+            # is almost always NULL. Rather than leave every row labelled
+            # "Research session", fall back to what the user actually asked —
+            # real data, derived on read so nothing needs migrating.
+            untitled = [row.id for row in rows if not row.title]
+            derived = (
+                self._first_user_messages(db, untitled)
+                if untitled
+                else {}
+            )
+
+            sessions: list[dict[str, Any]] = []
+            for row in rows:
+                payload = self._session_dict(row)
+                if not payload["title"]:
+                    fallback = _title_from_message(derived.get(row.id, ""))
+                    if fallback:
+                        payload["title"] = fallback
+                sessions.append(payload)
+
+            return sessions, total or 0
     def list_messages(
         self,
         owner_id: str | None,

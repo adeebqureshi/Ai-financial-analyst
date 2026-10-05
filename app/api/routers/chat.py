@@ -1,8 +1,8 @@
 from __future__ import annotations
 import asyncio
 import math
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response, StreamingResponse
 from app.api.dependencies import rate_limit_chat
 from app.api.dependencies.services import get_chat_service
 from app.auth.dependencies import get_current_user
@@ -131,22 +131,30 @@ async def list_messages(
     )
 @router.delete(
     "/sessions/{session_id}",
-    response_model=APIResponse[dict],
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a chat session",
-    description="Deletes one of the caller's sessions and all its messages.",
+    description=(
+        "Permanently deletes one of the caller's sessions together with every "
+        "message it owns. Returns 404 when the session does not exist *or* is "
+        "owned by somebody else — a 403 would confirm that an id exists under "
+        "another account, so absence and non-ownership are deliberately "
+        "indistinguishable."
+    ),
     dependencies=[Depends(rate_limit_chat)],
+    responses={404: {"description": "No such session for this caller."}},
 )
 async def delete_session(
     session_id: str,
     service: ChatService = Depends(get_chat_service),
     current_user: User | None = Depends(get_current_user),
-) -> APIResponse[dict]:
+) -> Response:
     deleted = await asyncio.to_thread(
         service.delete_session,
         _owner_id(current_user),
         session_id,
     )
-    return APIResponse.success_response(
-        message="Session deleted" if deleted else "Session not found",
-        data={"deleted": deleted, "session_id": session_id},
-    )
+
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

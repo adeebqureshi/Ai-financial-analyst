@@ -149,8 +149,9 @@ class TestLegacyResources:
         deleted = auth_client.delete(
             "/chat/sessions/legacy-session", headers=_headers(token)
         )
-        assert deleted.status_code == 200
-        assert deleted.json()["data"]["deleted"] is False
+        # 404, not 403: a 403 would confirm the id exists under another account.
+        assert deleted.status_code == 404
+        assert deleted.json()["success"] is False
         _, total = store.list_messages(None, "legacy-session", page=1, page_size=10)
         assert total == 2
 def _upload(client: TestClient, token: str, text: str) -> str:

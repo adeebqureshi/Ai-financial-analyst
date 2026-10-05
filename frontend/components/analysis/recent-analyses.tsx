@@ -1,15 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, MessageSquare } from "lucide-react";
 
 import { CompanyLogo } from "@/components/company/company-logo";
-import { useChatSessions, chatSessionRows } from "@/hooks/use-chat-sessions";
+import {
+  useChatSessions,
+  chatSessionRows,
+  useDeleteChatSession,
+} from "@/hooks/use-chat-sessions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
 import { SkeletonList } from "@/components/ui/skeleton";
+
+import { SessionActionsMenu } from "./session-actions-menu";
 
 const MAX_ITEMS = 6;
 const TICKER_PATTERN = /^[A-Z]{1,5}$/;
+const FALLBACK_TITLE = "Research session";
 
 function toTimestamp(value: string | null | undefined): number {
   if (!value) return 0;
@@ -54,21 +63,30 @@ function relativeTime(value: string | null | undefined): string {
 /**
  * Recent research sessions — the workspace's real persisted history.
  *
- * The backend persists AI chat sessions and documents only; analyses
- * themselves are recomputed on demand and never stored. So this lists the
- * sessions that exist, links each to its live analysis when the title is a
- * ticker symbol, and renders an honest empty state otherwise. No fabricated
- * companies or dates.
+ * The backend persists AI chat sessions and documents only; analyses themselves
+ * are recomputed on demand and never stored. So this lists the sessions that
+ * exist, links each to its live analysis when the title is a ticker symbol, and
+ * renders an honest empty state otherwise. No fabricated companies or dates.
+ *
+ * Each row can be deleted, which removes the session and its messages from
+ * persistent storage — it is not a client-side hide.
  */
 export function RecentAnalyses() {
   const sessions = useChatSessions();
+  const deleteSession = useDeleteChatSession();
+
+  // Session id awaiting confirmation, plus the delete error surfaced below.
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const rows = useMemo(
     () =>
       chatSessionRows(sessions.data)
         .map((session) => ({
           sessionId: session.session_id,
-          title: session.title?.trim() || "Research session",
+          // The backend derives the title from the first question actually
+          // asked. The fallback only applies to a session with no messages at
+          // all — it never invents a company or a subject.
+          title: session.title?.trim() || FALLBACK_TITLE,
           timestamp: toTimestamp(session.updated_at),
           updatedAt: session.updated_at,
         }))
@@ -76,6 +94,21 @@ export function RecentAnalyses() {
         .slice(0, MAX_ITEMS),
     [sessions.data]
   );
+
+  const pendingRow = rows.find((row) => row.sessionId === pendingId) ?? null;
+  const isDeleting = deleteSession.isPending;
+
+  async function confirmDelete() {
+    if (!pendingId || isDeleting) return;
+
+    try {
+      await deleteSession.mutateAsync(pendingId);
+      setPendingId(null);
+    } catch {
+      // Left to the mutation's error state; the dialog stays open so the user
+      // sees the failure and can retry or cancel. The row is NOT removed.
+    }
+  }
 
   return (
     <section aria-labelledby="recent-sessions-heading" className="space-y-2">
@@ -100,12 +133,15 @@ export function RecentAnalyses() {
               ? row.title.trim()
               : null;
             const href = symbol ? `/analysis/${symbol}` : "/analysis";
+            const busy = isDeleting && pendingId === row.sessionId;
 
             return (
-              <li key={row.sessionId}>
+              <li key={row.sessionId} className="flex items-center gap-1">
+                {/* The row is a link plus a sibling menu, never a button nested
+                    inside an anchor. */}
                 <Link
                   href={href}
-                  className="group flex items-center gap-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="group flex min-w-0 flex-1 items-center gap-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {symbol ? (
                     // A recognised ticker gets its real brand mark; an
@@ -136,11 +172,71 @@ export function RecentAnalyses() {
 
                   <span className="sr-only">Open research session</span>
                 </Link>
+
+                <SessionActionsMenu
+                  sessionId={row.sessionId}
+                  href={href}
+                  sessionLabel={row.title}
+                  onRequestDelete={() => setPendingId(row.sessionId)}
+                  busy={busy}
+                />
               </li>
             );
           })}
         </ul>
       )}
+
+      {deleteSession.isError && (
+        // Deliberately not `ErrorDisplay`: that component falls back to
+        // `error.message`, which for a 4xx is whatever text the backend sent.
+        // Deletion failure gets one fixed, friendly sentence instead, so no
+        // server detail (and certainly no trace) can reach the user.
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-loss/25 bg-loss-subtle px-3.5 py-2.5"
+        >
+          <p className="text-caption text-loss">
+            Couldn&apos;t delete this research session. Please try again.
+          </p>
+
+          {pendingId && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void confirmDelete()}
+            >
+              Try again
+            </Button>
+          )}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={pendingRow !== null}
+        title="Delete research session?"
+        description={
+          <>
+            This will permanently delete this research session and its
+            conversation history
+            {pendingRow ? (
+              <>
+                {" "}
+                (<span className="font-medium text-foreground">{pendingRow.title}</span>)
+              </>
+            ) : null}
+            . This cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        pending={isDeleting}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => {
+          if (isDeleting) return;
+          setPendingId(null);
+        }}
+      />
     </section>
   );
 }

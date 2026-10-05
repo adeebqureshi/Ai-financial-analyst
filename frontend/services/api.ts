@@ -149,6 +149,31 @@ async function request<T>(
 }
 
 /**
+ * A request whose success carries no payload — used by `204 No Content` deletes.
+ *
+ * Deliberately separate from `request`: parsing an empty body as JSON would
+ * raise a misleading "invalid response" error for a perfectly valid 204, but
+ * relaxing `parseSuccess` globally would also mask a genuinely truncated body
+ * on every other endpoint. Only endpoints that promise an empty body use this.
+ */
+async function requestNoContent(
+  endpoint: string,
+  init?: RequestInit,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
+): Promise<void> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+
+  await resolveAuthHeader(headers);
+
+  await performRequest<void>(endpoint, init, headers, timeoutMs, () =>
+    Promise.resolve(undefined)
+  );
+}
+
+/**
  * A request whose success body is binary rather than JSON — used for the PDF
  * report, which must arrive as real PDF bytes rather than a JSON wrapper.
  */
@@ -529,6 +554,21 @@ export const api = {
     return request(
       `/chat/sessions/${encodeURIComponent(sessionId)}/messages`
     );
+  },
+
+  /**
+   * Permanently delete one chat/research session and its messages.
+   *
+   * Resolves with an empty body on success (the endpoint answers `204 No
+   * Content`). A session that does not exist, or that belongs to another user,
+   * raises an `ApiError` with status 404 — the two are deliberately
+   * indistinguishable server-side, so a caller can never probe for ids owned by
+   * someone else.
+   */
+  deleteChatSession(sessionId: string): Promise<void> {
+    return requestNoContent(`/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "DELETE",
+    });
   },
 
   search(

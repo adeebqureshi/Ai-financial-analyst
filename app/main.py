@@ -117,6 +117,36 @@ def _run_shutdown_disposal(settings: Settings, logger: Any) -> None:
         reset_rate_limiter()
     except Exception:
         pass
+
+
+def _log_llm_configuration(settings: Settings, logger: Any) -> None:
+    """Log the *effective* LLM runtime configuration. Never logs secrets.
+
+    Settings are frozen into a process when it imports ``app.core.config``,
+    so an already-running server keeps serving whatever model its ``.env``
+    had at boot. Printing the resolved provider/model/base URL on every
+    startup makes a stale process visible in seconds instead of hiding it
+    behind a generic "language model unavailable" message.
+    """
+    from urllib.parse import urlparse
+
+    base_url = (
+        settings.freellmapi_base_url
+        if settings.uses_freellmapi
+        else "https://api.openai.com/v1"
+    )
+    host = urlparse(base_url).netloc or "default"
+    key_present = bool(
+        (settings.freellmapi_api_key_str or settings.openai_api_key_str).strip()
+    )
+    logger.info(
+        "Effective LLM configuration: provider=%s model=%s base_url_host=%s "
+        "api_key_present=%s",
+        settings.llm_provider,
+        settings.llm_model,
+        host,
+        key_present,
+    )
 def _run_chat_retention_cleanup(settings: Settings, logger: Any) -> None:
     try:
         from app.chat.store import ChatStore
@@ -163,6 +193,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings.debug,
         )
         settings.validate_required_keys()
+        _log_llm_configuration(settings, app_logger)
         _run_startup_infrastructure_checks(settings, app_logger)
         _run_database_migrations(settings, app_logger)
         _run_chat_retention_cleanup(settings, app_logger)

@@ -52,10 +52,11 @@ def test_chat_turn_is_persisted_and_ownership_isolated(tmp_path):
         bob_messages = client.get("/chat/sessions/sess-a/messages", headers=_headers(token_b))
         assert bob_messages.json()["data"]["total"] == 0
         forbidden = client.delete("/chat/sessions/sess-a", headers=_headers(token_b))
-        assert forbidden.status_code == 200
-        assert forbidden.json()["data"]["deleted"] is False
+        # Non-ownership is reported as 404, not 403, so the endpoint cannot be
+        # used to probe which session ids exist on other accounts.
+        assert forbidden.status_code == 404, forbidden.text
         own_delete = client.delete("/chat/sessions/sess-a", headers=_headers(token_a))
-        assert own_delete.json()["data"]["deleted"] is True
+        assert own_delete.status_code == 204, own_delete.text
         remaining = client.get("/chat/sessions", headers=_headers(token_a))
         assert remaining.json()["data"]["total"] == 0
 def test_anonymous_requests_are_isolated_when_auth_disabled(tmp_path):
