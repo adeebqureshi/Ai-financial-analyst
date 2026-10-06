@@ -30,11 +30,7 @@ export function ComparisonWorkspace() {
   function addTicker(ticker: string) {
     const symbol = ticker.trim().toUpperCase();
 
-    if (
-      !symbol ||
-      !/^[A-Z]{1,5}$/.test(symbol) ||
-      tickers.includes(symbol)
-    ) {
+    if (!symbol || tickers.includes(symbol)) {
       return;
     }
 

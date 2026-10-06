@@ -4,6 +4,7 @@ from app.api.routers.analysis import router as analysis_router
 from app.api.routers.analysis_pdf import router as analysis_pdf_router
 from app.api.routers.chat import router as chat_router
 from app.api.routers.compare import router as compare_router
+from app.api.routers.companies import router as companies_router
 from app.api.routers.documents import router as documents_router
 from app.api.routers.health import router as health_router
 from app.infrastructure.health_router import readiness_router
@@ -27,6 +28,7 @@ api_router.include_router(analysis_pdf_router, dependencies=_AUTH_GUARD)
 api_router.include_router(search_router, dependencies=_AUTH_GUARD)
 api_router.include_router(valuation_router, dependencies=_AUTH_GUARD)
 api_router.include_router(chat_router, dependencies=_AUTH_GUARD)
+api_router.include_router(companies_router)
 api_router.include_router(risk_router, dependencies=_AUTH_GUARD)
 api_router.include_router(report_router, dependencies=_AUTH_GUARD)
 api_router.include_router(compare_router, dependencies=_AUTH_GUARD)
@@ -44,6 +46,7 @@ __all__ = [
     "chat_router",
     "risk_router",
     "report_router",
+    "companies_router",
     "compare_router",
     "documents_router",
 ]

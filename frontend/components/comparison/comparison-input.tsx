@@ -1,11 +1,12 @@
 "use client";
 
-import { GitCompare, Plus, Search, Trash2, X } from "lucide-react";
+import { GitCompare, Plus, Trash2, X } from "lucide-react";
 import { useId, useState } from "react";
 
 import { CompanyLogo } from "@/components/company/company-logo";
+import { CompanySearch } from "@/components/company/company-search";
 import { Button } from "@/components/ui/button";
-import { TickerInput } from "@/components/ui/field";
+import { resolveCompany } from "@/lib/companies";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,18 +42,19 @@ export function ComparisonInput({
 
   const atLimit = tickers.length >= MAX_TICKERS;
 
-  function add(symbol: string) {
-    const candidate = symbol.trim().toUpperCase();
+  function add(raw: string) {
+    const company = resolveCompany(raw);
 
-    if (!candidate) {
-      setError("Enter a ticker symbol to add.");
+    if (!company) {
+      setError(
+        raw.trim()
+          ? "No matching company found. Select a company from the suggestions."
+          : "Enter a company name or ticker to add.",
+      );
       return;
     }
 
-    if (!/^[A-Z]{1,5}$/.test(candidate)) {
-      setError("Ticker symbols are 1–5 letters (e.g. TSLA).");
-      return;
-    }
+    const candidate = company.ticker;
 
     if (tickers.includes(candidate)) {
       setError(`${candidate} is already in the comparison.`);
@@ -91,7 +93,7 @@ export function ComparisonInput({
               Add companies to compare
             </h2>
             <p className="mt-1 text-label text-muted-foreground">
-              Enter two or more ticker symbols. Every value is computed by the
+              Search by company name or ticker. Every value is computed by the
               backend{" "}
               <code className="rounded bg-muted px-1 font-mono text-caption text-foreground">
                 /compare
@@ -122,28 +124,22 @@ export function ComparisonInput({
         }}
       >
         <label htmlFor={inputId} className="sr-only">
-          Enter ticker
+          Search company or ticker
         </label>
 
         <div className="flex h-14 min-w-0 flex-1 items-center gap-3 rounded-xl border border-input bg-background px-4 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
-          <Search
-            size={18}
-            className="shrink-0 text-subtle-foreground"
-            aria-hidden="true"
-          />
-
-          <TickerInput
+          <CompanySearch
             id={inputId}
             value={input}
             onValueChange={(value) => {
               setInput(value);
               setError(null);
             }}
+            onSelect={(company) => add(company.ticker)}
+            ariaLabel="Search company or ticker"
+            placeholder="Search company or ticker (e.g. Microsoft or MSFT)"
             disabled={disabled || atLimit}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${inputId}-error` : undefined}
-            placeholder="Enter ticker (e.g., AAPL, MSFT, NVDA)"
-            className="h-full flex-1 border-0 bg-transparent px-0 text-body focus-visible:border-0 focus-visible:ring-0"
+            inputClassName="h-full text-body"
           />
         </div>
 

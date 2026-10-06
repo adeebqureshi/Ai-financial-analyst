@@ -4,7 +4,7 @@ test.describe("Interactive Features Audit", () => {
   test("analysis page ticker input validation", async ({ page }) => {
     await page.goto("http://localhost:3000/analysis");
     await page.waitForLoadState("networkidle");
-    const input = page.locator("input[placeholder*='Enter ticker']");
+    const input = page.getByLabel("Search company or ticker to analyze");
     await expect(input).toBeVisible();
     await input.fill("123");
     const button = page.locator("button:has-text('Analyze')");
@@ -20,9 +20,9 @@ test.describe("Interactive Features Audit", () => {
     await page.goto("http://localhost:3000/compare");
     await page.waitForLoadState("networkidle");
 
-    // Located by accessible name: the placeholder text is illustrative
-    // ("Enter ticker (e.g., AAPL, MSFT, NVDA)") and is not a stable hook.
-    const input = page.getByLabel("Enter ticker");
+    // Located by accessible name; the placeholder text is illustrative
+    // ("Search company or ticker (e.g. Microsoft or MSFT)") and is not a stable hook.
+    const input = page.getByLabel("Search company or ticker", { exact: true });
     await expect(input).toBeVisible();
 
     await input.fill("AMD");

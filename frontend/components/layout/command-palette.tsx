@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { resolveCompany, searchCompanies } from "@/lib/companies";
 import { isActivePath, navigationGroups } from "./nav-items";
 import { useCopilot } from "./ai-copilot";
 
@@ -45,16 +46,7 @@ type Props = {
 
 const QUICK_TICKERS = ["AAPL", "MSFT", "NVDA"];
 
-function tickerFromQuery(query: string): string | null {
-  const trimmed = query.trim();
-
-  if (!trimmed || trimmed.length > 6) return null;
-  if (!/^[A-Za-z.\-]{1,6}$/.test(trimmed)) return null;
-
-  const symbol = trimmed.toUpperCase();
-
-  return /^[A-Z]{1,5}$/.test(symbol) ? symbol : null;
-}
+const MAX_COMPANY_SUGGESTIONS = 5;
 
 export function CommandPalette({ children }: Props) {
   const [open, setOpen] = useState(false);
@@ -77,20 +69,36 @@ export function CommandPalette({ children }: Props) {
 
   const items = useMemo<PaletteItem[]>(() => {
     const normalized = query.trim();
-    const ticker = tickerFromQuery(normalized);
+    const resolved = resolveCompany(normalized);
     const dynamic: PaletteItem[] = [];
 
-    if (ticker) {
+    if (resolved) {
       dynamic.push({
-        id: `analyze-${ticker}`,
-        label: `Analyze ${ticker}`,
+        id: `analyze-${resolved.ticker}`,
+        label: `${resolved.name} (${resolved.ticker})`,
         hint: "Run the full AI pipeline: valuation, health, risk",
-        group: "Ticker",
+        group: "Companies",
         kind: "analyze",
-        ticker,
-        href: `/analysis/${ticker}`,
+        ticker: resolved.ticker,
+        href: `/analysis/${resolved.ticker}`,
       });
     }
+
+    if (normalized && !resolved) {
+      for (const company of searchCompanies(normalized, MAX_COMPANY_SUGGESTIONS)) {
+        dynamic.push({
+          id: `company-${company.ticker}`,
+          label: `${company.name} (${company.ticker})`,
+          hint: "Open AI analysis",
+          group: "Companies",
+          kind: "analyze",
+          ticker: company.ticker,
+          href: `/analysis/${company.ticker}`,
+        });
+      }
+    }
+
+    const ticker = resolved?.ticker ?? null;
 
     if (normalized && !ticker) {
       dynamic.push({

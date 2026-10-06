@@ -2,20 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { AnalysisCapabilities } from "@/components/analysis/analysis-capabilities";
 import { RecentAnalyses } from "@/components/analysis/recent-analyses";
+import { CompanySearch } from "@/components/company/company-search";
 import { TickerChip } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TickerInput } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
+import { resolveCompany } from "@/lib/companies";
 import {
   POPULAR_TICKERS,
   TickerExamplesMenu,
 } from "@/components/ui/ticker-lookup";
-
-const SYMBOL_PATTERN = /^[A-Z]{1,5}$/;
 
 /**
  * The Analyze page has one job: get a ticker into the pipeline.
@@ -27,15 +26,15 @@ const SYMBOL_PATTERN = /^[A-Z]{1,5}$/;
  */
 export default function AnalysisPage() {
   const router = useRouter();
-  const [ticker, setTicker] = useState("");
+  const [input, setInput] = useState("");
 
-  const symbol = ticker.trim().toUpperCase();
-  const valid = SYMBOL_PATTERN.test(symbol);
+  const resolved = resolveCompany(input);
+  const valid = resolved !== null;
 
   function submit() {
-    if (!SYMBOL_PATTERN.test(symbol)) return;
-
-    router.push(`/analysis/${symbol}`);
+    const company = resolveCompany(input);
+    if (!company) return;
+    router.push(`/analysis/${company.ticker}`);
   }
 
   return (
@@ -61,19 +60,14 @@ export default function AnalysisPage() {
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex min-w-0 flex-1 items-center gap-2.5 px-2">
-              <Search
-                size={18}
-                className="shrink-0 text-brand"
-                aria-hidden="true"
-              />
-
-              <TickerInput
-                value={ticker}
-                onValueChange={setTicker}
-                placeholder="Enter ticker (e.g. NVDA)"
-                aria-label="Ticker symbol to analyze"
+              <CompanySearch
+                value={input}
+                onValueChange={setInput}
+                onSelect={(company) => router.push(`/analysis/${company.ticker}`)}
+                placeholder="Search company or ticker (e.g. NVIDIA or NVDA)"
+                ariaLabel="Search company or ticker to analyze"
                 autoFocus
-                className="h-12 min-w-0 flex-1 border-0 bg-transparent px-0 text-body focus-visible:border-0 focus-visible:ring-0"
+                inputClassName="h-12 text-body"
               />
             </div>
 
@@ -96,12 +90,12 @@ export default function AnalysisPage() {
             <TickerChip
               key={suggestion}
               value={suggestion}
-              onClick={() => setTicker(suggestion)}
+              onClick={() => setInput(suggestion)}
               title={`Analyze ${suggestion}`}
             />
           ))}
 
-          <TickerExamplesMenu onSelect={setTicker} className="ml-auto" />
+          <TickerExamplesMenu onSelect={setInput} className="ml-auto" />
         </div>
       </section>
 

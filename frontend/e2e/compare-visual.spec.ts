@@ -48,7 +48,7 @@ test("compare interactive states", async ({ page }) => {
   await page.waitForTimeout(500);
   await page.screenshot({ path: "shots/compare-loaded.png", fullPage: true });
 
-  const input = page.locator("input[placeholder*='Enter ticker']");
+  const input = page.getByLabel("Search company or ticker", { exact: true });
   await input.fill("AMD");
   await page.click("button:has-text('Add company')");
   await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), undefined, {
