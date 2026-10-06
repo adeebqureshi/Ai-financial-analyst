@@ -183,7 +183,12 @@ export function AnalysisView({ ticker }: Props) {
           description={`Ask about ${company.ticker} — the copilot uses the same filings, documents and statements as this analysis.`}
         />
 
-        <div className="h-[32rem] xl:h-[38rem]">
+        {/* Flex column with a definite height: ChatSurface is `flex-1 min-h-0`
+            by contract, so the wrapper must actually be a flex parent for that
+            height to reach it. As a plain block the chat stayed content-sized,
+            escaped this fixed box and painted over the Research report below;
+            now long answers scroll INSIDE the conversation area instead. */}
+        <div className="flex h-[32rem] flex-col xl:h-[38rem]">
           <AIChat ticker={ticker} />
         </div>
       </section>

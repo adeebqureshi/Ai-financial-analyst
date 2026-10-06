@@ -274,7 +274,10 @@ export function ChatSurface({
         ref={listRef}
         onScroll={onScroll}
         className={cn(
-          "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto",
+          // `break-words` (overflow-wrap) is inherited by every descendant, so
+          // long URLs, citations or code-like tokens in markdown/user bubbles
+          // wrap instead of forcing horizontal overflow out of the bubble.
+          "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto break-words",
           isResearch ? "px-5 py-5" : "p-4"
         )}
       >
@@ -615,7 +618,7 @@ function ChatMessageRow({ message, isStreaming, isLast, isResearch }: RowProps) 
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
+      <div className="flex shrink-0 justify-end">
         <div
           className={cn(
             "whitespace-pre-wrap bg-primary text-label text-primary-foreground",
@@ -634,7 +637,10 @@ function ChatMessageRow({ message, isStreaming, isLast, isResearch }: RowProps) 
     isStreaming && isLast && !message.content && !message.error;
 
   return (
-    <div className="flex justify-start">
+    // `shrink-0`: the conversation list is a flex column with a definite
+    // height; without it a long row could be compressed toward its min-content
+    // size instead of keeping its natural height and scrolling internally.
+    <div className="flex shrink-0 justify-start">
       <div className={cn("flex gap-2.5", isResearch ? "w-full" : "max-w-[85%]")}>
         {!isResearch && (
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
