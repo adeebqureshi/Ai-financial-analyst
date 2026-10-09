@@ -99,6 +99,30 @@ async def test_async_openai_provider_stream_skips_empty_deltas(mock_async_openai
     async for delta in provider.stream(LLMRequest(prompt="Hi")):
         deltas.append(delta)
     assert "".join(deltas) == "ok"
+
+
+@patch("app.llm.providers.async_openai_provider.os.getenv", return_value="fake-key")
+@patch("app.llm.providers.async_openai_provider.AsyncOpenAI")
+@pytest.mark.anyio
+async def test_async_openai_provider_stream_warns_on_zero_content(
+    mock_async_openai, mock_getenv, caplog
+):
+    client = MagicMock()
+    mock_async_openai.return_value = client
+    client.chat.completions.create = AsyncMock(
+        return_value=_FakeAsyncStream([_chunk(None), _chunk("")])
+    )
+    provider = AsyncOpenAIProvider()
+    deltas = []
+    with caplog.at_level("WARNING", logger="app.llm.openai"):
+        async for delta in provider.stream(LLMRequest(prompt="Hi")):
+            deltas.append(delta)
+    assert deltas == []
+    assert any(
+        "zero content tokens" in record.message for record in caplog.records
+    )
+
+
 @pytest.mark.anyio
 async def test_async_openai_provider_maps_sdk_errors():
     provider = AsyncOpenAIProvider()

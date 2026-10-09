@@ -1,0 +1,1140 @@
+event: plan
+data: {"tickers": ["AAPL"], "intents": ["RISK_ANALYSIS"]}
+
+event: token
+data: {"delta": "\n\nApple"}
+
+event: token
+data: {"delta": "'s"}
+
+event: token
+data: {"delta": " supply"}
+
+event: token
+data: {"delta": "-chain exposure"}
+
+event: token
+data: {"delta": " is concentrated"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " spans"}
+
+event: token
+data: {"delta": " geopolitical"}
+
+event: token
+data: {"delta": ", geographic"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " single-source"}
+
+event: token
+data: {"delta": " risks"}
+
+event: token
+data: {"delta": "."}
+
+event: token
+data: {"delta": " Key"}
+
+event: token
+data: {"delta": " risks identified"}
+
+event: token
+data: {"delta": " in its"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "4 Form"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0-K"}
+
+event: token
+data: {"delta": ":\n\n"}
+
+event: token
+data: {"delta": "-"}
+
+event: token
+data: {"delta": " **Ge"}
+
+event: token
+data: {"delta": "ographic"}
+
+event: token
+data: {"delta": " and outsourcing"}
+
+event: token
+data: {"delta": " concentration.**"}
+
+event: token
+data: {"delta": " Substant"}
+
+event: token
+data: {"delta": "ially all"}
+
+event: token
+data: {"delta": " manufacturing"}
+
+event: token
+data: {"delta": " is outs"}
+
+event: token
+data: {"delta": "ourced to"}
+
+event: token
+data: {"delta": " partners primarily"}
+
+event: token
+data: {"delta": " in China"}
+
+event: token
+data: {"delta": " mainland,"}
+
+event: token
+data: {"delta": " India,"}
+
+event: token
+data: {"delta": " Japan,"}
+
+event: token
+data: {"delta": " South Korea"}
+
+event: token
+data: {"delta": ", Taiwan"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " and Vietnam"}
+
+event: token
+data: {"delta": ", with"}
+
+event: token
+data: {"delta": " a significant"}
+
+event: token
+data: {"delta": " concentration in"}
+
+event: token
+data: {"delta": " a small"}
+
+event: token
+data: {"delta": " number of"}
+
+event: token
+data: {"delta": " partners,"}
+
+event: token
+data: {"delta": " often in"}
+
+event: token
+data: {"delta": " single locations"}
+
+event: token
+data: {"delta": ". Transportation"}
+
+event: token
+data: {"delta": " and logistics"}
+
+event: token
+data: {"delta": " are also"}
+
+event: token
+data: {"delta": " largely outs"}
+
+event: token
+data: {"delta": "ourced,"}
+
+event: token
+data: {"delta": " reducing"}
+
+event: token
+data: {"delta": " Apple"}
+
+event: token
+data: {"delta": "'s direct"}
+
+event: token
+data: {"delta": " control over"}
+
+event: token
+data: {"delta": " production and"}
+
+event: token
+data: {"delta": " distribution"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " its"}
+
+event: token
+data: {"delta": " flexibility to"}
+
+event: token
+data: {"delta": " respond to"}
+
+event: token
+data: {"delta": " changing conditions"}
+
+event: token
+data: {"delta": ".\n"}
+
+event: token
+data: {"delta": "- **"}
+
+event: token
+data: {"delta": "Trade and"}
+
+event: token
+data: {"delta": " geopolitical restrictions"}
+
+event: token
+data: {"delta": ".** Tar"}
+
+event: token
+data: {"delta": "iffs,"}
+
+event: token
+data: {"delta": " export/import"}
+
+event: token
+data: {"delta": " controls,"}
+
+event: token
+data: {"delta": " and escalating"}
+
+event: token
+data: {"delta": " tensions"}
+
+event: token
+data: {"delta": " ("}
+
+event: token
+data: {"delta": "including"}
+
+event: token
+data: {"delta": " U"}
+
+event: token
+data: {"delta": ".S.-"}
+
+event: token
+data: {"delta": "China)"}
+
+event: token
+data: {"delta": " can materially"}
+
+event: token
+data: {"delta": " adversely"}
+
+event: token
+data: {"delta": " affect the"}
+
+event: token
+data: {"delta": " supply"}
+
+event: token
+data: {"delta": " chain by"}
+
+event: token
+data: {"delta": " raising component"}
+
+event: token
+data: {"delta": " and raw"}
+
+event: token
+data: {"delta": "-material"}
+
+event: token
+data: {"delta": " costs,"}
+
+event: token
+data: {"delta": " forcing supplier"}
+
+event: token
+data: {"delta": " changes,"}
+
+event: token
+data: {"delta": " restructuring operations"}
+
+event: token
+data: {"delta": ", or"}
+
+event: token
+data: {"delta": " ceasing"}
+
+event: token
+data: {"delta": " affected"}
+
+event: token
+data: {"delta": " products."}
+
+event: token
+data: {"delta": " Such"}
+
+event: token
+data: {"delta": " measures can"}
+
+event: token
+data: {"delta": " be announced"}
+
+event: token
+data: {"delta": " with little"}
+
+event: token
+data: {"delta": " or"}
+
+event: token
+data: {"delta": " no advance"}
+
+event: token
+data: {"delta": " notice,"}
+
+event: token
+data: {"delta": " and Apple"}
+
+event: token
+data: {"delta": " may not"}
+
+event: token
+data: {"delta": " be able"}
+
+event: token
+data: {"delta": " to effectively"}
+
+event: token
+data: {"delta": " mitigate all"}
+
+event: token
+data: {"delta": " adverse impacts"}
+
+event: token
+data: {"delta": ".\n"}
+
+event: token
+data: {"delta": "- **"}
+
+event: token
+data: {"delta": "Single-source"}
+
+event: token
+data: {"delta": " components"}
+
+event: token
+data: {"delta": ".** Apple"}
+
+event: token
+data: {"delta": " relies on"}
+
+event: token
+data: {"delta": " single-source"}
+
+event: token
+data: {"delta": " outsourcing partners"}
+
+event: token
+data: {"delta": " in the"}
+
+event: token
+data: {"delta": " U.S"}
+
+event: token
+data: {"delta": "., Asia"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " Europe for"}
+
+event: token
+data: {"delta": " many components"}
+
+event: token
+data: {"delta": " and on"}
+
+event: token
+data: {"delta": " Asia"}
+
+event: token
+data: {"delta": "-based partners"}
+
+event: token
+data: {"delta": " for final"}
+
+event: token
+data: {"delta": " assembly of"}
+
+event: token
+data: {"delta": " substantially all"}
+
+event: token
+data: {"delta": " hardware."}
+
+event: token
+data: {"delta": " This"}
+
+event: token
+data: {"delta": " creates"}
+
+event: token
+data: {"delta": " significant supply"}
+
+event: token
+data: {"delta": " and pricing"}
+
+event: token
+data: {"delta": " risk"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " including"}
+
+event: token
+data: {"delta": " exposure"}
+
+event: token
+data: {"delta": " to industry"}
+
+event: token
+data: {"delta": "-wide shortages"}
+
+event: token
+data: {"delta": " and commodity"}
+
+event: token
+data: {"delta": " price fluctuations"}
+
+event: token
+data: {"delta": ";"}
+
+event: token
+data: {"delta": " the global"}
+
+event: token
+data: {"delta": " semiconductor industry"}
+
+event: token
+data: {"delta": "'s"}
+
+event: token
+data: {"delta": " past high"}
+
+event: token
+data: {"delta": " demand and"}
+
+event: token
+data: {"delta": " shortages"}
+
+event: token
+data: {"delta": " directly"}
+
+event: token
+data: {"delta": " imp"}
+
+event: token
+data: {"delta": "eded Apple"}
+
+event: token
+data: {"delta": "'s ability"}
+
+event: token
+data: {"delta": " to obtain"}
+
+event: token
+data: {"delta": " sufficient components"}
+
+event: token
+data: {"delta": " on"}
+
+event: token
+data: {"delta": " commercially reasonable"}
+
+event: token
+data: {"delta": " terms."}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " **Natural"}
+
+event: token
+data: {"delta": " disasters and"}
+
+event: token
+data: {"delta": " operational"}
+
+event: token
+data: {"delta": " interruptions"}
+
+event: token
+data: {"delta": ".** Many"}
+
+event: token
+data: {"delta": " Apple"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " supplier facilities"}
+
+event: token
+data: {"delta": " are in"}
+
+event: token
+data: {"delta": " locations"}
+
+event: token
+data: {"delta": " prone to"}
+
+event: token
+data: {"delta": " earthquakes and"}
+
+event: token
+data: {"delta": " other natural"}
+
+event: token
+data: {"delta": " disasters,"}
+
+event: token
+data: {"delta": " intensified"}
+
+event: token
+data: {"delta": " by climate"}
+
+event: token
+data: {"delta": " change."}
+
+event: token
+data: {"delta": " Other"}
+
+event: token
+data: {"delta": " interruption"}
+
+event: token
+data: {"delta": " risks include"}
+
+event: token
+data: {"delta": " fire,"}
+
+event: token
+data: {"delta": " power shortages"}
+
+event: token
+data: {"delta": ", nuclear"}
+
+event: token
+data: {"delta": " accidents"}
+
+event: token
+data: {"delta": ", industrial"}
+
+event: token
+data: {"delta": " accidents,"}
+
+event: token
+data: {"delta": " terrorism"}
+
+event: token
+data: {"delta": ", cybersecurity"}
+
+event: token
+data: {"delta": "/r"}
+
+event: token
+data: {"delta": "ansomware attacks"}
+
+event: token
+data: {"delta": ", labor"}
+
+event: token
+data: {"delta": " disputes,"}
+
+event: token
+data: {"delta": " and public"}
+
+event: token
+data: {"delta": " health events"}
+
+event: token
+data: {"delta": " (e"}
+
+event: token
+data: {"delta": ".g.,"}
+
+event: token
+data: {"delta": " pandemics"}
+
+event: token
+data: {"delta": ")."}
+
+event: token
+data: {"delta": " Such"}
+
+event: token
+data: {"delta": " events can"}
+
+event: token
+data: {"delta": " make"}
+
+event: token
+data: {"delta": " it difficult"}
+
+event: token
+data: {"delta": " or impossible"}
+
+event: token
+data: {"delta": " to manufacture"}
+
+event: token
+data: {"delta": " and deliver"}
+
+event: token
+data: {"delta": " products,"}
+
+event: token
+data: {"delta": " delay"}
+
+event: token
+data: {"delta": " production ramps"}
+
+event: token
+data: {"delta": " of"}
+
+event: token
+data: {"delta": " new products"}
+
+event: token
+data: {"delta": ", increase"}
+
+event: token
+data: {"delta": " costs,"}
+
+event: token
+data: {"delta": " and reduce"}
+
+event: token
+data: {"delta": " demand"}
+
+event: token
+data: {"delta": ".\n"}
+
+event: token
+data: {"delta": "- **"}
+
+event: token
+data: {"delta": "Partner"}
+
+event: token
+data: {"delta": " financial"}
+
+event: token
+data: {"delta": " failure"}
+
+event: token
+data: {"delta": " and asset"}
+
+event: token
+data: {"delta": " exposure"}
+
+event: token
+data: {"delta": ".** Apple"}
+
+event: token
+data: {"delta": " has invested"}
+
+event: token
+data: {"delta": " in manufacturing"}
+
+event: token
+data: {"delta": " process equipment"}
+
+event: token
+data: {"delta": " held at"}
+
+event: token
+data: {"delta": " certain"}
+
+event: token
+data: {"delta": " outsourcing"}
+
+event: token
+data: {"delta": " partners and"}
+
+event: token
+data: {"delta": " made pre"}
+
+event: token
+data: {"delta": "payments under"}
+
+event: token
+data: {"delta": " long-term"}
+
+event: token
+data: {"delta": " supply agreements"}
+
+event: token
+data: {"delta": ". If"}
+
+event: token
+data: {"delta": " a"}
+
+event: token
+data: {"delta": " partner faces"}
+
+event: token
+data: {"delta": " severe financial"}
+
+event: token
+data: {"delta": " problems or"}
+
+event: token
+data: {"delta": " disruption,"}
+
+event: token
+data: {"delta": " supply can"}
+
+event: token
+data: {"delta": " be disrupted"}
+
+event: token
+data: {"delta": " or terminated"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " the recover"}
+
+event: token
+data: {"delta": "ability of"}
+
+event: token
+data: {"delta": " that equipment"}
+
+event: token
+data: {"delta": " or"}
+
+event: token
+data: {"delta": " those"}
+
+event: token
+data: {"delta": " prepayments"}
+
+event: token
+data: {"delta": " can be"}
+
+event: token
+data: {"delta": " negatively impacted"}
+
+event: token
+data: {"delta": ".\n"}
+
+event: token
+data: {"delta": "- **"}
+
+event: token
+data: {"delta": "Re"}
+
+event: token
+data: {"delta": "covery time"}
+
+event: token
+data: {"delta": " and insurance"}
+
+event: token
+data: {"delta": " limits"}
+
+event: token
+data: {"delta": ".** Following"}
+
+event: token
+data: {"delta": " a"}
+
+event: token
+data: {"delta": " business interruption"}
+
+event: token
+data: {"delta": ", Apple"}
+
+event: token
+data: {"delta": " can require"}
+
+event: token
+data: {"delta": " substantial recovery"}
+
+event: token
+data: {"delta": " time,"}
+
+event: token
+data: {"delta": " incur significant"}
+
+event: token
+data: {"delta": " expenditures to"}
+
+event: token
+data: {"delta": " resume operations"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " lose significant"}
+
+event: token
+data: {"delta": " sales."}
+
+event: token
+data: {"delta": " Because many"}
+
+event: token
+data: {"delta": " critical components"}
+
+event: token
+data: {"delta": " come"}
+
+event: token
+data: {"delta": " from single"}
+
+event: token
+data: {"delta": " or limited"}
+
+event: token
+data: {"delta": " sources,"}
+
+event: token
+data: {"delta": " interruptions"}
+
+event: token
+data: {"delta": " affecting"}
+
+event: token
+data: {"delta": " those sources"}
+
+event: token
+data: {"delta": " are exacerbated"}
+
+event: token
+data: {"delta": ". Insurance"}
+
+event: token
+data: {"delta": " coverage for"}
+
+event: token
+data: {"delta": " certain losses"}
+
+event: token
+data: {"delta": " may be"}
+
+event: token
+data: {"delta": " insufficient to"}
+
+event: token
+data: {"delta": " cover all"}
+
+event: token
+data: {"delta": " losses."}
+
+event: token
+data: {"delta": "\n"}
+
+event: token
+data: {"delta": "- **"}
+
+event: token
+data: {"delta": "New product"}
+
+event: token
+data: {"delta": " custom"}
+
+event: token
+data: {"delta": " components.**"}
+
+event: token
+data: {"delta": " New products"}
+
+event: token
+data: {"delta": " often use"}
+
+event: token
+data: {"delta": " custom components"}
+
+event: token
+data: {"delta": " from"}
+
+event: token
+data: {"delta": " only one"}
+
+event: token
+data: {"delta": " source,"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " initial capacity"}
+
+event: token
+data: {"delta": " constraints can"}
+
+event: token
+data: {"delta": " exist until"}
+
+event: token
+data: {"delta": " supplier"}
+
+event: token
+data: {"delta": " yields mature"}
+
+event: token
+data: {"delta": " or"}
+
+event: token
+data: {"delta": " capacity"}
+
+event: token
+data: {"delta": " increases."}
+
+event: token
+data: {"delta": " If supply"}
+
+event: token
+data: {"delta": " is delayed"}
+
+event: token
+data: {"delta": " or constrained"}
+
+event: token
+data: {"delta": ", or"}
+
+event: token
+data: {"delta": " if an"}
+
+event: token
+data: {"delta": " alternative source"}
+
+event: token
+data: {"delta": " cannot be"}
+
+event: token
+data: {"delta": " identified and"}
+
+event: token
+data: {"delta": " qualified"}
+
+event: token
+data: {"delta": " quickly"}
+
+event: token
+data: {"delta": " enough"}
+
+event: token
+data: {"delta": ", results"}
+
+event: token
+data: {"delta": " can"}
+
+event: token
+data: {"delta": " be materially"}
+
+event: token
+data: {"delta": " adversely affected"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "On"}
+
+event: token
+data: {"delta": " a broader"}
+
+event: token
+data: {"delta": " financial basis"}
+
+event: token
+data: {"delta": ", Apple"}
+
+event: token
+data: {"delta": " reports"}
+
+event: token
+data: {"delta": " low"}
+
+event: token
+data: {"delta": " overall"}
+
+event: token
+data: {"delta": " risk:"}
+
+event: token
+data: {"delta": " health"}
+
+event: token
+data: {"delta": " score of"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "00"}
+
+event: token
+data: {"delta": " (EX"}
+
+event: token
+data: {"delta": "CELLE"}
+
+event: token
+data: {"delta": "NT),"}
+
+event: token
+data: {"delta": " Altman"}
+
+event: token
+data: {"delta": " score of"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "2."}
+
+event: token
+data: {"delta": "79"}
+
+event: token
+data: {"delta": " (SAFE"}
+
+event: token
+data: {"delta": "), Bene"}
+
+event: token
+data: {"delta": "ish score"}
+
+event: token
+data: {"delta": " of -"}
+
+event: token
+data: {"delta": "2."}
+
+event: token
+data: {"delta": "37"}
+
+event: token
+data: {"delta": " (LOW"}
+
+event: token
+data: {"delta": "_RISK"}
+
+event: token
+data: {"delta": "), and"}
+
+event: token
+data: {"delta": " a LOW"}
+
+event: token
+data: {"delta": " risk level"}
+
+event: token
+data: {"delta": ", which"}
+
+event: token
+data: {"delta": " provides some"}
+
+event: token
+data: {"delta": " balance"}
+
+event: token
+data: {"delta": "-sheet"}
+
+event: token
+data: {"delta": " capacity to"}
+
+event: token
+data: {"delta": " absorb or"}
+
+event: token
+data: {"delta": " remed"}
+
+event: token
+data: {"delta": "iate supply"}
+
+event: token
+data: {"delta": "-chain shocks"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "Source:"}
+
+event: token
+data: {"delta": " apple "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "k.pdf"}
+
+event: token
+data: {"delta": ", p"}
+
+event: token
+data: {"delta": ". "}
+
+event: token
+data: {"delta": "6."}
+
+event: token
+data: {"delta": "\nSource"}
+
+event: token
+data: {"delta": ": apple"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0k"}
+
+event: token
+data: {"delta": ".pdf,"}
+
+event: token
+data: {"delta": " p."}
+
+event: token
+data: {"delta": " 8"}
+
+event: token
+data: {"delta": "."}
+
+event: done
+data: {"message": "\n\nApple's supply-chain exposure is concentrated and spans geopolitical, geographic, and single-source risks. Key risks identified in its 2024 Form 10-K:\n\n- **Geographic and outsourcing concentration.** Substantially all manufacturing is outsourced to partners primarily in China mainland, India, Japan, South Korea, Taiwan, and Vietnam, with a significant concentration in a small number of partners, often in single locations. Transportation and logistics are also largely outsourced, reducing Apple's direct control over production and distribution and its flexibility to respond to changing conditions.\n- **Trade and geopolitical restrictions.** Tariffs, export/import controls, and escalating tensions (including U.S.-China) can materially adversely affect the supply chain by raising component and raw-material costs, forcing supplier changes, restructuring operations, or ceasing affected products. Such measures can be announced with little or no advance notice, and Apple may not be able to effectively mitigate all adverse impacts.\n- **Single-source components.** Apple relies on single-source outsourcing partners in the U.S., Asia, and Europe for many components and on Asia-based partners for final assembly of substantially all hardware. This creates significant supply and pricing risk, including exposure to industry-wide shortages and commodity price fluctuations; the global semiconductor industry's past high demand and shortages directly impeded Apple's ability to obtain sufficient components on commercially reasonable terms.\n- **Natural disasters and operational interruptions.** Many Apple and supplier facilities are in locations prone to earthquakes and other natural disasters, intensified by climate change. Other interruption risks include fire, power shortages, nuclear accidents, industrial accidents, terrorism, cybersecurity/ransomware attacks, labor disputes, and public health events (e.g., pandemics). Such events can make it difficult or impossible to manufacture and deliver products, delay production ramps of new products, increase costs, and reduce demand.\n- **Partner financial failure and asset exposure.** Apple has invested in manufacturing process equipment held at certain outsourcing partners and made prepayments under long-term supply agreements. If a partner faces severe financial problems or disruption, supply can be disrupted or terminated and the recoverability of that equipment or those prepayments can be negatively impacted.\n- **Recovery time and insurance limits.** Following a business interruption, Apple can require substantial recovery time, incur significant expenditures to resume operations, and lose significant sales. Because many critical components come from single or limited sources, interruptions affecting those sources are exacerbated. Insurance coverage for certain losses may be insufficient to cover all losses.\n- **New product custom components.** New products often use custom components from only one source, and initial capacity constraints can exist until supplier yields mature or capacity increases. If supply is delayed or constrained, or if an alternative source cannot be identified and qualified quickly enough, results can be materially adversely affected.\n\nOn a broader financial basis, Apple reports low overall risk: health score of 100 (EXCELLENT), Altman score of 12.79 (SAFE), Beneish score of -2.37 (LOW_RISK), and a LOW risk level, which provides some balance-sheet capacity to absorb or remediate supply-chain shocks.\n\nSource: apple 10k.pdf, p. 6.\nSource: apple 10k.pdf, p. 8.", "model": "openai", "success": true, "tickers": ["AAPL"], "intents": ["RISK_ANALYSIS"], "sources": [{"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 8, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000007", "score": -5.100207805633545}]}
+

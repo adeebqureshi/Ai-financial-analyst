@@ -1,0 +1,18 @@
+{
+ "events": [
+  "done",
+  "plan"
+ ],
+ "chars": 0,
+ "sources": 5,
+ "done_keys": [
+  "intents",
+  "message",
+  "model",
+  "sources",
+  "success",
+  "tickers"
+ ],
+ "error": null,
+ "text": ""
+}

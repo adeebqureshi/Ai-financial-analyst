@@ -129,27 +129,29 @@ class PlannerAgent:
                 return
             seen.add(key)
             tools.append(ToolCall(tool=tool, args=args, label=label))
-        if AgentIntent.DOCUMENT_RESEARCH.value in intent_names:
+        def add_document_search(ticker: str | None = None) -> None:
+            args: dict[str, object] = {"query": query}
+            if ticker:
+                args["ticker"] = ticker
+            if document_id:
+                args["document_id"] = document_id
+            add(
+                "search_documents",
+                args,
+                f"Searched {ticker} documents" if ticker else "Searched uploaded documents",
+            )
             plan.needs_rag = True
-            if plan.tickers:
-                for ticker in plan.tickers:
-                    args: dict[str, object] = {"query": query, "ticker": ticker}
-                    if document_id:
-                        args["document_id"] = document_id
-                    add(
-                        "search_documents",
-                        args,
-                        f"Searched {ticker} documents",
-                    )
-            else:
-                args = {"query": query}
-                if document_id:
-                    args["document_id"] = document_id
-                add(
-                    "search_documents",
-                    args,
-                    "Searched uploaded documents",
-                )
+        if AgentIntent.DOCUMENT_RESEARCH.value in intent_names:
+            for ticker in plan.tickers or [None]:
+                add_document_search(ticker)
+        if AgentIntent.RISK_ANALYSIS.value in intent_names:
+            # Documented risk factors (e.g. Item 1A of a 10-K) are the primary
+            # evidence for a risk question. "calculate_risk" only derives
+            # quantitative metrics (beta, leverage, distress), so without a
+            # document search a tickerless risk question planned zero tools and
+            # fell back to "insufficient evidence" without ever reaching Qdrant.
+            for ticker in plan.tickers or [None]:
+                add_document_search(ticker)
         if AgentIntent.MARKET_DATA.value in intent_names:
             for ticker in plan.tickers:
                 add(
@@ -168,12 +170,22 @@ class PlannerAgent:
                 AgentIntent.REPORT_GENERATION.value,
             )
         ):
-            for ticker in plan.tickers:
-                add(
-                    "get_company",
-                    {"ticker": ticker},
-                    f"Retrieved company profile for {ticker}",
-                )
+            if plan.tickers:
+                for ticker in plan.tickers:
+                    add(
+                        "get_company",
+                        {"ticker": ticker},
+                        f"Retrieved company profile for {ticker}",
+                    )
+            elif AgentIntent.FINANCIAL_ANALYSIS.value in intent_names:
+                # Tickerless financial questions (e.g. Research-page questions
+                # over uploaded documents such as "What drove revenue growth?")
+                # carry no ticker, so ticker-scoped tools would leave the plan
+                # with zero tools and force the "insufficient evidence"
+                # fallback without ever searching the documents. Searching the
+                # owner's documents (or the explicitly scoped document) gives
+                # the synthesizer real evidence to ground its answer in.
+                add_document_search()
         if any(
             name in intent_names
             for name in (

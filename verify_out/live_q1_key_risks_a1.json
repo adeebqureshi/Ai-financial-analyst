@@ -1,0 +1,19 @@
+{
+ "events": [
+  "done",
+  "plan",
+  "token"
+ ],
+ "chars": 2824,
+ "sources": 5,
+ "done_keys": [
+  "intents",
+  "message",
+  "model",
+  "sources",
+  "success",
+  "tickers"
+ ],
+ "error": null,
+ "text": "\n\nApple Inc.'s principal risks, as disclosed in its 2024 Form 10-K, span market, operational, technology, and strategic areas:\n\n- **Market Risk:** Interest rate fluctuations affect the fair value of the investment portfolio and term debt interest expense; a hypothetical 100 basis point rate increase would decline investment portfolio fair value by $2,755 million in 2024 (vs $3,089 million in 2023) and increase annual interest expense by $139 million (vs $194 million in 2023). As a net receiver of non-USD currencies, a strengthening dollar negatively affects net sales and gross margins; the value-at-risk of foreign currency derivatives is estimated at a maximum one-day loss of $538 million at 95% confidence (vs $669 million in 2023).\n- **Product Quality, IP and Inventory:** Design and manufacturing defects in hardware, software and services\u2014including new AI features\u2014create safety, recall, warranty, litigation and regulatory fine exposure. The company faces inventory write-downs from obsolescence and forecasting errors under manufacturing purchase obligations typically covering up to 150 days, and relies on third-party intellectual property licenses that may not be obtainable on commercially reasonable terms or at all, potentially forcing product modifications or sales bans.\n- **Cybersecurity and IT Operations:** The company experiences malicious attacks and unauthorized access attempts regularly, with attacks expected to accelerate in frequency and sophistication, including during geopolitical tensions; its security measures and insurance may be insufficient to cover all losses. IT system failures or network disruptions across the global supply chain (from ransomware to natural disasters or war) could impede manufacturing, shipping, and access to online services.\n- **Talent, Distribution and Retail:** Success depends on retaining highly skilled personnel and key executives in an intensely competitive labor market, particularly in Silicon Valley, and on managing the performance of carriers, wholesalers and resellers\u2014many of which distribute competitor products\u2014whose financing offers or orders could decline. Retail operations are exposed to macroeconomic conditions, construction and lease costs, and inventory value fluctuations.\n- **Strategic Investments:** New business strategies or acquisitions carry risks of management distraction, regulatory challenges, inadequate returns and asset write-offs.\n- **Tax Uncertainty:** The independent auditor identified uncertain tax positions as a critical audit matter, noting gross unrecognized tax benefits of $22.0 billion as of September 28, 2024, of which $10.8 billion, if recognized, would impact the effective tax rate.\n\nSource: apple 10k.pdf, p. 30; apple 10k.pdf, p. 12; apple 10k.pdf, p. 15; apple 10k.pdf, p. 14; apple 10k.pdf, p. 51."
+}

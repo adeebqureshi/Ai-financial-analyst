@@ -1,0 +1,846 @@
+event: plan
+data: {"tickers": [], "intents": ["COMPARISON", "FINANCIAL_ANALYSIS"]}
+
+event: token
+data: {"delta": "\n\n"}
+
+event: token
+data: {"delta": "Apple does"}
+
+event: token
+data: {"delta": " not disclose"}
+
+event: token
+data: {"delta": " gross margin"}
+
+event: token
+data: {"delta": " by geographic"}
+
+event: token
+data: {"delta": " report"}
+
+event: token
+data: {"delta": "able segment"}
+
+event: token
+data: {"delta": " \u2014"}
+
+event: token
+data: {"delta": " its"}
+
+event: token
+data: {"delta": " Form"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0-K"}
+
+event: token
+data: {"delta": " reports"}
+
+event: token
+data: {"delta": " gross margin"}
+
+event: token
+data: {"delta": " only by"}
+
+event: token
+data: {"delta": " product category"}
+
+event: token
+data: {"delta": " (Products"}
+
+event: token
+data: {"delta": " vs"}
+
+event: token
+data: {"delta": ". Services"}
+
+event: token
+data: {"delta": "). For"}
+
+event: token
+data: {"delta": " geographic"}
+
+event: token
+data: {"delta": " segments,"}
+
+event: token
+data: {"delta": " the margin"}
+
+event: token
+data: {"delta": " metric"}
+
+event: token
+data: {"delta": " disclosed"}
+
+event: token
+data: {"delta": " is operating"}
+
+event: token
+data: {"delta": " income,"}
+
+event: token
+data: {"delta": " so"}
+
+event: token
+data: {"delta": " the"}
+
+event: token
+data: {"delta": " comparable"}
+
+event: token
+data: {"delta": " measure"}
+
+event: token
+data: {"delta": " is operating"}
+
+event: token
+data: {"delta": " margin ("}
+
+event: token
+data: {"delta": "segment operating"}
+
+event: token
+data: {"delta": " income "}
+
+event: token
+data: {"delta": "\u00f7 segment"}
+
+event: token
+data: {"delta": " net sales"}
+
+event: token
+data: {"delta": "),"}
+
+event: token
+data: {"delta": " both"}
+
+event: token
+data: {"delta": " of"}
+
+event: token
+data: {"delta": " which the"}
+
+event: token
+data: {"delta": " company uses"}
+
+event: token
+data: {"delta": " to evaluate"}
+
+event: token
+data: {"delta": " segment performance"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "4 operating"}
+
+event: token
+data: {"delta": " margins"}
+
+event: token
+data: {"delta": " by geographic"}
+
+event: token
+data: {"delta": " segment:"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Americas:"}
+
+event: token
+data: {"delta": " "}
+
+event: token
+data: {"delta": "6"}
+
+event: token
+data: {"delta": "7,"}
+
+event: token
+data: {"delta": "65"}
+
+event: token
+data: {"delta": "6 /"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "67"}
+
+event: token
+data: {"delta": ",0"}
+
+event: token
+data: {"delta": "45"}
+
+event: token
+data: {"delta": " = "}
+
+event: token
+data: {"delta": "40"}
+
+event: token
+data: {"delta": ".5"}
+
+event: token
+data: {"delta": "%\n"}
+
+event: token
+data: {"delta": "- Europe"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "41"}
+
+event: token
+data: {"delta": ",7"}
+
+event: token
+data: {"delta": "90"}
+
+event: token
+data: {"delta": " / "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "1,"}
+
+event: token
+data: {"delta": "32"}
+
+event: token
+data: {"delta": "8 ="}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "1."}
+
+event: token
+data: {"delta": "2%"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Rest"}
+
+event: token
+data: {"delta": " of Asia"}
+
+event: token
+data: {"delta": " Pacific:"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "3,"}
+
+event: token
+data: {"delta": "06"}
+
+event: token
+data: {"delta": "2 /"}
+
+event: token
+data: {"delta": " 3"}
+
+event: token
+data: {"delta": "0,"}
+
+event: token
+data: {"delta": "65"}
+
+event: token
+data: {"delta": "8 ="}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "2."}
+
+event: token
+data: {"delta": "6%"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Greater China"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "27"}
+
+event: token
+data: {"delta": ",0"}
+
+event: token
+data: {"delta": "82"}
+
+event: token
+data: {"delta": " / "}
+
+event: token
+data: {"delta": "66"}
+
+event: token
+data: {"delta": ",9"}
+
+event: token
+data: {"delta": "52"}
+
+event: token
+data: {"delta": " = "}
+
+event: token
+data: {"delta": "40"}
+
+event: token
+data: {"delta": ".4"}
+
+event: token
+data: {"delta": "%\n"}
+
+event: token
+data: {"delta": "- Japan"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "12"}
+
+event: token
+data: {"delta": ",4"}
+
+event: token
+data: {"delta": "54"}
+
+event: token
+data: {"delta": " / "}
+
+event: token
+data: {"delta": "25"}
+
+event: token
+data: {"delta": ",0"}
+
+event: token
+data: {"delta": "52"}
+
+event: token
+data: {"delta": " = "}
+
+event: token
+data: {"delta": "49"}
+
+event: token
+data: {"delta": ".7"}
+
+event: token
+data: {"delta": "% ("}
+
+event: token
+data: {"delta": "highest)"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Consolid"}
+
+event: token
+data: {"delta": "ated total"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "12"}
+
+event: token
+data: {"delta": "3,"}
+
+event: token
+data: {"delta": "21"}
+
+event: token
+data: {"delta": "6 /"}
+
+event: token
+data: {"delta": " 3"}
+
+event: token
+data: {"delta": "91"}
+
+event: token
+data: {"delta": ",0"}
+
+event: token
+data: {"delta": "35"}
+
+event: token
+data: {"delta": " = "}
+
+event: token
+data: {"delta": "31"}
+
+event: token
+data: {"delta": ".5"}
+
+event: token
+data: {"delta": "%\n\n"}
+
+event: token
+data: {"delta": "Year"}
+
+event: token
+data: {"delta": "-over-year"}
+
+event: token
+data: {"delta": " shifts"}
+
+event: token
+data: {"delta": " show"}
+
+event: token
+data: {"delta": " Japan"}
+
+event: token
+data: {"delta": " stable"}
+
+event: token
+data: {"delta": " at ~"}
+
+event: token
+data: {"delta": "49"}
+
+event: token
+data: {"delta": "%,"}
+
+event: token
+data: {"delta": " while"}
+
+event: token
+data: {"delta": " all"}
+
+event: token
+data: {"delta": " other regions"}
+
+event: token
+data: {"delta": " improved:"}
+
+event: token
+data: {"delta": " Americas "}
+
+event: token
+data: {"delta": "37"}
+
+event: token
+data: {"delta": ".2"}
+
+event: token
+data: {"delta": "% ("}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "23"}
+
+event: token
+data: {"delta": ") \u2192"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "0."}
+
+event: token
+data: {"delta": "5%,"}
+
+event: token
+data: {"delta": " Europe "}
+
+event: token
+data: {"delta": "38"}
+
+event: token
+data: {"delta": ".3"}
+
+event: token
+data: {"delta": "% \u2192"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "1."}
+
+event: token
+data: {"delta": "2%,"}
+
+event: token
+data: {"delta": " Rest"}
+
+event: token
+data: {"delta": " of Asia"}
+
+event: token
+data: {"delta": " Pacific "}
+
+event: token
+data: {"delta": "40"}
+
+event: token
+data: {"delta": ".7"}
+
+event: token
+data: {"delta": "% \u2192"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "2."}
+
+event: token
+data: {"delta": "6%,"}
+
+event: token
+data: {"delta": " but"}
+
+event: token
+data: {"delta": " Greater China"}
+
+event: token
+data: {"delta": " declined "}
+
+event: token
+data: {"delta": "41"}
+
+event: token
+data: {"delta": ".8"}
+
+event: token
+data: {"delta": "% \u2192"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "0."}
+
+event: token
+data: {"delta": "4%"}
+
+event: token
+data: {"delta": " as net"}
+
+event: token
+data: {"delta": " sales fell"}
+
+event: token
+data: {"delta": " 8"}
+
+event: token
+data: {"delta": "%."}
+
+event: token
+data: {"delta": "\n\nBy"}
+
+event: token
+data: {"delta": " product line"}
+
+event: token
+data: {"delta": " ("}
+
+event: token
+data: {"delta": "the"}
+
+event: token
+data: {"delta": " only gross"}
+
+event: token
+data: {"delta": " margin disclosed"}
+
+event: token
+data: {"delta": "), "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": " gross margin"}
+
+event: token
+data: {"delta": " percentage"}
+
+event: token
+data: {"delta": " was "}
+
+event: token
+data: {"delta": "37"}
+
+event: token
+data: {"delta": ".2"}
+
+event: token
+data: {"delta": "% for"}
+
+event: token
+data: {"delta": " Products and"}
+
+event: token
+data: {"delta": " 7"}
+
+event: token
+data: {"delta": "3."}
+
+event: token
+data: {"delta": "9%"}
+
+event: token
+data: {"delta": " for Services"}
+
+event: token
+data: {"delta": ", versus"}
+
+event: token
+data: {"delta": " 3"}
+
+event: token
+data: {"delta": "6."}
+
+event: token
+data: {"delta": "5%"}
+
+event: token
+data: {"delta": " and "}
+
+event: token
+data: {"delta": "70"}
+
+event: token
+data: {"delta": ".8"}
+
+event: token
+data: {"delta": "% in"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "3;"}
+
+event: token
+data: {"delta": " total gross"}
+
+event: token
+data: {"delta": " margin was"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "6."}
+
+event: token
+data: {"delta": "2%"}
+
+event: token
+data: {"delta": " in "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": " versus"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "4."}
+
+event: token
+data: {"delta": "1%"}
+
+event: token
+data: {"delta": " in "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "23"}
+
+event: token
+data: {"delta": ". Products"}
+
+event: token
+data: {"delta": " margin"}
+
+event: token
+data: {"delta": " rose"}
+
+event: token
+data: {"delta": " on"}
+
+event: token
+data: {"delta": " cost savings"}
+
+event: token
+data: {"delta": " partially"}
+
+event: token
+data: {"delta": " offset by"}
+
+event: token
+data: {"delta": " a different"}
+
+event: token
+data: {"delta": " mix"}
+
+event: token
+data: {"delta": " and weak"}
+
+event: token
+data: {"delta": " foreign currencies"}
+
+event: token
+data: {"delta": ";"}
+
+event: token
+data: {"delta": " Services margin"}
+
+event: token
+data: {"delta": " percentage"}
+
+event: token
+data: {"delta": " rose on"}
+
+event: token
+data: {"delta": " a different"}
+
+event: token
+data: {"delta": " Services mix"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "Source:"}
+
+event: token
+data: {"delta": " apple "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "k.pdf"}
+
+event: token
+data: {"delta": ", p"}
+
+event: token
+data: {"delta": ". "}
+
+event: token
+data: {"delta": "4"}
+
+event: token
+data: {"delta": "7."}
+
+event: token
+data: {"delta": "\nSource"}
+
+event: token
+data: {"delta": ": apple"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0k"}
+
+event: token
+data: {"delta": ".pdf,"}
+
+event: token
+data: {"delta": " p."}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "4"}
+
+event: token
+data: {"delta": ".\n"}
+
+event: token
+data: {"delta": "Source:"}
+
+event: token
+data: {"delta": " apple "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "k.pdf"}
+
+event: token
+data: {"delta": ", p"}
+
+event: token
+data: {"delta": ". "}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": "."}
+
+event: token
+data: {"delta": "\n\n_Auditor note: this response could not be fully verified against retrieved evidence. Please verify the claims before relying on them._"}
+
+event: done
+data: {"message": "\n\nApple does not disclose gross margin by geographic reportable segment \u2014 its Form 10-K reports gross margin only by product category (Products vs. Services). For geographic segments, the margin metric disclosed is operating income, so the comparable measure is operating margin (segment operating income \u00f7 segment net sales), both of which the company uses to evaluate segment performance.\n\n2024 operating margins by geographic segment:\n- Americas: 67,656 / 167,045 = 40.5%\n- Europe: 41,790 / 101,328 = 41.2%\n- Rest of Asia Pacific: 13,062 / 30,658 = 42.6%\n- Greater China: 27,082 / 66,952 = 40.4%\n- Japan: 12,454 / 25,052 = 49.7% (highest)\n- Consolidated total: 123,216 / 391,035 = 31.5%\n\nYear-over-year shifts show Japan stable at ~49%, while all other regions improved: Americas 37.2% (2023) \u2192 40.5%, Europe 38.3% \u2192 41.2%, Rest of Asia Pacific 40.7% \u2192 42.6%, but Greater China declined 41.8% \u2192 40.4% as net sales fell 8%.\n\nBy product line (the only gross margin disclosed), 2024 gross margin percentage was 37.2% for Products and 73.9% for Services, versus 36.5% and 70.8% in 2023; total gross margin was 46.2% in 2024 versus 44.1% in 2023. Products margin rose on cost savings partially offset by a different mix and weak foreign currencies; Services margin percentage rose on a different Services mix.\n\nSource: apple 10k.pdf, p. 47.\nSource: apple 10k.pdf, p. 44.\nSource: apple 10k.pdf, p. 24.\n\n_Auditor note: this response could not be fully verified against retrieved evidence. Please verify the claims before relying on them._", "model": "openai", "success": false, "tickers": [], "intents": ["COMPARISON", "FINANCIAL_ANALYSIS"], "sources": []}
+

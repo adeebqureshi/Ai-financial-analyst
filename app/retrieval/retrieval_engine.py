@@ -109,15 +109,18 @@ class RetrievalEngine:
         else:
             candidate_limit = limit * 3 if as_of_date is not None else limit
 
-        similarity = self.retriever.dense.similarity_scores(
+        # Single Qdrant round-trip: fetch the dense points once, derive the
+        # cosine scores locally, and fuse with BM25 without re-querying.
+        dense_points = self.retriever.dense.search(
             vector=vector,
             limit=candidate_limit,
             document_id=document_id,
             owner_id=owner_id,
         )
+        similarity = self.retriever.dense.points_to_scores(dense_points)
 
-        ids = self.retriever.search(
-            vector=vector,
+        ids = self.retriever.search_with_points(
+            dense_points,
             query=query,
             limit=candidate_limit,
             document_id=document_id,

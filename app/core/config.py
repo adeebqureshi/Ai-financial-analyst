@@ -16,8 +16,10 @@ from app.core.constants import (
     API_RETRY_BACKOFF,
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
+    DEFAULT_EMBEDDING_BATCH_SIZE,
     DEFAULT_EMBEDDING_DIMENSION,
     DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_QDRANT_UPSERT_BATCH_SIZE,
     DEFAULT_LLM_MAX_TOKENS,
     DEFAULT_LLM_MODEL,
     DEFAULT_LLM_TEMPERATURE,
@@ -327,6 +329,27 @@ class Settings(BaseSettings):
             "Expected embedding vector dimension. Must match the "
             "SentenceTransformer model output and the Qdrant collection "
             "vector size (EMBEDDING_DIMENSION)."
+        ),
+    )
+
+    embedding_batch_size: int = Field(
+        default=DEFAULT_EMBEDDING_BATCH_SIZE,
+        ge=1,
+        le=128,
+        description=(
+            "Batch size for batched embedding encoding. Benchmarked at 32 "
+            "as the sweet spot for all-MiniLM-L6-v2 on CPU "
+            "(EMBEDDING_BATCH_SIZE)."
+        ),
+    )
+
+    qdrant_upsert_batch_size: int = Field(
+        default=DEFAULT_QDRANT_UPSERT_BATCH_SIZE,
+        ge=1,
+        le=4096,
+        description=(
+            "Maximum Qdrant points per upsert call. Large documents are "
+            "split into batches of this size (QDRANT_UPSERT_BATCH_SIZE)."
         ),
     )
 

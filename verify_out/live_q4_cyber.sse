@@ -1,0 +1,420 @@
+event: plan
+data: {"tickers": ["AAPL"], "intents": ["RISK_ANALYSIS"]}
+
+event: token
+data: {"delta": "\n\nApple"}
+
+event: token
+data: {"delta": "'s FY"}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": " Form "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "-K does"}
+
+event: token
+data: {"delta": " contain a"}
+
+event: token
+data: {"delta": " dedicated cybersecurity"}
+
+event: token
+data: {"delta": " disclosure:"}
+
+event: token
+data: {"delta": " the"}
+
+event: token
+data: {"delta": " table"}
+
+event: token
+data: {"delta": " of contents"}
+
+event: token
+data: {"delta": " shows"}
+
+event: token
+data: {"delta": " Item"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "C."}
+
+event: token
+data: {"delta": " Cybersecurity"}
+
+event: token
+data: {"delta": " on"}
+
+event: token
+data: {"delta": " page "}
+
+event: token
+data: {"delta": "17"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " separate"}
+
+event: token
+data: {"delta": " from the"}
+
+event: token
+data: {"delta": " risk"}
+
+event: token
+data: {"delta": " factors section"}
+
+event: token
+data: {"delta": " (Item"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "A."}
+
+event: token
+data: {"delta": " Risk Factors"}
+
+event: token
+data: {"delta": " begins"}
+
+event: token
+data: {"delta": " on page"}
+
+event: token
+data: {"delta": " 5"}
+
+event: token
+data: {"delta": "). However"}
+
+event: token
+data: {"delta": ", the"}
+
+event: token
+data: {"delta": " actual"}
+
+event: token
+data: {"delta": " text"}
+
+event: token
+data: {"delta": " of Item"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "C ("}
+
+event: token
+data: {"delta": "page "}
+
+event: token
+data: {"delta": "17"}
+
+event: token
+data: {"delta": ") is"}
+
+event: token
+data: {"delta": " not present"}
+
+event: token
+data: {"delta": " in the"}
+
+event: token
+data: {"delta": " retrieved evidence"}
+
+event: token
+data: {"delta": ", so"}
+
+event: token
+data: {"delta": " I cannot"}
+
+event: token
+data: {"delta": " enumerate the"}
+
+event: token
+data: {"delta": " specific cybersecurity"}
+
+event: token
+data: {"delta": " risks Apple"}
+
+event: token
+data: {"delta": " discloses"}
+
+event: token
+data: {"delta": " there."}
+
+event: token
+data: {"delta": "\n\nWhat"}
+
+event: token
+data: {"delta": " the retrieved"}
+
+event: token
+data: {"delta": " evidence does"}
+
+event: token
+data: {"delta": " confirm:"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Apple"}
+
+event: token
+data: {"delta": "'s independent"}
+
+event: token
+data: {"delta": " auditor"}
+
+event: token
+data: {"delta": " aud"}
+
+event: token
+data: {"delta": "ited its"}
+
+event: token
+data: {"delta": " internal control"}
+
+event: token
+data: {"delta": " over financial"}
+
+event: token
+data: {"delta": " reporting as"}
+
+event: token
+data: {"delta": " of September"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "8,"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "4,"}
+
+event: token
+data: {"delta": " based on"}
+
+event: token
+data: {"delta": " the COS"}
+
+event: token
+data: {"delta": "O "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "13"}
+
+event: token
+data: {"delta": " framework,"}
+
+event: token
+data: {"delta": " and expressed"}
+
+event: token
+data: {"delta": " an un"}
+
+event: token
+data: {"delta": "qualified opinion"}
+
+event: token
+data: {"delta": " on it"}
+
+event: token
+data: {"delta": " (page"}
+
+event: token
+data: {"delta": " 5"}
+
+event: token
+data: {"delta": "1)."}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Cyber"}
+
+event: token
+data: {"delta": "security is"}
+
+event: token
+data: {"delta": " addressed"}
+
+event: token
+data: {"delta": " in"}
+
+event: token
+data: {"delta": " its own"}
+
+event: token
+data: {"delta": " "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "-K item"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " indicating"}
+
+event: token
+data: {"delta": " a"}
+
+event: token
+data: {"delta": " structured governance"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " risk"}
+
+event: token
+data: {"delta": "-disc"}
+
+event: token
+data: {"delta": "losure process"}
+
+event: token
+data: {"delta": " for"}
+
+event: token
+data: {"delta": " that"}
+
+event: token
+data: {"delta": " topic"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "To"}
+
+event: token
+data: {"delta": " see"}
+
+event: token
+data: {"delta": " the specific"}
+
+event: token
+data: {"delta": " cybersecurity risk"}
+
+event: token
+data: {"delta": " factors"}
+
+event: token
+data: {"delta": " Apple disc"}
+
+event: token
+data: {"delta": "loses,"}
+
+event: token
+data: {"delta": " you would"}
+
+event: token
+data: {"delta": " need the"}
+
+event: token
+data: {"delta": " text"}
+
+event: token
+data: {"delta": " of Item"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "C on"}
+
+event: token
+data: {"delta": " page "}
+
+event: token
+data: {"delta": "17"}
+
+event: token
+data: {"delta": " of apple"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0k"}
+
+event: token
+data: {"delta": ".pdf,"}
+
+event: token
+data: {"delta": " which was"}
+
+event: token
+data: {"delta": " not among"}
+
+event: token
+data: {"delta": " the retrieved"}
+
+event: token
+data: {"delta": " content"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "Source:"}
+
+event: token
+data: {"delta": " apple "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "k.pdf"}
+
+event: token
+data: {"delta": ", p"}
+
+event: token
+data: {"delta": ". "}
+
+event: token
+data: {"delta": "3."}
+
+event: token
+data: {"delta": "\n\n_Auditor note: this response could not be fully verified against retrieved evidence. Please verify the claims before relying on them._"}
+
+event: done
+data: {"message": "\n\nApple's FY2024 Form 10-K does contain a dedicated cybersecurity disclosure: the table of contents shows Item 1C. Cybersecurity on page 17, separate from the risk factors section (Item 1A. Risk Factors begins on page 5). However, the actual text of Item 1C (page 17) is not present in the retrieved evidence, so I cannot enumerate the specific cybersecurity risks Apple discloses there.\n\nWhat the retrieved evidence does confirm:\n- Apple's independent auditor audited its internal control over financial reporting as of September 28, 2024, based on the COSO 2013 framework, and expressed an unqualified opinion on it (page 51).\n- Cybersecurity is addressed in its own 10-K item, indicating a structured governance and risk-disclosure process for that topic.\n\nTo see the specific cybersecurity risk factors Apple discloses, you would need the text of Item 1C on page 17 of apple 10k.pdf, which was not among the retrieved content.\n\nSource: apple 10k.pdf, p. 3.\n\n_Auditor note: this response could not be fully verified against retrieved evidence. Please verify the claims before relying on them._", "model": "openai", "success": false, "tickers": ["AAPL"], "intents": ["RISK_ANALYSIS"], "sources": [{"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 3, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000002", "score": 2.8402862548828125}]}
+

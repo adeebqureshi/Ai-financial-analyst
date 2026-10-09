@@ -1,0 +1,1308 @@
+event: plan
+data: {"tickers": [], "intents": ["RISK_ANALYSIS"]}
+
+event: token
+data: {"delta": "\n\n"}
+
+event: token
+data: {"delta": "Based"}
+
+event: token
+data: {"delta": " on Apple"}
+
+event: token
+data: {"delta": "'s "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": " Form "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "-K ("}
+
+event: token
+data: {"delta": "Item"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "A Risk"}
+
+event: token
+data: {"delta": " Factors and"}
+
+event: token
+data: {"delta": " Item "}
+
+event: token
+data: {"delta": "7A"}
+
+event: token
+data: {"delta": "), the"}
+
+event: token
+data: {"delta": " key"}
+
+event: token
+data: {"delta": " risks"}
+
+event: token
+data: {"delta": " fall"}
+
+event: token
+data: {"delta": " into the"}
+
+event: token
+data: {"delta": " following categories"}
+
+event: token
+data: {"delta": ":\n\n"}
+
+event: token
+data: {"delta": "**Market"}
+
+event: token
+data: {"delta": " risks"}
+
+event: token
+data: {"delta": "** \u2013"}
+
+event: token
+data: {"delta": " Apple"}
+
+event: token
+data: {"delta": " is exposed"}
+
+event: token
+data: {"delta": " to U"}
+
+event: token
+data: {"delta": ".S."}
+
+event: token
+data: {"delta": " interest rate"}
+
+event: token
+data: {"delta": " fluctuations,"}
+
+event: token
+data: {"delta": " which reduce"}
+
+event: token
+data: {"delta": " the fair"}
+
+event: token
+data: {"delta": " value of"}
+
+event: token
+data: {"delta": " its investment"}
+
+event: token
+data: {"delta": " portfolio ($"}
+
+event: token
+data: {"delta": "2,"}
+
+event: token
+data: {"delta": "75"}
+
+event: token
+data: {"delta": "5 million"}
+
+event: token
+data: {"delta": " potential"}
+
+event: token
+data: {"delta": " decline and"}
+
+event: token
+data: {"delta": " $1"}
+
+event: token
+data: {"delta": "39"}
+
+event: token
+data: {"delta": " million increase"}
+
+event: token
+data: {"delta": " in annual"}
+
+event: token
+data: {"delta": " interest expense"}
+
+event: token
+data: {"delta": " on term"}
+
+event: token
+data: {"delta": " debt,"}
+
+event: token
+data: {"delta": " each"}
+
+event: token
+data: {"delta": " from"}
+
+event: token
+data: {"delta": " a "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "0-b"}
+
+event: token
+data: {"delta": "asis-point"}
+
+event: token
+data: {"delta": " rate"}
+
+event: token
+data: {"delta": " increase as"}
+
+event: token
+data: {"delta": " of September"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "8,"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "4)"}
+
+event: token
+data: {"delta": " and to"}
+
+event: token
+data: {"delta": " foreign exchange"}
+
+event: token
+data: {"delta": " risk as"}
+
+event: token
+data: {"delta": " a net"}
+
+event: token
+data: {"delta": " receiver of"}
+
+event: token
+data: {"delta": " non-"}
+
+event: token
+data: {"delta": "USD currencies"}
+
+event: token
+data: {"delta": ";"}
+
+event: token
+data: {"delta": " a strengthening"}
+
+event: token
+data: {"delta": " U.S"}
+
+event: token
+data: {"delta": ". dollar"}
+
+event: token
+data: {"delta": " would reduce"}
+
+event: token
+data: {"delta": " net sales"}
+
+event: token
+data: {"delta": " and gross"}
+
+event: token
+data: {"delta": " margins."}
+
+event: token
+data: {"delta": " The value"}
+
+event: token
+data: {"delta": "-at-risk"}
+
+event: token
+data: {"delta": " model estimates"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " with "}
+
+event: token
+data: {"delta": "95"}
+
+event: token
+data: {"delta": "% confidence"}
+
+event: token
+data: {"delta": ", a"}
+
+event: token
+data: {"delta": " maximum one"}
+
+event: token
+data: {"delta": "-day loss"}
+
+event: token
+data: {"delta": " in fair"}
+
+event: token
+data: {"delta": " value of"}
+
+event: token
+data: {"delta": " $5"}
+
+event: token
+data: {"delta": "38"}
+
+event: token
+data: {"delta": " million on"}
+
+event: token
+data: {"delta": " foreign"}
+
+event: token
+data: {"delta": " currency derivative"}
+
+event: token
+data: {"delta": " positions ("}
+
+event: token
+data: {"delta": "down"}
+
+event: token
+data: {"delta": " from $"}
+
+event: token
+data: {"delta": "66"}
+
+event: token
+data: {"delta": "9 million"}
+
+event: token
+data: {"delta": " a"}
+
+event: token
+data: {"delta": " year earlier"}
+
+event: token
+data: {"delta": ").\n\n"}
+
+event: token
+data: {"delta": "**Product"}
+
+event: token
+data: {"delta": " and quality"}
+
+event: token
+data: {"delta": " risks**"}
+
+event: token
+data: {"delta": " \u2013 Design"}
+
+event: token
+data: {"delta": " and manufacturing"}
+
+event: token
+data: {"delta": " defects in"}
+
+event: token
+data: {"delta": " hardware,"}
+
+event: token
+data: {"delta": " software,"}
+
+event: token
+data: {"delta": " and third"}
+
+event: token
+data: {"delta": "-party components"}
+
+event: token
+data: {"delta": " could"}
+
+event: token
+data: {"delta": " cause safety"}
+
+event: token
+data: {"delta": " issues,"}
+
+event: token
+data: {"delta": " personal"}
+
+event: token
+data: {"delta": " injury,"}
+
+event: token
+data: {"delta": " product liability"}
+
+event: token
+data: {"delta": " claims,"}
+
+event: token
+data: {"delta": " recalls,"}
+
+event: token
+data: {"delta": " inventory"}
+
+event: token
+data: {"delta": " write-offs"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " significant warranty"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " litigation,"}
+
+event: token
+data: {"delta": " and regulatory"}
+
+event: token
+data: {"delta": " expense"}
+
+event: token
+data: {"delta": "."}
+
+event: token
+data: {"delta": " Quality problems"}
+
+event: token
+data: {"delta": " may"}
+
+event: token
+data: {"delta": " harm"}
+
+event: token
+data: {"delta": " reputation"}
+
+event: token
+data: {"delta": ", reduce"}
+
+event: token
+data: {"delta": " demand,"}
+
+event: token
+data: {"delta": " delay"}
+
+event: token
+data: {"delta": " new product"}
+
+event: token
+data: {"delta": " introductions"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " cause lost"}
+
+event: token
+data: {"delta": " sales;"}
+
+event: token
+data: {"delta": " emerging"}
+
+event: token
+data: {"delta": " complexities"}
+
+event: token
+data: {"delta": " such"}
+
+event: token
+data: {"delta": " as artificial"}
+
+event: token
+data: {"delta": " intelligence features"}
+
+event: token
+data: {"delta": " add"}
+
+event: token
+data: {"delta": " safety"}
+
+event: token
+data: {"delta": " risks"}
+
+event: token
+data: {"delta": " including"}
+
+event: token
+data: {"delta": " harmful"}
+
+event: token
+data: {"delta": " or inaccurate"}
+
+event: token
+data: {"delta": " user"}
+
+event: token
+data: {"delta": " content."}
+
+event: token
+data: {"delta": "\n\n**"}
+
+event: token
+data: {"delta": "Inventory and"}
+
+event: token
+data: {"delta": " ob"}
+
+event: token
+data: {"delta": "solescence"}
+
+event: token
+data: {"delta": "**"}
+
+event: token
+data: {"delta": " \u2013 Rapid"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " unpredictable product"}
+
+event: token
+data: {"delta": " obsoles"}
+
+event: token
+data: {"delta": "cence creates"}
+
+event: token
+data: {"delta": " exposure"}
+
+event: token
+data: {"delta": " to inventory"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " asset"}
+
+event: token
+data: {"delta": " write-down"}
+
+event: token
+data: {"delta": "s and"}
+
+event: token
+data: {"delta": " purchase-commit"}
+
+event: token
+data: {"delta": "ment cancellation"}
+
+event: token
+data: {"delta": " fees."}
+
+event: token
+data: {"delta": " With"}
+
+event: token
+data: {"delta": " manufacturing purchase"}
+
+event: token
+data: {"delta": " obligations typically"}
+
+event: token
+data: {"delta": " covering up"}
+
+event: token
+data: {"delta": " to "}
+
+event: token
+data: {"delta": "15"}
+
+event: token
+data: {"delta": "0 days"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " incorrect"}
+
+event: token
+data: {"delta": " forecasts could"}
+
+event: token
+data: {"delta": " leave"}
+
+event: token
+data: {"delta": " Apple"}
+
+event: token
+data: {"delta": " with excess"}
+
+event: token
+data: {"delta": " or insufficient"}
+
+event: token
+data: {"delta": " components."}
+
+event: token
+data: {"delta": "\n\n**"}
+
+event: token
+data: {"delta": "Intellectual"}
+
+event: token
+data: {"delta": " property**"}
+
+event: token
+data: {"delta": " \u2013 Apple"}
+
+event: token
+data: {"delta": " relies on"}
+
+event: token
+data: {"delta": " third-party"}
+
+event: token
+data: {"delta": " intellectual"}
+
+event: token
+data: {"delta": " property and"}
+
+event: token
+data: {"delta": " can"}
+
+event: token
+data: {"delta": " unknow"}
+
+event: token
+data: {"delta": "ingly infr"}
+
+event: token
+data: {"delta": "inge others"}
+
+event: token
+data: {"delta": "' patents"}
+
+event: token
+data: {"delta": ";"}
+
+event: token
+data: {"delta": " failure"}
+
+event: token
+data: {"delta": " to obtain"}
+
+event: token
+data: {"delta": " necessary"}
+
+event: token
+data: {"delta": " licenses could"}
+
+event: token
+data: {"delta": " force"}
+
+event: token
+data: {"delta": " product modifications"}
+
+event: token
+data: {"delta": ","}
+
+event: token
+data: {"delta": " halt"}
+
+event: token
+data: {"delta": " product"}
+
+event: token
+data: {"delta": " sales,"}
+
+event: token
+data: {"delta": " or materially"}
+
+event: token
+data: {"delta": " harm operations"}
+
+event: token
+data: {"delta": "."}
+
+event: token
+data: {"delta": "\n\n**"}
+
+event: token
+data: {"delta": "Cyber"}
+
+event: token
+data: {"delta": "security and"}
+
+event: token
+data: {"delta": " information"}
+
+event: token
+data: {"delta": " security**"}
+
+event: token
+data: {"delta": " \u2013 Apple"}
+
+event: token
+data: {"delta": " faces regular"}
+
+event: token
+data: {"delta": " malicious attacks"}
+
+event: token
+data: {"delta": " and unauthorized"}
+
+event: token
+data: {"delta": " access attempts"}
+
+event: token
+data: {"delta": ", with"}
+
+event: token
+data: {"delta": " attacks"}
+
+event: token
+data: {"delta": " accelerating"}
+
+event: token
+data: {"delta": " in frequency"}
+
+event: token
+data: {"delta": " and sophistication"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " escalating"}
+
+event: token
+data: {"delta": " during geopolitical"}
+
+event: token
+data: {"delta": " tensions"}
+
+event: token
+data: {"delta": ". Its"}
+
+event: token
+data: {"delta": " high profile"}
+
+event: token
+data: {"delta": " makes it"}
+
+event: token
+data: {"delta": " a relatively"}
+
+event: token
+data: {"delta": " greater target"}
+
+event: token
+data: {"delta": ". Security"}
+
+event: token
+data: {"delta": " measures,"}
+
+event: token
+data: {"delta": " including encryption"}
+
+event: token
+data: {"delta": " and multif"}
+
+event: token
+data: {"delta": "actor authentication"}
+
+event: token
+data: {"delta": ", cannot"}
+
+event: token
+data: {"delta": " provide absolute"}
+
+event: token
+data: {"delta": " security,"}
+
+event: token
+data: {"delta": " and supplier"}
+
+event: token
+data: {"delta": "-side"}
+
+event: token
+data: {"delta": " breaches"}
+
+event: token
+data: {"delta": " can"}
+
+event: token
+data: {"delta": " also transmit"}
+
+event: token
+data: {"delta": " risk"}
+
+event: token
+data: {"delta": ". Data"}
+
+event: token
+data: {"delta": " security insurance"}
+
+event: token
+data: {"delta": " may not"}
+
+event: token
+data: {"delta": " cover all"}
+
+event: token
+data: {"delta": " losses."}
+
+event: token
+data: {"delta": "\n\n**"}
+
+event: token
+data: {"delta": "Invest"}
+
+event: token
+data: {"delta": "ments,"}
+
+event: token
+data: {"delta": " acquisitions,"}
+
+event: token
+data: {"delta": " and retail"}
+
+event: token
+data: {"delta": "** \u2013"}
+
+event: token
+data: {"delta": " New business"}
+
+event: token
+data: {"delta": " strategies and"}
+
+event: token
+data: {"delta": " acquisitions carry"}
+
+event: token
+data: {"delta": " risks of"}
+
+event: token
+data: {"delta": " management distraction"}
+
+event: token
+data: {"delta": ", un"}
+
+event: token
+data: {"delta": "anticipated liabilities"}
+
+event: token
+data: {"delta": ", regulatory"}
+
+event: token
+data: {"delta": " approval"}
+
+event: token
+data: {"delta": " failures"}
+
+event: token
+data: {"delta": ", asset"}
+
+event: token
+data: {"delta": " impair"}
+
+event: token
+data: {"delta": "ments,"}
+
+event: token
+data: {"delta": " and significant"}
+
+event: token
+data: {"delta": " write-offs"}
+
+event: token
+data: {"delta": ". Retail"}
+
+event: token
+data: {"delta": " stores"}
+
+event: token
+data: {"delta": " face macro"}
+
+event: token
+data: {"delta": "economic pressures"}
+
+event: token
+data: {"delta": ", retail"}
+
+event: token
+data: {"delta": " partner"}
+
+event: token
+data: {"delta": " relationship"}
+
+event: token
+data: {"delta": " risks"}
+
+event: token
+data: {"delta": ", inventory"}
+
+event: token
+data: {"delta": " value"}
+
+event: token
+data: {"delta": " fluctuations,"}
+
+event: token
+data: {"delta": " and lease"}
+
+event: token
+data: {"delta": " acquisition"}
+
+event: token
+data: {"delta": "/re"}
+
+event: token
+data: {"delta": "newal"}
+
+event: token
+data: {"delta": " costs."}
+
+event: token
+data: {"delta": "\n\n**"}
+
+event: token
+data: {"delta": "Talent"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " distribution"}
+
+event: token
+data: {"delta": " dependence"}
+
+event: token
+data: {"delta": "** \u2013"}
+
+event: token
+data: {"delta": " Success depends"}
+
+event: token
+data: {"delta": " heavily"}
+
+event: token
+data: {"delta": " on key"}
+
+event: token
+data: {"delta": " personnel and"}
+
+event: token
+data: {"delta": " a"}
+
+event: token
+data: {"delta": " distinctive"}
+
+event: token
+data: {"delta": " culture amid"}
+
+event: token
+data: {"delta": " intense Silicon"}
+
+event: token
+data: {"delta": " Valley competition"}
+
+event: token
+data: {"delta": " for skilled"}
+
+event: token
+data: {"delta": " technology"}
+
+event: token
+data: {"delta": " workers."}
+
+event: token
+data: {"delta": " Apple also"}
+
+event: token
+data: {"delta": " depends on"}
+
+event: token
+data: {"delta": " carriers,"}
+
+event: token
+data: {"delta": " wholesalers,"}
+
+event: token
+data: {"delta": " retailers,"}
+
+event: token
+data: {"delta": " and res"}
+
+event: token
+data: {"delta": "ellers \u2014"}
+
+event: token
+data: {"delta": " many of"}
+
+event: token
+data: {"delta": " which sell"}
+
+event: token
+data: {"delta": " competitor"}
+
+event: token
+data: {"delta": " products \u2014"}
+
+event: token
+data: {"delta": " whose financial"}
+
+event: token
+data: {"delta": " weakness"}
+
+event: token
+data: {"delta": ", reduced"}
+
+event: token
+data: {"delta": " ordering,"}
+
+event: token
+data: {"delta": " or discontin"}
+
+event: token
+data: {"delta": "uation of"}
+
+event: token
+data: {"delta": " financing/sub"}
+
+event: token
+data: {"delta": "sidy"}
+
+event: token
+data: {"delta": " offers"}
+
+event: token
+data: {"delta": " could materially"}
+
+event: token
+data: {"delta": " adversely"}
+
+event: token
+data: {"delta": " affect the"}
+
+event: token
+data: {"delta": " business."}
+
+event: token
+data: {"delta": "\n\n**"}
+
+event: token
+data: {"delta": "IT systems"}
+
+event: token
+data: {"delta": " and data"}
+
+event: token
+data: {"delta": "** \u2013"}
+
+event: token
+data: {"delta": " Complex"}
+
+event: token
+data: {"delta": " IT systems"}
+
+event: token
+data: {"delta": " and the"}
+
+event: token
+data: {"delta": " global supply"}
+
+event: token
+data: {"delta": " chain face"}
+
+event: token
+data: {"delta": " disruption"}
+
+event: token
+data: {"delta": " from natural"}
+
+event: token
+data: {"delta": " disasters,"}
+
+event: token
+data: {"delta": " power"}
+
+event: token
+data: {"delta": " or"}
+
+event: token
+data: {"delta": " telecommunications failures"}
+
+event: token
+data: {"delta": ", cyber"}
+
+event: token
+data: {"delta": " incidents"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " ransomware"}
+
+event: token
+data: {"delta": ";"}
+
+event: token
+data: {"delta": " continuity"}
+
+event: token
+data: {"delta": " and"}
+
+event: token
+data: {"delta": " disaster recovery"}
+
+event: token
+data: {"delta": " planning may"}
+
+event: token
+data: {"delta": " prove"}
+
+event: token
+data: {"delta": " inadequate,"}
+
+event: token
+data: {"delta": " and losses"}
+
+event: token
+data: {"delta": " or unauthorized"}
+
+event: token
+data: {"delta": " releases of"}
+
+event: token
+data: {"delta": " confidential information"}
+
+event: token
+data: {"delta": " carry"}
+
+event: token
+data: {"delta": " significant"}
+
+event: token
+data: {"delta": " reputational"}
+
+event: token
+data: {"delta": ", financial"}
+
+event: token
+data: {"delta": ", legal"}
+
+event: token
+data: {"delta": ", and"}
+
+event: token
+data: {"delta": " operational consequences"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "**Critical"}
+
+event: token
+data: {"delta": " audit matter"}
+
+event: token
+data: {"delta": " \u2014"}
+
+event: token
+data: {"delta": " uncertain tax"}
+
+event: token
+data: {"delta": " positions**"}
+
+event: token
+data: {"delta": " \u2013 The"}
+
+event: token
+data: {"delta": " auditors"}
+
+event: token
+data: {"delta": " flagged"}
+
+event: token
+data: {"delta": " management"}
+
+event: token
+data: {"delta": "'s judgment"}
+
+event: token
+data: {"delta": " in accounting"}
+
+event: token
+data: {"delta": " for uncertain"}
+
+event: token
+data: {"delta": " tax positions"}
+
+event: token
+data: {"delta": "."}
+
+event: token
+data: {"delta": " As of"}
+
+event: token
+data: {"delta": " September "}
+
+event: token
+data: {"delta": "28"}
+
+event: token
+data: {"delta": ", "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": ", gross"}
+
+event: token
+data: {"delta": " unrecognized tax"}
+
+event: token
+data: {"delta": " benefits totaled"}
+
+event: token
+data: {"delta": " $2"}
+
+event: token
+data: {"delta": "2."}
+
+event: token
+data: {"delta": "0 billion"}
+
+event: token
+data: {"delta": ", of"}
+
+event: token
+data: {"delta": " which $"}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": ".8"}
+
+event: token
+data: {"delta": " billion would"}
+
+event: token
+data: {"delta": " impact the"}
+
+event: token
+data: {"delta": " effective tax"}
+
+event: token
+data: {"delta": " rate if"}
+
+event: token
+data: {"delta": " recognized;"}
+
+event: token
+data: {"delta": " evaluating these"}
+
+event: token
+data: {"delta": " positions involves"}
+
+event: token
+data: {"delta": " complex"}
+
+event: token
+data: {"delta": " interpretation"}
+
+event: token
+data: {"delta": " of"}
+
+event: token
+data: {"delta": " domestic and"}
+
+event: token
+data: {"delta": " international tax"}
+
+event: token
+data: {"delta": " laws."}
+
+event: token
+data: {"delta": "\n\nSource"}
+
+event: token
+data: {"delta": ": apple"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0k"}
+
+event: token
+data: {"delta": ".pdf,"}
+
+event: token
+data: {"delta": " p."}
+
+event: token
+data: {"delta": " 3"}
+
+event: token
+data: {"delta": "0,"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "2,"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "5,"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "4,"}
+
+event: token
+data: {"delta": " 5"}
+
+event: token
+data: {"delta": "1."}
+
+event: done
+data: {"message": "\n\nBased on Apple's 2024 Form 10-K (Item 1A Risk Factors and Item 7A), the key risks fall into the following categories:\n\n**Market risks** \u2013 Apple is exposed to U.S. interest rate fluctuations, which reduce the fair value of its investment portfolio ($2,755 million potential decline and $139 million increase in annual interest expense on term debt, each from a 100-basis-point rate increase as of September 28, 2024) and to foreign exchange risk as a net receiver of non-USD currencies; a strengthening U.S. dollar would reduce net sales and gross margins. The value-at-risk model estimates, with 95% confidence, a maximum one-day loss in fair value of $538 million on foreign currency derivative positions (down from $669 million a year earlier).\n\n**Product and quality risks** \u2013 Design and manufacturing defects in hardware, software, and third-party components could cause safety issues, personal injury, product liability claims, recalls, inventory write-offs, and significant warranty, litigation, and regulatory expense. Quality problems may harm reputation, reduce demand, delay new product introductions, and cause lost sales; emerging complexities such as artificial intelligence features add safety risks including harmful or inaccurate user content.\n\n**Inventory and obsolescence** \u2013 Rapid, unpredictable product obsolescence creates exposure to inventory and asset write-downs and purchase-commitment cancellation fees. With manufacturing purchase obligations typically covering up to 150 days, incorrect forecasts could leave Apple with excess or insufficient components.\n\n**Intellectual property** \u2013 Apple relies on third-party intellectual property and can unknowingly infringe others' patents; failure to obtain necessary licenses could force product modifications, halt product sales, or materially harm operations.\n\n**Cybersecurity and information security** \u2013 Apple faces regular malicious attacks and unauthorized access attempts, with attacks accelerating in frequency and sophistication and escalating during geopolitical tensions. Its high profile makes it a relatively greater target. Security measures, including encryption and multifactor authentication, cannot provide absolute security, and supplier-side breaches can also transmit risk. Data security insurance may not cover all losses.\n\n**Investments, acquisitions, and retail** \u2013 New business strategies and acquisitions carry risks of management distraction, unanticipated liabilities, regulatory approval failures, asset impairments, and significant write-offs. Retail stores face macroeconomic pressures, retail partner relationship risks, inventory value fluctuations, and lease acquisition/renewal costs.\n\n**Talent and distribution dependence** \u2013 Success depends heavily on key personnel and a distinctive culture amid intense Silicon Valley competition for skilled technology workers. Apple also depends on carriers, wholesalers, retailers, and resellers \u2014 many of which sell competitor products \u2014 whose financial weakness, reduced ordering, or discontinuation of financing/subsidy offers could materially adversely affect the business.\n\n**IT systems and data** \u2013 Complex IT systems and the global supply chain face disruption from natural disasters, power or telecommunications failures, cyber incidents, and ransomware; continuity and disaster recovery planning may prove inadequate, and losses or unauthorized releases of confidential information carry significant reputational, financial, legal, and operational consequences.\n\n**Critical audit matter \u2014 uncertain tax positions** \u2013 The auditors flagged management's judgment in accounting for uncertain tax positions. As of September 28, 2024, gross unrecognized tax benefits totaled $22.0 billion, of which $10.8 billion would impact the effective tax rate if recognized; evaluating these positions involves complex interpretation of domestic and international tax laws.\n\nSource: apple 10k.pdf, p. 30, 12, 15, 14, 51.", "model": "openai", "success": true, "tickers": [], "intents": ["RISK_ANALYSIS"], "sources": [{"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 30, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000029", "score": -4.897496223449707}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 12, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000011", "score": -5.74233341217041}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 15, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000014", "score": -6.273910999298096}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 14, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000013", "score": -6.906472206115723}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 51, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000050", "score": -7.877053260803223}]}
+

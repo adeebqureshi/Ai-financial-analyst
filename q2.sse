@@ -1,0 +1,6 @@
+event: plan
+data: {"tickers": ["AAPL"], "intents": ["RISK_ANALYSIS"]}
+
+event: done
+data: {"message": "", "model": "openai", "success": true, "tickers": ["AAPL"], "intents": ["RISK_ANALYSIS"], "sources": [{"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 8, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000007", "score": -2.9721298217773438}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 3, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000002", "score": -3.3767502307891846}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 51, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000050", "score": -3.405740737915039}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 109, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000108", "score": -3.6135263442993164}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 53, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000052", "score": -4.3007049560546875}]}
+

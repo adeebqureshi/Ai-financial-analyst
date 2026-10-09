@@ -13,8 +13,11 @@ def test_retrieve(
     embedder.embed_text.return_value = [0.1, 0.2]
     mock_embedder.return_value = embedder
     retriever = MagicMock()
-    retriever.search.return_value = ["1"]
-    retriever.dense.similarity_scores.return_value = {"1": 0.72}
+    # Engine fetches dense points once, then fuses with BM25 without a
+    # second Qdrant call (single round-trip optimization).
+    retriever.dense.search.return_value = ["point-1"]
+    retriever.dense.points_to_scores.return_value = {"1": 0.72}
+    retriever.search_with_points.return_value = ["1"]
     mock_retriever.return_value = retriever
     engine = RetrievalEngine()
     chunk = RetrievedChunk(

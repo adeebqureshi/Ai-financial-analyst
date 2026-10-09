@@ -32,8 +32,29 @@ class HybridRetriever:
             document_id,
             owner_id,
         )
+        return self._fuse_points(dense, query, document_id, owner_id, limit)
+
+    def search_with_points(
+        self,
+        dense_points,
+        query: str,
+        limit: int = 5,
+        document_id: str | None = None,
+        owner_id: str | None = None,
+    ) -> list[str]:
+        """Fuse pre-fetched dense points with BM25 (avoids a 2nd Qdrant call)."""
+        return self._fuse_points(dense_points, query, document_id, owner_id, limit)
+
+    def _fuse_points(
+        self,
+        dense_points,
+        query: str,
+        document_id: str | None,
+        owner_id: str | None,
+        limit: int,
+    ) -> list[str]:
         dense_ids = []
-        for point in dense:
+        for point in dense_points:
             payload = getattr(point, "payload", None) or {}
             chunk_id = payload.get("chunk_id")
             dense_ids.append(

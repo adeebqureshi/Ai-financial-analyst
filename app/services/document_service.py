@@ -249,11 +249,16 @@ class DocumentService:
         document_id: str,
         owner_id: str | None,
     ) -> dict:
+        import time
+
+        timings: dict[str, float] = {}
         try:
+            started = time.perf_counter()
             result = self._parser.parse(
                 pdf_path,
                 filename=filename,
             )
+            timings["parsing_s"] = time.perf_counter() - started
         except Exception as exc:
             raise ParserError(
                 message=f"Failed to parse PDF: {exc}",
@@ -269,9 +274,13 @@ class DocumentService:
             )
 
         pages = result.pages or [result.text]
+        started = time.perf_counter()
         chunks = self._chunker.chunk_pages(pages)
+        timings["chunking_s"] = time.perf_counter() - started
         texts = [chunk.text for chunk in chunks]
+        started = time.perf_counter()
         vectors = self._embedder.embed_documents(texts)
+        timings["embedding_s"] = time.perf_counter() - started
         filing_type = _detect_filing_type(filename)
         ticker = _detect_ticker(filename)
         tables_by_page: dict[int, list[dict[str, object]]] = {}
@@ -308,11 +317,14 @@ class DocumentService:
                 }
             )
 
+        started = time.perf_counter()
         self._vector_store.upsert(
             ids=ids,
             vectors=vectors,
             payloads=payloads,
         )
+        timings["qdrant_s"] = time.perf_counter() - started
+        timings["total_s"] = sum(timings.values())
         record = {
             "document_id": document_id,
             "filename": filename,
@@ -325,14 +337,24 @@ class DocumentService:
             "owner_id": owner_id,
         }
         self._save_record(record)
-        self.refresh_engine(owner_id or "anonymous")
+        # NOTE: no refresh_engine() here. DocumentService is built per request,
+        # so refreshing would only warm this request's throwaway engine, which
+        # is discarded on return. retrieve() rebuilds its engine from Qdrant
+        # (the source of truth) on every call, so the next query sees these
+        # points without a redundant full scroll + BM25 rebuild on upload.
         logger.info(
-            "Indexed document %s (%d pages, %d chunks, %d tables, %s)",
+            "Indexed document %s (%d pages, %d chunks, %d tables, %s) "
+            "in %.2fs (parse=%.2f chunk=%.2f embed=%.2f qdrant=%.2f)",
             document_id,
             len(pages),
             len(chunks),
             len(result.tables),
             result.parser_used,
+            timings["total_s"],
+            timings["parsing_s"],
+            timings["chunking_s"],
+            timings["embedding_s"],
+            timings["qdrant_s"],
         )
         return record
 

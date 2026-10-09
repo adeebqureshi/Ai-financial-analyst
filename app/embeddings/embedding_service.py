@@ -47,6 +47,15 @@ def _validate_vector(vector: list[float], expected: int) -> list[float]:
     return vector
 
 
+def _embedding_batch_size() -> int:
+    try:
+        settings = get_settings()
+        size = int(getattr(settings, "embedding_batch_size", 32) or 32)
+    except Exception:
+        return 32
+    return max(1, min(size, 128))
+
+
 class EmbeddingService:
     def embed_text(self, text: str) -> list[float]:
         try:
@@ -69,7 +78,12 @@ class EmbeddingService:
             # previous per-document behaviour.
             batch = getattr(model, "embed_batch", None)
             if callable(batch):
-                vectors = [list(embedding.vector) for embedding in batch(documents)]
+                vectors = [
+                    list(embedding.vector)
+                    for embedding in batch(
+                        documents, batch_size=_embedding_batch_size()
+                    )
+                ]
             else:
                 vectors = [list(model.embed(doc).vector) for doc in documents]
         except Exception as exc:

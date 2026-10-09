@@ -1,0 +1,744 @@
+event: plan
+data: {"tickers": [], "intents": ["COMPARISON", "FINANCIAL_ANALYSIS"]}
+
+event: token
+data: {"delta": "\n\n"}
+
+event: token
+data: {"delta": "Apple reports"}
+
+event: token
+data: {"delta": " its segments"}
+
+event: token
+data: {"delta": " ge"}
+
+event: token
+data: {"delta": "ographically ("}
+
+event: token
+data: {"delta": "Americas"}
+
+event: token
+data: {"delta": ", Europe"}
+
+event: token
+data: {"delta": ", Greater"}
+
+event: token
+data: {"delta": " China,"}
+
+event: token
+data: {"delta": " Japan,"}
+
+event: token
+data: {"delta": " Rest of"}
+
+event: token
+data: {"delta": " Asia Pacific"}
+
+event: token
+data: {"delta": "), so"}
+
+event: token
+data: {"delta": " margins"}
+
+event: token
+data: {"delta": " are"}
+
+event: token
+data: {"delta": " compared"}
+
+event: token
+data: {"delta": " below"}
+
+event: token
+data: {"delta": " on"}
+
+event: token
+data: {"delta": " an operating"}
+
+event: token
+data: {"delta": "-income"}
+
+event: token
+data: {"delta": " basis using"}
+
+event: token
+data: {"delta": " reported"}
+
+event: token
+data: {"delta": " net sales"}
+
+event: token
+data: {"delta": " and operating"}
+
+event: token
+data: {"delta": " income,"}
+
+event: token
+data: {"delta": " plus gross"}
+
+event: token
+data: {"delta": " margin by"}
+
+event: token
+data: {"delta": " product type"}
+
+event: token
+data: {"delta": " where"}
+
+event: token
+data: {"delta": " the company"}
+
+event: token
+data: {"delta": " disc"}
+
+event: token
+data: {"delta": "loses it"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "Segment"}
+
+event: token
+data: {"delta": " operating margins"}
+
+event: token
+data: {"delta": " for"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "4 ("}
+
+event: token
+data: {"delta": "computed"}
+
+event: token
+data: {"delta": " from"}
+
+event: token
+data: {"delta": " reported operating"}
+
+event: token
+data: {"delta": " income "}
+
+event: token
+data: {"delta": "\u00f7 net"}
+
+event: token
+data: {"delta": " sales):"}
+
+event: token
+data: {"delta": "\n"}
+
+event: token
+data: {"delta": "- Japan"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "1"}
+
+event: token
+data: {"delta": "2,"}
+
+event: token
+data: {"delta": "45"}
+
+event: token
+data: {"delta": "4 /"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "5,"}
+
+event: token
+data: {"delta": "05"}
+
+event: token
+data: {"delta": "2 ="}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "9."}
+
+event: token
+data: {"delta": "7%"}
+
+event: token
+data: {"delta": " \u2014 the"}
+
+event: token
+data: {"delta": " most"}
+
+event: token
+data: {"delta": " profitable segment"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Rest"}
+
+event: token
+data: {"delta": " of Asia"}
+
+event: token
+data: {"delta": " Pacific:"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "3,"}
+
+event: token
+data: {"delta": "06"}
+
+event: token
+data: {"delta": "2 /"}
+
+event: token
+data: {"delta": " 3"}
+
+event: token
+data: {"delta": "0,"}
+
+event: token
+data: {"delta": "65"}
+
+event: token
+data: {"delta": "8 ="}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "2."}
+
+event: token
+data: {"delta": "6%"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Europe:"}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "1,"}
+
+event: token
+data: {"delta": "79"}
+
+event: token
+data: {"delta": "0 /"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "01"}
+
+event: token
+data: {"delta": ",3"}
+
+event: token
+data: {"delta": "28"}
+
+event: token
+data: {"delta": " = "}
+
+event: token
+data: {"delta": "41"}
+
+event: token
+data: {"delta": ".2"}
+
+event: token
+data: {"delta": "%\n"}
+
+event: token
+data: {"delta": "- Americas"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "67"}
+
+event: token
+data: {"delta": ",6"}
+
+event: token
+data: {"delta": "56"}
+
+event: token
+data: {"delta": " / "}
+
+event: token
+data: {"delta": "16"}
+
+event: token
+data: {"delta": "7,"}
+
+event: token
+data: {"delta": "04"}
+
+event: token
+data: {"delta": "5 ="}
+
+event: token
+data: {"delta": " 4"}
+
+event: token
+data: {"delta": "0."}
+
+event: token
+data: {"delta": "5%"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Greater China"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "27"}
+
+event: token
+data: {"delta": ",0"}
+
+event: token
+data: {"delta": "82"}
+
+event: token
+data: {"delta": " / "}
+
+event: token
+data: {"delta": "66"}
+
+event: token
+data: {"delta": ",9"}
+
+event: token
+data: {"delta": "52"}
+
+event: token
+data: {"delta": " = "}
+
+event: token
+data: {"delta": "40"}
+
+event: token
+data: {"delta": ".5"}
+
+event: token
+data: {"delta": "% \u2014"}
+
+event: token
+data: {"delta": " the least"}
+
+event: token
+data: {"delta": " profitable segment"}
+
+event: token
+data: {"delta": "\n\nJapan"}
+
+event: token
+data: {"delta": "'s operating"}
+
+event: token
+data: {"delta": " margin runs"}
+
+event: token
+data: {"delta": " roughly "}
+
+event: token
+data: {"delta": "9 percentage"}
+
+event: token
+data: {"delta": " points above"}
+
+event: token
+data: {"delta": " Americas"}
+
+event: token
+data: {"delta": " and Greater"}
+
+event: token
+data: {"delta": " China."}
+
+event: token
+data: {"delta": " Americas"}
+
+event: token
+data: {"delta": " generated"}
+
+event: token
+data: {"delta": " the largest"}
+
+event: token
+data: {"delta": " operating income"}
+
+event: token
+data: {"delta": " ($6"}
+
+event: token
+data: {"delta": "7,"}
+
+event: token
+data: {"delta": "65"}
+
+event: token
+data: {"delta": "6M"}
+
+event: token
+data: {"delta": ") on"}
+
+event: token
+data: {"delta": " the"}
+
+event: token
+data: {"delta": " largest net"}
+
+event: token
+data: {"delta": " sales ($"}
+
+event: token
+data: {"delta": "16"}
+
+event: token
+data: {"delta": "7,"}
+
+event: token
+data: {"delta": "04"}
+
+event: token
+data: {"delta": "5M"}
+
+event: token
+data: {"delta": "), while"}
+
+event: token
+data: {"delta": " Greater China"}
+
+event: token
+data: {"delta": "'s operating"}
+
+event: token
+data: {"delta": " income fell"}
+
+event: token
+data: {"delta": " from $"}
+
+event: token
+data: {"delta": "30"}
+
+event: token
+data: {"delta": ",3"}
+
+event: token
+data: {"delta": "28"}
+
+event: token
+data: {"delta": "M in"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "3 to"}
+
+event: token
+data: {"delta": " $2"}
+
+event: token
+data: {"delta": "7,"}
+
+event: token
+data: {"delta": "08"}
+
+event: token
+data: {"delta": "2M"}
+
+event: token
+data: {"delta": " in "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": " as"}
+
+event: token
+data: {"delta": " iPhone"}
+
+event: token
+data: {"delta": " and iPad"}
+
+event: token
+data: {"delta": " net"}
+
+event: token
+data: {"delta": " sales declined"}
+
+event: token
+data: {"delta": ".\n\n"}
+
+event: token
+data: {"delta": "The "}
+
+event: token
+data: {"delta": "10"}
+
+event: token
+data: {"delta": "-K does"}
+
+event: token
+data: {"delta": " not publish"}
+
+event: token
+data: {"delta": " gross margins"}
+
+event: token
+data: {"delta": " by geographic"}
+
+event: token
+data: {"delta": " segment;"}
+
+event: token
+data: {"delta": " gross"}
+
+event: token
+data: {"delta": " margin by"}
+
+event: token
+data: {"delta": " product category"}
+
+event: token
+data: {"delta": " was"}
+
+event: token
+data: {"delta": ":\n"}
+
+event: token
+data: {"delta": "- Products"}
+
+event: token
+data: {"delta": ": "}
+
+event: token
+data: {"delta": "37"}
+
+event: token
+data: {"delta": ".2"}
+
+event: token
+data: {"delta": "% gross"}
+
+event: token
+data: {"delta": " margin in"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "4,"}
+
+event: token
+data: {"delta": " up from"}
+
+event: token
+data: {"delta": " 3"}
+
+event: token
+data: {"delta": "6."}
+
+event: token
+data: {"delta": "5%"}
+
+event: token
+data: {"delta": " in "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "23"}
+
+event: token
+data: {"delta": " ("}
+
+event: token
+data: {"delta": "driven"}
+
+event: token
+data: {"delta": " by cost"}
+
+event: token
+data: {"delta": " savings,"}
+
+event: token
+data: {"delta": " partially offset"}
+
+event: token
+data: {"delta": " by mix"}
+
+event: token
+data: {"delta": " and currency"}
+
+event: token
+data: {"delta": " weakness)"}
+
+event: token
+data: {"delta": "\n-"}
+
+event: token
+data: {"delta": " Services:"}
+
+event: token
+data: {"delta": " 7"}
+
+event: token
+data: {"delta": "3."}
+
+event: token
+data: {"delta": "9%"}
+
+event: token
+data: {"delta": " gross margin"}
+
+event: token
+data: {"delta": " in "}
+
+event: token
+data: {"delta": "20"}
+
+event: token
+data: {"delta": "24"}
+
+event: token
+data: {"delta": ", up"}
+
+event: token
+data: {"delta": " from "}
+
+event: token
+data: {"delta": "70"}
+
+event: token
+data: {"delta": ".8"}
+
+event: token
+data: {"delta": "% in"}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "02"}
+
+event: token
+data: {"delta": "3 ("}
+
+event: token
+data: {"delta": "driven"}
+
+event: token
+data: {"delta": " by a"}
+
+event: token
+data: {"delta": " different Services"}
+
+event: token
+data: {"delta": " mix and"}
+
+event: token
+data: {"delta": " higher net"}
+
+event: token
+data: {"delta": " sales)"}
+
+event: token
+data: {"delta": "\n\nSource"}
+
+event: token
+data: {"delta": ": apple"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0k"}
+
+event: token
+data: {"delta": ".pdf,"}
+
+event: token
+data: {"delta": " p."}
+
+event: token
+data: {"delta": " 5"}
+
+event: token
+data: {"delta": "0."}
+
+event: token
+data: {"delta": "\nSource"}
+
+event: token
+data: {"delta": ": apple"}
+
+event: token
+data: {"delta": " 1"}
+
+event: token
+data: {"delta": "0k"}
+
+event: token
+data: {"delta": ".pdf,"}
+
+event: token
+data: {"delta": " p."}
+
+event: token
+data: {"delta": " 2"}
+
+event: token
+data: {"delta": "7."}
+
+event: token
+data: {"delta": "\n\n_Auditor note: this response could not be fully verified against retrieved evidence. Please verify the claims before relying on them._"}
+
+event: done
+data: {"message": "\n\nApple reports its segments geographically (Americas, Europe, Greater China, Japan, Rest of Asia Pacific), so margins are compared below on an operating-income basis using reported net sales and operating income, plus gross margin by product type where the company discloses it.\n\nSegment operating margins for 2024 (computed from reported operating income \u00f7 net sales):\n- Japan: 12,454 / 25,052 = 49.7% \u2014 the most profitable segment\n- Rest of Asia Pacific: 13,062 / 30,658 = 42.6%\n- Europe: 41,790 / 101,328 = 41.2%\n- Americas: 67,656 / 167,045 = 40.5%\n- Greater China: 27,082 / 66,952 = 40.5% \u2014 the least profitable segment\n\nJapan's operating margin runs roughly 9 percentage points above Americas and Greater China. Americas generated the largest operating income ($67,656M) on the largest net sales ($167,045M), while Greater China's operating income fell from $30,328M in 2023 to $27,082M in 2024 as iPhone and iPad net sales declined.\n\nThe 10-K does not publish gross margins by geographic segment; gross margin by product category was:\n- Products: 37.2% gross margin in 2024, up from 36.5% in 2023 (driven by cost savings, partially offset by mix and currency weakness)\n- Services: 73.9% gross margin in 2024, up from 70.8% in 2023 (driven by a different Services mix and higher net sales)\n\nSource: apple 10k.pdf, p. 50.\nSource: apple 10k.pdf, p. 27.\n\n_Auditor note: this response could not be fully verified against retrieved evidence. Please verify the claims before relying on them._", "model": "openai", "success": false, "tickers": [], "intents": ["COMPARISON", "FINANCIAL_ANALYSIS"], "sources": [{"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 27, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000026", "score": -3.021395206451416}, {"document_id": "dc62d42da64f47379dca22417c445dd9", "filename": "apple 10k.pdf", "page": 50, "chunk_id": "dc62d42da64f47379dca22417c445dd9:000049", "score": -6.472315788269043}]}
+

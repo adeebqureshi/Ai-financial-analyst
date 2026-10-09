@@ -19,6 +19,7 @@ from app.vectorstore.base_vector_store import BaseVectorStore
 
 _DEFAULT_COLLECTION = "financial_documents"
 _DEFAULT_VECTOR_SIZE = 384
+_DEFAULT_GRPC_PORT = 6334
 _client: QdrantClient | None = None
 logger = get_logger(__name__)
 
@@ -81,6 +82,15 @@ def _get_shared_client(
                 )
                 _client = QdrantClient(url=url, api_key=api_key)
         else:
+            # No URL configured. An in-memory client starts empty and answers
+            # every query with zero results, which reads as "your documents
+            # have no relevant evidence" rather than "storage is not
+            # configured", so make the substitution loud.
+            logger.warning(
+                "No Qdrant URL configured (QDRANT_URL unset); using an empty "
+                "in-memory store. Persisted documents are NOT searchable and "
+                "nothing will be retained across restarts.",
+            )
             _client = QdrantClient(":memory:")
     return _client
 
@@ -151,7 +161,19 @@ class QdrantStore(BaseVectorStore):
         except RetrievalError:
             raise
         except Exception as exc:
-            logger.warning("Qdrant collection check failed: %s", exc)
+            # `get_collections` already failed by the time this runs, so a
+            # connection error here means the server is unreachable, not that
+            # the collection is missing. Naming the configured endpoint makes
+            # a stopped local Qdrant obvious instead of looking like a data
+            # problem. Only the endpoint is logged, never the API key.
+            logger.warning(
+                "Qdrant is unreachable at %s (collection=%s, gRPC port %s "
+                "preferred, REST fallback available): %s",
+                self._url or "<in-memory>",
+                self.collection_name,
+                _DEFAULT_GRPC_PORT,
+                exc,
+            )
             raise RetrievalError(
                 "Document storage is temporarily unavailable.",
                 error_code="VECTOR_STORE_UNAVAILABLE",
@@ -211,6 +233,39 @@ class QdrantStore(BaseVectorStore):
         return Filter(must=filters)
 
     def upsert(
+        self,
+        ids: list[int | str],
+        vectors: list[list[float]],
+        payloads: list[dict],
+    ) -> None:
+        batch_size = self._upsert_batch_size()
+        if batch_size <= 0 or len(ids) <= batch_size:
+            self._upsert_points(ids, vectors, payloads)
+            return
+        # Large documents (e.g. 360-page reports) produce hundreds of points.
+        # One giant upsert risks payload/timeout limits, so split into
+        # bounded batches while keeping each call server-efficient.
+        for start in range(0, len(ids), batch_size):
+            end = start + batch_size
+            self._upsert_points(
+                ids[start:end],
+                vectors[start:end],
+                payloads[start:end],
+            )
+
+    @staticmethod
+    def _upsert_batch_size() -> int:
+        try:
+            from app.core.config import get_settings
+
+            size = int(
+                getattr(get_settings(), "qdrant_upsert_batch_size", 256) or 256
+            )
+        except Exception:
+            return 256
+        return max(1, min(size, 4096))
+
+    def _upsert_points(
         self,
         ids: list[int | str],
         vectors: list[list[float]],

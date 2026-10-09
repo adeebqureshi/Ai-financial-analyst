@@ -97,8 +97,13 @@ def _run_startup_infrastructure_checks(settings: Settings, logger: Any) -> None:
             if ok:
                 logger.info("Infrastructure check passed: %s", component)
             else:
+                # No store is swapped in here: a failed check means
+                # retrieval stays unavailable, not that some local store
+                # silently takes over and answers with zero evidence.
                 logger.warning(
-                    "Infrastructure check FAILED: %s (falling back to local resources)",
+                    "Infrastructure check FAILED: %s. No fallback is "
+                    "substituted; features depending on it stay degraded "
+                    "until it recovers. See /readiness for live status.",
                     component,
                 )
     except Exception as exc:

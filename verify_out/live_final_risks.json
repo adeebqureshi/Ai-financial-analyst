@@ -1,0 +1,48 @@
+{
+ "dt_s": 20,
+ "events": [
+  "done",
+  "plan",
+  "token"
+ ],
+ "chars": 2674,
+ "sources": [
+  {
+   "document_id": "dc62d42da64f47379dca22417c445dd9",
+   "filename": "apple 10k.pdf",
+   "page": 30,
+   "chunk_id": "dc62d42da64f47379dca22417c445dd9:000029",
+   "score": -4.897496223449707
+  },
+  {
+   "document_id": "dc62d42da64f47379dca22417c445dd9",
+   "filename": "apple 10k.pdf",
+   "page": 12,
+   "chunk_id": "dc62d42da64f47379dca22417c445dd9:000011",
+   "score": -5.74233341217041
+  },
+  {
+   "document_id": "dc62d42da64f47379dca22417c445dd9",
+   "filename": "apple 10k.pdf",
+   "page": 15,
+   "chunk_id": "dc62d42da64f47379dca22417c445dd9:000014",
+   "score": -6.273910999298096
+  },
+  {
+   "document_id": "dc62d42da64f47379dca22417c445dd9",
+   "filename": "apple 10k.pdf",
+   "page": 14,
+   "chunk_id": "dc62d42da64f47379dca22417c445dd9:000013",
+   "score": -6.906472206115723
+  },
+  {
+   "document_id": "dc62d42da64f47379dca22417c445dd9",
+   "filename": "apple 10k.pdf",
+   "page": 51,
+   "chunk_id": "dc62d42da64f47379dca22417c445dd9:000050",
+   "score": -7.877053260803223
+  }
+ ],
+ "error": null,
+ "text": "\n\nApple's 2024 Form 10-K discloses material risks across market, operational, technology, and reporting categories, with quantified exposures where available.\n\n- **Market risk:** Interest rate increases could decline the investment portfolio fair value by $2,755 million and raise term debt annual interest expense by $139 million under a hypothetical 100-basis-point increase as of September 28, 2024 (2023: $3,089 million and $194 million). As a net receiver of non-USD currencies, a strengthening dollar lowers reported net sales and gross margins; a 95% confidence value-at-risk model estimates a maximum one-day loss of $538 million in derivative fair value ($669 million in 2023).\n- **Product, supply chain, and intellectual property risk:** Design and manufacturing defects, third-party component defects, service outages, and new technologies such as AI can lead to product liability claims, recalls, warranty expenses, safety harm, and reputation damage. Risks also include inventory write-downs and asset impairments from obsolescence or forecast errors against purchase obligations (typically up to 150 days), and reliance on third-party IP licenses that may not be obtainable on commercial terms or at all, with potential infringement claims that could restrict product sales.\n- **Cybersecurity and IT risk:** Malicious attacks, ransomware, employee error, and supply-chain vulnerabilities occur on a regular basis and may compromise confidential data, disrupt operations, damage commercial relationships, or exceed the Company's insurance coverage; IT system failures or network disruptions from natural disasters, war, or cybersecurity incidents could impede manufacturing, shipping, and customer transactions.\n- **Strategic and operational risk:** Dependence on the CEO, executive team, and highly skilled employees amid intense talent competition; acquisitions or new business investments may distract management, face regulatory approval delays, or result in impairments and write-offs; distribution through carriers, wholesalers, and retailers (many selling competitor products) exposes the Company to reseller weakening or reduced financing and subsidies; retail stores face macroeconomic, lease, construction cost, and inventory value pressures.\n- **Financial reporting and tax risk:** Management uses significant judgment in evaluating uncertain tax positions under complex domestic and international tax laws; gross unrecognized tax benefits totaled $22.0 billion as of Septembe"
+}

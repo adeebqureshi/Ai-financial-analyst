@@ -1,0 +1,19 @@
+{
+ "events": [
+  "done",
+  "plan",
+  "token"
+ ],
+ "chars": 2614,
+ "sources": 3,
+ "done_keys": [
+  "intents",
+  "message",
+  "model",
+  "sources",
+  "success",
+  "tickers"
+ ],
+ "error": null,
+ "text": "\n\nApple's major business risks, per its 2024 Form 10-K, fall into a few key categories:\n\n**Macroeconomic and economic conditions** \u2014 Apple's operations and performance depend significantly on global and regional economic conditions. Adverse conditions \u2014 slow growth or recession, high unemployment, inflation, tighter credit, higher interest rates, and currency fluctuations \u2014 can materially affect consumer confidence and spending, and thus demand for its products and services. Sales outside the U.S. represent a majority of total net sales, amplifying this exposure. These conditions also create credit and collectibility risk on trade receivables, risk of failure of derivative counterparties and other financial institutions, limitations on the ability to issue new debt, reduced liquidity, and declines in the fair values of financial instruments. Source: apple 10k.pdf, p. 5.\n\n**Supply chain and international operations** \u2014 Apple's global supply chain is large and complex, with a majority of its supplier facilities, including manufacturing and assembly sites, located outside the U.S. Economic uncertainty can significantly impact suppliers, contract manufacturers, logistics providers, distributors, cellular network carriers, channel partners, and developers, with potential outcomes including financial instability, inability to obtain credit, and insolvency. Source: apple 10k.pdf, p. 5.\n\n**Competition** \u2014 The markets for Apple's products and services are highly competitive, characterized by aggressive price competition and resulting downward pressure on gross margins, frequent introduction of new products and services, short product life cycles, evolving industry standards, rapid adoption of technological advancements by competitors, and consumer/business price sensitivity. Many competitors compete on aggressive pricing, very low cost structures, product imitation, and intellectual property infringement. Source: apple 10k.pdf, p. 2.\n\n**Tax matters** \u2014 As a critical audit matter, Apple faces uncertainty around tax positions: as of September 28, 2024, gross unrecognized tax benefits totaled $22.0 billion, of which $10.8 billion would impact the effective tax rate if recognized, requiring significant judgment in interpreting complex domestic and international tax laws. Source: apple 10k.pdf, p. 48.\n\nThe 10-K also flags cybersecurity (Item 1C, listed in the table of contents) and legal proceedings (Item 3) as disclosed risk areas, though the specific risk-factor text for those items is not included in the retrieved pages. Source: apple 10k.pdf, p. 3.\n\nSource: apple 10k.pdf, p. 5."
+}

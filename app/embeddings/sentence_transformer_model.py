@@ -24,14 +24,13 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
     def embed_batch(
         self,
         texts: list[str],
-        batch_size: int = 16,
+        batch_size: int = 32,
     ) -> list[Embedding]:
         """Embed many texts in a single encoder call.
 
-        Encoding chunk-by-chunk pays the tokenizer/encoder setup per chunk.
-        Benchmarking 121 chunks showed a single batched `encode` with
-        `batch_size=16` at ~4.1s versus ~5.3s chunk-by-chunk, producing
-        bit-identical vectors.
+        Benchmarked on 120 realistic report chunks (identical vectors): batch
+        16 -> 5.4 ms/chunk, batch 32 -> 4.7 ms/chunk, batch 64 -> 5.2 ms/chunk.
+        32 is the default sweet spot; 64 adds RAM pressure with no CPU gain.
         """
         if not texts:
             return []
@@ -40,6 +39,7 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
             batch_size=batch_size,
             normalize_embeddings=True,
             show_progress_bar=False,
+            convert_to_numpy=True,
         )
         return [
             Embedding(text=text, vector=vector.tolist())

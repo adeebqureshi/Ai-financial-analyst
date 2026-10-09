@@ -138,6 +138,7 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
         except Exception as exc:
             self._log_failure("stream", exc, start)
             self._map_error(exc)
+        content_tokens = 0
         while True:
             try:
                 chunk = await stream.__anext__()
@@ -153,7 +154,16 @@ class AsyncOpenAIProvider(AsyncLLMProvider):
                 continue
             content = getattr(delta, "content", None)
             if content:
+                content_tokens += len(content)
                 yield content
+        if content_tokens == 0:
+            logger.warning(
+                "LLM stream completed with zero content tokens: "
+                "model=%s duration_ms=%.0f (provider returned an empty "
+                "completion; consider retrying the request)",
+                self.config.model,
+                (time.perf_counter() - start) * 1000,
+            )
         self._log_success("stream", start)
     def _log_success(self, operation: str, start: float, usage: object = None) -> None:
         duration_ms = (time.perf_counter() - start) * 1000
